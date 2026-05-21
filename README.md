@@ -1,237 +1,484 @@
-# Template for Hackathon
-이 레파지토리는 참여자들이 해커톤 결과물을 위한 레파지토리 생성시에 참고할 내용들을 담고 있습니다.
-1. 레파지토리 생성
-2. 레파지토리 구성
-3. README.md 가이드라인
-4. README.md 작성팁
-<br/>
+# 🌱 Farm Broker — 봄동마켓 (Bomdong Market)
 
+> **도심을 채우다, 이웃과 나누다**
+> 도심 유휴공간 기반 AI 스마트팜 중개 플랫폼
+> 공실 제공자 · 도심 농부 · 소비자를 잇는 생활권 농업 생태계
 
-## 1. 레파지토리 생성
-- https://classroom.github.com/a/VDJSvmVC
-- 위 Github Classroom 링크에 접속해 본인 조의 github 레파지토리를 생성하세요.
-<img width="1125" height="790" alt="image" src="https://github.com/user-attachments/assets/7377b191-d36a-43bd-ba16-9742be532ecf" />
+<p align="center">
+  <img src="https://img.shields.io/badge/Track-지정과제트랙-2E7D5B?style=flat-square" />
+  <img src="https://img.shields.io/badge/Service-Mobile%20App-FF8A4C?style=flat-square" />
+  <img src="https://img.shields.io/badge/Team-봄동마켓-2E7D5B?style=flat-square" />
+  <img src="https://img.shields.io/badge/PNU-제7회%20창의융합AI해커톤-2E7D5B?style=flat-square" />
+</p>
 
+---
 
-- 레파지토리 생성 시 팀 이름은 `{트랙}-{팀번호}-{팀명}` 형식으로 생성하세요.
-- 트랙 란에는 융합트랙은 'A', 지정과제 트랙은 'B', 창업트랙은 'C'를 기입합니다.
-- 예를 들어, 융합트랙 3조의 팀명은 `A-03-ExampleTeamName` 입니다.
-- 이 경우 `PNUAI-A-03-ExampleTeamName`이라는 이름으로 레포지토리가 생성됩니다.
-<br/>
+## 📑 목차
 
+1. [프로젝트 소개](#1-프로젝트-소개)
+2. [상세 설계](#2-상세설계)
+3. [개발 결과](#3-개발결과)
+4. [설치 및 사용 방법](#4-설치-및-사용-방법)
+5. [소개 및 시연 영상](#5-소개-및-시연-영상)
+6. [팀 소개](#6-팀-소개)
+7. [해커톤 참여 후기](#7-해커톤-참여-후기)
 
+---
 
-## 2. 레파지토리 구성
-- 레파지토리 내에 `README.md` 파일 생성하고 아래의 가이드라인과 작성팁을 참고하여 파일을 작성하세요.
-- 레파지토리 내에 `docs` 폴더를 생성하고 폴더 내에는 과제 수행 하면서 작성한 각종 보고서, 발표자료를 올려둡니다.
-- 그 밖에 레파지토리의 폴더 구성은 과제 결과물에 따라 자유롭게 구성하되 가급적 코드의 목적이나 기능에 따라 폴더를 나누어 구성하세요.  
-<br/>
+## 1. 프로젝트 소개
 
+### 1.1. 개발 배경 및 필요성
 
-## 3. README.md 가이드라인
-- README 파일 작성시에 아래의 5가지 항목의 내용은 필수적으로 포함해야 합니다.
-- 아래의 7가지 항목이외에 프로젝트의 이해를 돕기위한 내용을 추가해도 됩니다.
-- `SAMPLE_README.md`가 단순한 형태의 예제이니 참고하세요.
-```markdown
-### 1. 프로젝트 소개
-#### 1.1. 개발배경 및 필요성
-> 프로젝트를 실행하게 된 배경 및 필요성을 작성하세요.
+부산을 비롯한 국내 주요 도시는 **도심 공실률 증가**라는 경제적 문제에 직면해 있습니다. 자산 가치 하락, 지역 상권 침체, 도시 활력 저하로 이어지는 악순환이 가속화되는 한편, 도시화와 기후 변화로 농업 부지는 점차 외곽으로 밀려나고 있습니다.
 
-#### 1.2. 개발 목표 및 주요 내용
-> 프로젝트의 목표 및 주요 내용을 작성하세요.
+이로 인해 발생하는 **세 가지 핵심 문제**는 다음과 같습니다.
 
-#### 1.3. 세부내용
-> 위 내용을 작성하세요.
+| 구분 | 문제점 |
+|------|--------|
+| 🏙️ **도심 공실 증가** | 자산가치 하락 · 지역상권 침체 · 도시활력 저하 |
+| 🚚 **푸드 마일리지** | 농업부지 외곽화 → 장거리 운송 → 탄소 배출 · 신선도 저하 |
+| 🚪 **진입 장벽** | 공간 확보 어려움 · 전문 재배 지식 부족 · 초기 설계비용 부담 |
 
-#### 1.4. 기존 서비스 대비 차별성
-> 위 내용을 작성하세요.
+기존 스마트팜은 수억 단위의 초기 구축비와 복잡한 상담 절차로 일반 시민의 접근이 제한적이며, 지역 주민이 자신의 생활권 안에서 유연하게 참여할 수 있는 비즈니스 모델 또한 부재한 상황입니다.
 
-#### 1.5. 사회적가치 도입 계획
-> 위 내용을 작성하세요.
+따라서 **도심 유휴공간을 활용해 생산–관리–수확–유통을 하나의 플랫폼으로 연결**하고, 지역 주민과 소비자가 함께 참여하는 새로운 도심형 스마트팜 생태계 구축이 필요합니다.
 
+### 1.2. 개발 목표 및 주요 내용
 
-### 2. 상세설계
-#### 2.1. 시스템 구성도
-> 시스템 구성도(infra, front, back등의 node 간의 관계)의 사진을 삽입하세요.
+> **도심 유휴공간 → 생산 → 수확 → 판매 → 소비까지,
+> 한 동네 안에서 순환하는 스마트팜 플랫폼을 만든다.**
 
-#### 2.1. 사용 기술
-> 스택 별(backend, frontend, designer등) 사용한 기술 및 버전을 작성하세요.
-> 
-> ex) React.Js - React14, Node.js - v20.0.2
-> (필수)활용한 생성형 AI, AI 코딩 도구에 대해서도 기술하세요.
+**Farm Broker**는 카메라 사진·동영상 기반의 AI 공간 매핑 기술로 유휴공간의 구조와 조건을 분석하고, 가변형 스마트팜 모듈 배치를 제안합니다. 비전문가도 박스형 재배 모듈과 휴리스틱 성장 예측 시스템을 통해 작물을 관리할 수 있으며, 수확물은 앱 내 직거래 마켓을 통해 생활권 내에서 소비됩니다.
 
-### 3. 개발결과
-#### 3.1. 전체시스템 흐름도
-> 위 내용을 작성하세요.
+```
+[01 공간 발견] → [02 농부 매칭] → [03 재배·관리] → [04 수확] → [05 지역 직거래]
+   AI 공간매핑       공실↔농부 연결      박스형 모듈         휴리스틱 알림      앱 마켓플레이스
+   수익 시뮬레이션                       환경 자동 제어       품질 검증          생활권 배송
+```
 
-#### 3.2. 기능설명
-> 각 페이지 마다 사용자의 입력의 종류와 입력에 따른 결과 설명 및 시연 영상.
-> 
-> ex. 로그인 페이지:
-> 
-> - 이메일 주소와 비밀번호를 입력하면 입력창에서 유효성 검사가 진행됩니다.
-> 
-> - 요효성 검사를 통과하지 못한 경우, 각 경고 문구가 입력창 하단에 표시됩니다.
->   
-> - 유효성 검사를 통과한 경우, 로그인 버튼이 활성화 됩니다.
->   
-> - 로그인 버튼을 클릭 시, 입력한 이메일 주소와 비밀번호에 대한 계정이 있는지 확인합니다.
->   
-> - 계정이 없는 경우, 경고문구가 나타납니다.
+**핵심 기대 효과**
+
+- 🗺️ **공간**: AI 공간 매핑으로 유휴공간 → 스마트팜 즉시 시뮬레이션
+- ⚙️ **기술**: 박스형 관리 모듈 + 휴리스틱 성장 예측으로 비전문가도 운영
+- 🛒 **판로**: 지역 (직)거래 마켓으로 푸드 마일리지 ↓, 신선도 ↑
+- 👥 **참여**: 수확·포장·배송에서 발생하는 유연한 지역 일자리 창출
+
+### 1.3. 세부 내용
+
+#### 🔍 사용자 요구사항
+
+| 사용자 | 핵심 요구사항 |
+|--------|---------------|
+| **공실 제공자** | 공간 등록 · 수익 시뮬레이션 · 입주 농부 관리 · 계약 |
+| **도심 농부** | 적합 공간 검색 · AI 수익 예측 · 재배 모듈 구성 · 수확 알림 |
+| **소비자** | 신선 농산물 직거래 구매 · 생산 이력 조회 |
+
+#### 🛠 기능 요구사항
+
+- **AI 예측** — 면적·위치·일조량 기반 수익 예측 및 작물 추천
+- **IoT 제어** — 온습도 · CO₂ · 조도 실시간 모니터링 / 자동 환경 제어
+- **매칭** — 공실 제공자 ↔ 농부 매칭 · 계약 관리 · 지역 직거래 마켓플레이스
+- **결제·관리** — 소셜 로그인 · 인앱 결제 · 정기 구독 · 수익 정산
+
+#### 🎯 활용 방안 (4주체 시나리오)
+
+1. **건물주·부동산 관리자** — 방치된 유휴공간을 고부가가치 자산으로 전환. AI 공간 매핑으로 모듈 배치도와 임대 수익을 즉시 시뮬레이션하며, 자동 환경 제어로 상주 인력 없이 운영 가능.
+2. **농업이 하고픈 바쁜 현대인·부업 희망자** — '서비스형 농업' 환경에서 토지 매입 없이 매칭된 도심 공간 임대로 소자본 시작. 휴리스틱 수확 알림으로 본업을 유지하며 원격 관리.
+3. **지역 소비자·공동체** — 거주지 인근 미니팜 작물을 구독형으로 공급받고, 수확 보조·상품 검수 등 유연한 지역 일자리 참여. 생태 교육·주민 체험 프로그램 확장.
+4. **기업·공공기관** — 지자체 도시재생 핵심 모델로 채택. 복지시설·공공기관 유휴공간을 미니팜으로 전환해 취약계층 식단 지원 등 사회적 가치 사업 수행.
+
+### 1.4. 기존 서비스 대비 차별성
+
+| 항목 | ❌ 기존 스마트팜 | ✅ 봄동마켓 (Farm Broker) |
+|------|------------------|--------------------------|
+| **진입 장벽** | 수억 단위 초기 구축비 + 복잡한 상담 절차 | **공간 공유 개념** 도입, 누구나 도심 농부로 참여 |
+| **정서적 가치** | 완전 자동화로 개입 여지·성취감 부재 | **반려식물 같은 유대감**, 일하고 싶은 만큼만 자동화 토글 |
+| **가격·신뢰** | 대규모 물량 공세로 표준 가격 형성 | **당근마켓형 직거래**, 생산자·생산이력 앱 내 증명 |
+
+### 1.5. 사회적 가치 도입 계획
+
+Farm Broker는 **경제적 수익성 · 환경적 지속가능성 · 사회적 참여**를 동시에 실현하는 미래 도심 농업의 표준 모델을 지향합니다.
+
+- 🏘️ **지역 순환 경제** — 생산–수확–판매–소비가 생활권 안에서 완결되어 지역 상권 활성화
+- 🌱 **친환경 유통** — 푸드 마일리지 절감을 통한 탄소 배출 감소, 농산물 신선도 향상
+- 💼 **유연한 지역 일자리** — 수확 보조 · 상품 검수 · 포장 · 지역 배송 등 단위 업무 기반 신규 소득원
+- 🏛️ **도시재생 도구** — 지자체 도시재생 모델 및 복지시설 유휴공간 활용 사회적 사업으로 확장
+- 🎓 **생태 교육 거점** — 도심 미니팜이 아동 생태 교육 및 주민 체험 프로그램 공간으로 기능
+
+---
+
+## 2. 상세설계
+
+### 2.1. 시스템 구성도
+
+> 📌 *시스템 구성도 이미지 첨부 위치* — `docs/system-architecture.png`
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      📱 Mobile Client (React Native / Flutter)   │
+│         공실 탐색 · AI 수익 예측 · 환경 모니터링 · 직거래 마켓        │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ HTTPS / REST
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+┌───────────────────────┐         ┌───────────────────────┐
+│  🌿 Spring Boot (Java) │         │  🤖 FastAPI (Python)   │
+│  계약 · 결제 · 정산     │         │  AI 서빙 · IoT 수신    │
+│  회원·인증 · 마켓 로직   │         │  공간 매핑 · 작물 추천  │
+└───────────┬───────────┘         └───────────┬───────────┘
+            │                                 │
+            ▼                                 ▼
+    ┌───────────────┐                 ┌───────────────────┐
+    │  💾 RDB        │                 │  🧠 PyTorch Models │
+    │  (회원·거래)    │                 │  + 휴리스틱 엔진    │
+    └───────────────┘                 └───────────┬───────┘
+                                                  │
+                                                  ▼
+                                    ┌─────────────────────────┐
+                                    │  📡 IoT Sensor Modules   │
+                                    │  온습도 · CO₂ · 조도      │
+                                    └─────────────────────────┘
+```
+
+### 2.2. 사용 기술
+
+#### 🎨 Frontend
+
+| 기술 | 용도 |
+|------|------|
+| React Native / Flutter *(검토 중)* | 크로스플랫폼(Android·iOS) 모바일 앱 |
+| Lingbot Map | 위치 기반 공실 정보 지도 시각화 |
+| 3D Point Cloud | 공실 공간 3D 시각화 · 모듈 배치 시뮬레이션 |
+
+#### ⚙️ Backend
+
+| 기술 | 용도 |
+|------|------|
+| Spring Boot (Java) | 회원 관리 · 계약 · 결제 · 정산 핵심 비즈니스 로직 |
+| FastAPI (Python) | AI 모델 서빙 · IoT 센서 데이터 수신 처리 |
+
+#### 🤖 AI / Data
+
+| 기술 | 용도 |
+|------|------|
+| Python · PyTorch | 공간 매핑 · 수익 예측 · 작물 추천 모델 |
+| 휴리스틱 알고리즘 | 수확 시점 예측 |
+
+#### 📡 IoT
+
+| 기술 | 용도 |
+|------|------|
+| 온·습도 · CO₂ · 조도 센서 모듈 | 재배 환경 실시간 모니터링 |
+
+#### 🤝 협업·관리
+
+| 기술 | 용도 |
+|------|------|
+| GitHub | 브랜치 전략(main/dev/feature) 기반 버전 관리 |
+| VS Code | 통합 개발 환경 (ESLint · Prettier) |
+| Notion · Google Docs | 요구사항·회의록·API 문서 통합 관리 |
+| Discord | 실시간 팀 커뮤니케이션 |
+
+#### 🧠 생성형 AI · AI 코딩도구 활용
+
+| 영역 | 활용 도구 | 주요 사용 방식 |
+|------|-----------|----------------|
+| 코드 생성·리팩토링 | Claude Code · Codex(ChatGPT) | Superpowers 플러그인 + Custom Skills/Subagents로 전용 파이프라인 구성 |
+| 설계·아키텍처 검토 | ChatGPT · Claude · Gemini | ERD·시스템 다이어그램 검증, REST API 명세 자동 생성, 동시성·트랜잭션 이슈 사전 검토 |
+| AI 모델·데이터 | ChatGPT · Claude + PyTorch | 학습 코드 골격 생성, 합성 데이터셋(공실 시나리오·생육 케이스) 보강 |
+| 기획·UI/UX | ChatGPT · Figma | 와이어프레임·아이콘·일러스트 시안, 페르소나 기반 UX 시나리오 작성 |
+
+> **AI는 도구가 아니라 6번째 팀원** — Harness 구축과 Agent 활용으로 단순 반복 코딩은 AI에 위임하고, 5인 팀의 시간을 아키텍처 설계와 IoT 통합에 집중 투자합니다.
+
+---
+
+## 3. 개발결과
+
+### 3.1. 전체 시스템 흐름도
+
+```
+ ┌────────────────┐   ① 공간 등록      ┌────────────────────┐
+ │  공실 제공자    │ ──────────────▶  │  AI 공간 매핑 엔진  │
+ └────────────────┘                   │ (PyTorch · FastAPI) │
+        ▲                             └──────────┬─────────┘
+        │ ⑥ 매칭·계약                            │ ② 수익 시뮬레이션
+        │                                       ▼
+ ┌──────┴─────────┐   ③ 적합 공간 검색   ┌────────────────────┐
+ │   도심 농부     │ ◀──────────────── │   매칭 플랫폼        │
+ └──────┬─────────┘                   │  (Spring Boot)      │
+        │ ④ 재배·관리                  └──────────┬─────────┘
+        ▼                                        │
+ ┌────────────────┐   ⑤ 환경 데이터       ┌──────▼─────────┐
+ │  IoT 재배 모듈  │ ─────────────────▶ │  실시간 모니터링 │
+ └────────────────┘                     └──────┬─────────┘
+        │ ⑦ 수확 알림                          │
+        ▼                                      ▼
+ ┌────────────────────────────────────────────────────┐
+ │             📦 직거래 마켓 (생활권 배송)              │
+ └─────────────────────┬──────────────────────────────┘
+                       │ ⑧ 구매 · 생산 이력 조회
+                       ▼
+              ┌────────────────┐
+              │   지역 소비자   │
+              └────────────────┘
+```
+
+### 3.2. 기능 설명
+
+> 📌 *각 기능 시연 영상 / GIF 첨부 위치*
+
+#### 🗺️ ① 공간 발견 · AI 공간 매핑
+
+- 지도에서 주변 유휴공간 탐색 (Lingbot Map 기반)
+- **사진 촬영만으로 수익 시뮬레이션** — 면적·일조량 자동 분석
+- 예: `남구 대연동 · 18평 · 예상 월수익 42만 원`
+- 3D Point Cloud로 모듈 배치 사전 시각화
+
+#### 🌡️ ② 농장 운영 · 환경 모니터링
+
+- 온도·습도·CO₂·광량 **실시간 표시** (예: `23.4°C 최적 온도 유지 중 · 습도 62% · 광량 850lx`)
+- 박스형 재배 모듈의 자동 환경 제어
+- **휴리스틱 수확 알림** (예: `상추 수확 D-3`) + 작물 추천
+
+#### 🛒 ③ 직거래 마켓 · 생활권 거래
+
+- 내가 키운 작물을 이웃에게 직접 판매
+- 도보 거리 기반 추천 (예: `대연동 상추 · 도보 8분 · 3,500원`)
+- **생산자·생산 이력 앱 내 증명** (당근마켓형 신뢰 구조)
+- 인앱 결제 · 정기 구독 · 수익 정산
+
+#### 🔐 ④ 계약·결제·정산
+
+- 소셜 로그인 기반 회원 관리
+- 공실 제공자 ↔ 도심 농부 전자 계약
+- 거래 정산 및 분배 자동화
+
+### 3.3. 기능 명세서
+
+> 📌 기능 명세서 링크 첨부 위치
 >
-> (영상)
+> - 🔗 Notion: *추가 예정*
+> - 📄 PDF: `docs/functional-specification.pdf`
+> - 📊 Google Sheets: *추가 예정*
 
-#### 3.3. 기능명세서
-> 개발한 제품에 대한 기능명세서를 작성해 제출하세요.
-> 
-> 노션 링크, 한글 문서, pdf 파일, 구글 스프레드 시트 등...
-
-#### 3.4. 디렉토리 구조
-> 위 레포지토리의 디렉토리 구조를 설명하세요.
-
-#### 3.5 AI 도구 활용
-> AI 도구를 어떤 단계에서 어떻게 활용했는지, 어떤 성과가 도출되었는지 기술해주세요.
-
-### 4. 설치 및 사용 방법
-> 제품을 설치하기 위헤 필요한 소프트웨어 및 설치 방법을 작성하세요.
->
-> 제품을 설치하고 난 후, 실행 할 수 있는 방법을 작성하세요.
-
-### 5. 소개 및 시연 영상
-> 프로젝트에 대한 소개와 시연 영상을 넣으세요.
-> 프로젝트 소개 동영상을 교육원 메일(swedu@pusan.ac.kr)로 제출 이후 센터에서 부여받은 youtube URL주소를 넣으세요.
-
-### 6. 팀 소개
-> 팀원 소개 & 구성원 별 역할 분담 & 간단한 연락처를 작성하세요.
-
-### 7. 해커톤 참여 후기
-> 팀원 별 해커톤 참여 후기를 작성하세요.
-```
-<br/>
-
-
-## 4. README.md 작성 팁
-- 마크다운 언어를 이용해 README.md 파일을 작성할 때 참고할 수 있는 마크다운 언어 문법을 공유합니다.
-- 다양한 예제와 보다 자세한 문법은 [이 문서](https://www.markdownguide.org/basic-syntax/)를 참고하세요.
-
-### 4.1. 헤더 Header
-```
-# This is a Header 1
-## This is a Header 2
-### This is a Header 3
-#### This is a Header 4
-##### This is a Header 5
-###### This is a Header 6
-####### This is a Header 7 은 지원되지 않습니다.
-```
-
-# This is a Header 1
-## This is a Header 2
-### This is a Header 3
-#### This is a Header 4
-##### This is a Header 5
-###### This is a Header 6
-####### This is a Header 7 은 지원되지 않습니다.
-<br />
-
-### 4.2. 인용문 BlockQuote
-```
-> This is a first blockqute.
->	> This is a second blockqute.
->	>	> This is a third blockqute.
-```
-> This is a first blockqute.
->	> This is a second blockqute.
->	>	> This is a third blockqute.
-<br />
-
-### 4.3. 목록 List
-* **Ordered List**
-```
-1. first
-2. second
-3. third  
-```
-1. first
-2. second
-3. third
-<br />
-
-* **Unordered List**
-```
-* 하나
-  * 둘
-
-+ 하나
-  + 둘
-
-- 하나
-  - 둘
-```
-* 하나
-  * 둘
-
-+ 하나
-  + 둘
-
-- 하나
-  - 둘
-<br />
-
-### 4.4. 코드 CodeBlock
-* 코드 블럭 이용 '``'
-```
-여러줄 주석 "```" 이용
-"```
-#include <stdio.h>
-int main(void){
-  printf("Hello world!");
-  return 0;
-}
-```"
-
-단어 주석 "`" 이용
-"`Hello world`"
-
-* 큰 따옴표(") 없이 사용하세요.
-``` 
-<br />
-
-### 4.5. 링크 Link
-```
-[Title](link)
-[부산대학교 AI융합교육원](https://swedu.pusan.ac.kr/swedu/index.do)
-
-<link>
-<https://swedu.pusan.ac.kr>
-``` 
-[부산대학교 AI융합교육원](https://swedu.pusan.ac.kr)
-
-<https://swedu.pusan.ac.kr>  
-<br />
-
-### 4.6. 강조 Highlighting
-```
-*single asterisks*
-_single underscores_
-**double asterisks**
-__double underscores__
-~~cancelline~~<img width="1994" height="253" alt="KakaoTalk_20260520_160616446_01" src="https://github.com/user-attachments/assets/9269b8bd-7539-4120-a97c-705f96fd5e71" />
+### 3.4. 디렉토리 구조
 
 ```
-*single asterisks* <br />
-_single underscores_ <br />
-**double asterisks** <br />
-__double underscores__ <br />
-~~cancelline~~  <br />
-<br />
+farm-broker/
+├── 📱 mobile/                  # React Native / Flutter 모바일 앱
+│   ├── src/
+│   │   ├── screens/            # 화면별 컴포넌트 (Map, Farm, Market 등)
+│   │   ├── components/         # 공통 UI 컴포넌트
+│   │   ├── services/           # API 호출 모듈
+│   │   ├── store/              # 전역 상태 관리
+│   │   └── utils/
+│   └── package.json
+│
+├── 🌿 backend-spring/          # Spring Boot (계약·결제·회원)
+│   ├── src/main/java/com/bomdong/
+│   │   ├── controller/
+│   │   ├── service/
+│   │   ├── repository/
+│   │   ├── domain/
+│   │   └── config/
+│   └── build.gradle
+│
+├── 🤖 backend-fastapi/         # FastAPI (AI 서빙·IoT)
+│   ├── app/
+│   │   ├── api/                # 엔드포인트
+│   │   ├── models/             # PyTorch 모델
+│   │   ├── services/           # 비즈니스 로직
+│   │   ├── iot/                # IoT 데이터 수신 핸들러
+│   │   └── core/
+│   └── requirements.txt
+│
+├── 🧠 ai/                      # 모델 학습·데이터셋
+│   ├── space-mapping/          # 공간 매핑 모델
+│   ├── crop-recommendation/    # 작물 추천 모델
+│   ├── revenue-prediction/     # 수익 예측 모델
+│   ├── harvest-heuristic/      # 휴리스틱 수확 예측
+│   └── datasets/
+│
+├── 📡 iot/                     # IoT 펌웨어·센서 코드
+│   └── sensor-modules/
+│
+├── 📚 docs/                    # 문서 (다이어그램·명세서·발표자료)
+│   ├── system-architecture.png
+│   ├── ERD.png
+│   └── api-spec.md
+│
+├── .github/                    # GitHub Actions CI/CD
+└── README.md
+```
 
-### 4.7. 이미지 Image
+---
+
+## 4. 설치 및 사용 방법
+
+### 📋 사전 요구사항
+
+| 구분 | 버전 |
+|------|------|
+| Node.js | v20.x 이상 |
+| Java (JDK) | 17 이상 |
+| Python | 3.11 이상 |
+| Docker *(선택)* | 24.x 이상 |
+
+### 🚀 설치 방법
+
+#### 1) 저장소 클론
+
+```bash
+git clone https://github.com/bomdong-market/farm-broker.git
+cd farm-broker
 ```
-<img src="/path/to/img.jpg" width="600px" title="Title" alt="Alt text"></img>
-![Alt text](/path/to/img.jpg "Optional title")
+
+#### 2) 모바일 앱 (React Native 예시)
+
+```bash
+cd mobile
+npm install
+npx react-native run-android   # 안드로이드
+npx react-native run-ios       # iOS
 ```
-<img src="https://github.com/user-attachments/assets/3c717ecf-6e22-487b-ae12-72d11e8af5ff" width="600px" title="부산대학교 AI융합교육원" alt="부산대학교 AI융합교육원"></img>
-<br/>
-![부산대학교 AI융합교육원](https://github.com/user-attachments/assets/3c717ecf-6e22-487b-ae12-72d11e8af5ff "부산대학교 AI융합교육원")
-<br/>
+
+#### 3) Spring Boot 백엔드
+
+```bash
+cd backend-spring
+./gradlew clean build
+./gradlew bootRun
+# 기본 포트: http://localhost:8080
+```
+
+#### 4) FastAPI 백엔드
+
+```bash
+cd backend-fastapi
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+# 기본 포트: http://localhost:8000
+```
+
+#### 5) 환경 변수 설정 (`.env` 예시)
+
+```env
+DB_URL=jdbc:mysql://localhost:3306/bomdong
+DB_USER=bomdong
+DB_PASSWORD=********
+JWT_SECRET=********
+KAKAO_CLIENT_ID=********
+FASTAPI_URL=http://localhost:8000
+```
+
+### ▶️ 실행 후 접속
+
+- 📱 모바일 앱: 에뮬레이터 또는 실기기에서 자동 실행
+- 🌿 Spring Boot API: `http://localhost:8080/swagger-ui.html`
+- 🤖 FastAPI Docs: `http://localhost:8000/docs`
+
+---
+
+## 5. 소개 및 시연 영상
+
+> 📌 프로젝트 소개 동영상은 부산대학교 AI융합교육원 메일(**swedu@pusan.ac.kr**)로 제출 후
+> 센터에서 부여받은 YouTube URL을 아래에 게시합니다.
+
+[![Farm Broker 시연 영상](https://img.shields.io/badge/▶_YouTube-시연_영상-FF0000?style=for-the-badge&logo=youtube)](https://www.youtube.com/)
+
+🔗 시연 영상: *YouTube URL 추가 예정*
+
+---
+
+## 6. 팀 소개
+
+> **팀명:** 봄동마켓 (Bomdong Market)
+> **지도교수:** 김태운 (부산대학교 정보컴퓨터공학부)
+
+<table>
+  <tr>
+    <th align="center">PM</th>
+    <th align="center">Backend</th>
+    <th align="center">AI</th>
+    <th align="center">DFM</th>
+    <th align="center">Front + Back</th>
+  </tr>
+  <tr>
+    <td align="center"><b>강범수</b></td>
+    <td align="center"><b>강민규</b></td>
+    <td align="center"><b>문수호</b></td>
+    <td align="center"><b>변현빈</b></td>
+    <td align="center"><b>이도헌</b></td>
+  </tr>
+  <tr>
+    <td align="center">정보컴퓨터공학부</td>
+    <td align="center">정보컴퓨터공학부</td>
+    <td align="center">정보컴퓨터공학부</td>
+    <td align="center">기계공학부</td>
+    <td align="center">정보컴퓨터공학부</td>
+  </tr>
+  <tr>
+    <td>전체 총괄<br/>기획 · IoT</td>
+    <td>백엔드 주개발<br/>데이터 처리</td>
+    <td>Agentic AI<br/>디버깅</td>
+    <td>제품설계<br/>전략기획</td>
+    <td>프론트 주<br/>백엔드 서브</td>
+  </tr>
+  <tr>
+    <td>CIS Lab 학부연구생<br/>Agentic AI 연구<br/>ADSP 자격증</td>
+    <td>카카오테크캠퍼스 4기<br/>(Agentic AI 과정)<br/>AI Boost 우수상(2위)</td>
+    <td>카카오테크캠퍼스 3기<br/>(프론트엔드 우수상 2위)<br/>SQLD 자격증</td>
+    <td>전산제도및형상모델링 A+<br/>공학기술경영 수강<br/>Creo · Ansys 활용</td>
+    <td>카카오테크캠퍼스 4기<br/>(Agentic AI 과정)<br/>웹응용프로그래밍 A+</td>
+  </tr>
+  <tr>
+    <td align="center"><a href="mailto:soseze1215@gmail.com">📧</a></td>
+    <td align="center"><a href="mailto:kanghy6220@gmail.com">📧</a></td>
+    <td align="center"><a href="mailto:dib3474@gmail.com">📧</a></td>
+    <td align="center"><a href="mailto:bini2432@naver.com">📧</a></td>
+    <td align="center"><a href="mailto:hero9573@naver.com">📧</a></td>
+  </tr>
+</table>
+
+| 이름 | 역할 | 연락처 | 이메일 |
+|------|------|--------|--------|
+| 강범수 (PM) | 전체 총괄 · 기획 · IoT | 010-9379-3821 | soseze1215@gmail.com |
+| 강민규 (Backend) | 백엔드 주개발 · 데이터 | 010-2298-6220 | kanghy6220@gmail.com |
+| 문수호 (AI) | Agentic AI · 디버깅 | 010-9497-2864 | dib3474@gmail.com |
+| 변현빈 (DFM) | 제품설계 · 전략기획 | 010-8977-5378 | bini2432@naver.com |
+| 이도헌 (Front+Back) | 프론트 주 · 백엔드 서브 | 010-9963-1705 | hero9573@naver.com |
+
+---
+
+## 7. 해커톤 참여 후기
+
+> 각 팀원의 솔직한 참여 후기를 자유롭게 작성합니다.
+
+### 👤 강범수 (PM)
+
+> *후기 작성 예정*
+
+### 👤 강민규 (Backend)
+
+> *후기 작성 예정*
+
+### 👤 문수호 (AI)
+
+> *후기 작성 예정*
+
+### 👤 변현빈 (DFM)
+
+> *후기 작성 예정*
+
+### 👤 이도헌 (Front + Back)
+
+> *후기 작성 예정*
+
+---
+
+<p align="center">
+  <b>🌱 도심을 채우다, 이웃과 나누다 🌱</b><br/>
+  <sub>제7회 PNU 창의융합 AI 해커톤 · 지정과제트랙 · 팀 봄동마켓</sub>
+</p>
