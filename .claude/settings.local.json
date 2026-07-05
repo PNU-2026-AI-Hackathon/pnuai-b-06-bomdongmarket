@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /c/Users/sosez/.claude/ide/ && cat /c/Users/sosez/.claude/ide/*.json 2>/dev/null | head -50)"
+    ]
+  }
+}
