@@ -43,6 +43,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 인증 불필요 — 회원가입 · 로그인
                 .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login").permitAll()
+                // 인증 불필요 — 작물 백과사전 공개 조회 (백엔드 3, 2026-07-05 협의로 백엔드 3이 직접 추가)
+                .requestMatchers(HttpMethod.GET, "/crops", "/crops/**").permitAll()
                 // 그 외 모든 요청은 인증 필요 (다른 팀원 도메인 API도 자동 보호됨)
                 .anyRequest().authenticated()
             )
