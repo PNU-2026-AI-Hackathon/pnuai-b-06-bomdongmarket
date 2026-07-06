@@ -6,6 +6,7 @@ import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyResponse;
+import com.farmbroker.farmbroker.matching.dto.MatchingStatusResponse;
 import com.farmbroker.farmbroker.matching.dto.MyMatchingResponse;
 import com.farmbroker.farmbroker.matching.dto.ReceivedMatchingResponse;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -101,5 +103,41 @@ public class MatchingService {
         return matchingRepository.findAllReceivedByOwnerId(userId).stream()
                 .map(ReceivedMatchingResponse::from)
                 .toList();
+    }
+
+    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 나머지 REQUESTED 자동 REJECTED.
+    // 공간 상태 전환은 백엔드 2 제공 markMatched()로만 수행(직접 UPDATE 금지) —
+    // 내부에서 AVAILABLE·미삭제를 검증해 위반 시 SPACE_NOT_AVAILABLE(409)을 던지고 수락 전체가 롤백된다.
+    @Transactional
+    public MatchingStatusResponse accept(Long matchingId, Long userId) {
+        Matching matching = getOwnedRequestedMatching(matchingId, userId);
+
+        matching.accept();
+        spaceService.markMatched(matching.getSpace().getId());
+        matchingRepository.rejectRemainingRequested(
+                matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
+
+        return MatchingStatusResponse.from(matching);
+    }
+
+    // 거절 — 매칭 상태만 변경하고 공간 상태는 건드리지 않는다
+    @Transactional
+    public MatchingStatusResponse reject(Long matchingId, Long userId) {
+        Matching matching = getOwnedRequestedMatching(matchingId, userId);
+        matching.reject();
+        return MatchingStatusResponse.from(matching);
+    }
+
+    // 수락/거절 공통 전제: 매칭 존재 → 공간 owner 본인 → 아직 REQUESTED 상태
+    private Matching getOwnedRequestedMatching(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        if (!matching.getSpace().getOwner().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
+        if (matching.getStatus() != MatchingStatus.REQUESTED) {
+            throw new BusinessException(ErrorCode.MATCHING_ALREADY_PROCESSED);
+        }
+        return matching;
     }
 }

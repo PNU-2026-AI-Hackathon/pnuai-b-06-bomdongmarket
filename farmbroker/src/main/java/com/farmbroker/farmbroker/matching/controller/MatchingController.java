@@ -3,6 +3,7 @@ package com.farmbroker.farmbroker.matching.controller;
 import com.farmbroker.farmbroker.common.response.ApiResponse;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyResponse;
+import com.farmbroker.farmbroker.matching.dto.MatchingStatusResponse;
 import com.farmbroker.farmbroker.matching.dto.MyMatchingResponse;
 import com.farmbroker.farmbroker.matching.dto.ReceivedMatchingResponse;
 import com.farmbroker.farmbroker.matching.service.MatchingService;
@@ -45,5 +46,21 @@ public class MatchingController {
     public ApiResponse<List<ReceivedMatchingResponse>> getReceived(@AuthenticationPrincipal Long userId) {
         List<ReceivedMatchingResponse> response = matchingService.getReceived(userId);
         return ApiResponse.success("받은 신청 목록 조회에 성공했습니다.", response);
+    }
+
+    // PATCH /api/matchings/{matchingId}/accept — 신청 수락 (공간 owner 전용)
+    @PatchMapping("/{matchingId}/accept")
+    public ApiResponse<MatchingStatusResponse> accept(@PathVariable Long matchingId,
+                                                      @AuthenticationPrincipal Long userId) {
+        MatchingStatusResponse response = matchingService.accept(matchingId, userId);
+        return ApiResponse.success("매칭 신청을 수락했습니다.", response);
+    }
+
+    // PATCH /api/matchings/{matchingId}/reject — 신청 거절 (공간 owner 전용)
+    @PatchMapping("/{matchingId}/reject")
+    public ApiResponse<MatchingStatusResponse> reject(@PathVariable Long matchingId,
+                                                      @AuthenticationPrincipal Long userId) {
+        MatchingStatusResponse response = matchingService.reject(matchingId, userId);
+        return ApiResponse.success("매칭 신청을 거절했습니다.", response);
     }
 }

@@ -59,4 +59,16 @@ public class Matching {
         this.message = message;
         this.status = MatchingStatus.REQUESTED;
     }
+
+    // 상태 전이는 REQUESTED에서만 허용된다 — 전제 검증(권한/현재 상태)은 서비스가 수행
+
+    public void accept() {
+        this.status = MatchingStatus.ACCEPTED;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    public void reject() {
+        this.status = MatchingStatus.REJECTED;
+        this.respondedAt = LocalDateTime.now();
+    }
 }
