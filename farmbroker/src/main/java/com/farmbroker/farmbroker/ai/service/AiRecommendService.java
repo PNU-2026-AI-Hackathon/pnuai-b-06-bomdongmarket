@@ -18,13 +18,13 @@ import com.farmbroker.farmbroker.space.dto.SpaceSummary;
 import com.farmbroker.farmbroker.space.service.SpaceService;
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -113,7 +113,7 @@ public class AiRecommendService {
                 if (output.recommendedCrops() != null && !output.recommendedCrops().isEmpty()) {
                     return output;
                 }
-            } catch (JsonProcessingException ignored) {
+            } catch (JacksonException ignored) {
                 // 재시도 1회
             }
         }
@@ -168,7 +168,7 @@ public class AiRecommendService {
     private String toJson(List<String> cautions) {
         try {
             return objectMapper.writeValueAsString(cautions != null ? cautions : List.of());
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
         }
     }
@@ -180,7 +180,7 @@ public class AiRecommendService {
         try {
             return objectMapper.readValue(cautionsJson, new TypeReference<List<String>>() {
             });
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             return List.of(); // 저장된 이력이 깨져 있어도 응답 전체를 실패시키지 않는다
         }
     }

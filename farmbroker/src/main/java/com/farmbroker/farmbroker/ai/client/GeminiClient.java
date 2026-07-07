@@ -2,9 +2,6 @@ package com.farmbroker.farmbroker.ai.client;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -13,6 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -21,6 +21,7 @@ import java.util.Map;
 
 // Gemini API 호출을 격리하는 클라이언트.
 // 서비스 로직이 외부 API의 요청/응답 형식을 모르게 해 모델 교체·모킹·테스트를 쉽게 한다.
+// ObjectMapper는 Boot 4 기본인 Jackson 3(tools.jackson) 빈을 주입받는다 (Jackson 2 자동 설정은 Boot 4에서 제거됨).
 // - responseMimeType=application/json으로 JSON 응답 강제
 // - 타임아웃: connect 3s / read 15s → 초과 시 AI_TIMEOUT(504)
 // - 429 → AI_QUOTA_EXCEEDED, 그 외 API 오류/응답 구조 이상 → AI_RESPONSE_INVALID
@@ -86,7 +87,7 @@ public class GeminiClient {
                 throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
             }
             return text.asText();
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
         }
     }
