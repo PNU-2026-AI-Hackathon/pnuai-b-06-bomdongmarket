@@ -6,6 +6,7 @@ import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.space.domain.SpaceImage;
 import com.farmbroker.farmbroker.space.domain.SpaceStatus;
 import com.farmbroker.farmbroker.space.dto.SpaceCreateRequest;
+import com.farmbroker.farmbroker.space.dto.SpaceDeleteResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceDetailResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceListItemResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceResponse;
@@ -109,6 +110,17 @@ public class SpaceService {
         // @LastModifiedDate는 flush 시점에 갱신되므로, 응답에 최신 updatedAt을 담기 위해 먼저 flush한다
         spaceRepository.flush();
         return SpaceResponse.from(space, imageUrls);
+    }
+
+    // 공간 삭제 — Soft Delete(deleted=true). 이미지는 물리 삭제하지 않는다 (매칭 이력에서 참조 가능).
+    // 이미 삭제된 공간은 findByIdAndDeletedFalse에서 걸러져 404가 된다.
+    @Transactional
+    public SpaceDeleteResponse delete(Long userId, Long spaceId) {
+        Space space = spaceRepository.findByIdAndDeletedFalse(spaceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
+        validateOwner(space, userId);
+        space.softDelete();
+        return SpaceDeleteResponse.of(spaceId, true);
     }
 
     private void validateOwner(Space space, Long userId) {

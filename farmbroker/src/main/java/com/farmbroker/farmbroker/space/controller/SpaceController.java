@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.space.controller;
 
 import com.farmbroker.farmbroker.common.response.ApiResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceCreateRequest;
+import com.farmbroker.farmbroker.space.dto.SpaceDeleteResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceDetailResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceListItemResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceResponse;
@@ -56,5 +57,13 @@ public class SpaceController {
                                              @RequestBody @Valid SpaceUpdateRequest request) {
         SpaceResponse response = spaceService.update(userId, spaceId, request);
         return ApiResponse.success("공간 정보가 수정되었습니다.", response);
+    }
+
+    // DELETE /api/spaces/{spaceId} — 공간 삭제 (Soft Delete, 등록자 본인만)
+    @DeleteMapping("/{spaceId}")
+    public ApiResponse<SpaceDeleteResponse> delete(@AuthenticationPrincipal Long userId,
+                                                   @PathVariable Long spaceId) {
+        SpaceDeleteResponse response = spaceService.delete(userId, spaceId);
+        return ApiResponse.success("공간이 삭제되었습니다.", response);
     }
 }
