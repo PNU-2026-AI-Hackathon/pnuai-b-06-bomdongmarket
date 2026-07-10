@@ -10,7 +10,7 @@ import { DesktopNavigation } from '@/components/layout/DesktopNavigation';
 export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-leaf-200 bg-white/[0.97] shadow-[0_10px_30px_-24px_rgba(16,32,22,0.45)] backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:gap-5">
         <Link
           className="flex items-center gap-2"
           to={ROUTES.home}
