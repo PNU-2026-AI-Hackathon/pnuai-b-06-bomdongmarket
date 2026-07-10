@@ -24,6 +24,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SpaceController {
 
+    // 응답 메시지 상수 — 문구 변경 시 여기만 수정한다
+    private static final String MSG_CREATED = "공간 등록이 완료되었습니다.";
+    private static final String MSG_MY_LIST = "내 공간 목록 조회에 성공했습니다.";
+    private static final String MSG_DETAIL = "공간 상세 조회에 성공했습니다.";
+    private static final String MSG_UPDATED = "공간 정보가 수정되었습니다.";
+    private static final String MSG_DELETED = "공간이 삭제되었습니다.";
+
     private final SpaceService spaceService;
 
     // POST /api/spaces — 공간 등록 (OWNER만)
@@ -32,7 +39,7 @@ public class SpaceController {
     public ApiResponse<SpaceResponse> create(@AuthenticationPrincipal Long userId,
                                              @RequestBody @Valid SpaceCreateRequest request) {
         SpaceResponse response = spaceService.create(userId, request);
-        return ApiResponse.success("공간 등록이 완료되었습니다.", response);
+        return ApiResponse.success(MSG_CREATED, response);
     }
 
     // GET /api/spaces/my — 내가 등록한 공간 목록 (인증 필요)
@@ -40,14 +47,14 @@ public class SpaceController {
     @GetMapping("/my")
     public ApiResponse<List<SpaceListItemResponse>> getMy(@AuthenticationPrincipal Long userId) {
         List<SpaceListItemResponse> response = spaceService.getMy(userId);
-        return ApiResponse.success("내 공간 목록 조회에 성공했습니다.", response);
+        return ApiResponse.success(MSG_MY_LIST, response);
     }
 
     // GET /api/spaces/{spaceId} — 공간 상세 조회 (비로그인 허용)
     @GetMapping("/{spaceId}")
     public ApiResponse<SpaceDetailResponse> getDetail(@PathVariable Long spaceId) {
         SpaceDetailResponse response = spaceService.getDetail(spaceId);
-        return ApiResponse.success("공간 상세 조회에 성공했습니다.", response);
+        return ApiResponse.success(MSG_DETAIL, response);
     }
 
     // PATCH /api/spaces/{spaceId} — 공간 부분수정 (등록자 본인만)
@@ -56,7 +63,7 @@ public class SpaceController {
                                              @PathVariable Long spaceId,
                                              @RequestBody @Valid SpaceUpdateRequest request) {
         SpaceResponse response = spaceService.update(userId, spaceId, request);
-        return ApiResponse.success("공간 정보가 수정되었습니다.", response);
+        return ApiResponse.success(MSG_UPDATED, response);
     }
 
     // DELETE /api/spaces/{spaceId} — 공간 삭제 (Soft Delete, 등록자 본인만)
@@ -64,6 +71,6 @@ public class SpaceController {
     public ApiResponse<SpaceDeleteResponse> delete(@AuthenticationPrincipal Long userId,
                                                    @PathVariable Long spaceId) {
         SpaceDeleteResponse response = spaceService.delete(userId, spaceId);
-        return ApiResponse.success("공간이 삭제되었습니다.", response);
+        return ApiResponse.success(MSG_DELETED, response);
     }
 }
