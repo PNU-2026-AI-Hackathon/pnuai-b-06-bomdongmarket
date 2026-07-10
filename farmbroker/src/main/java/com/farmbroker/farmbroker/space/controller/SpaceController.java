@@ -27,12 +27,12 @@ import java.util.List;
 public class SpaceController {
 
     // 응답 메시지 상수 — 문구 변경 시 여기만 수정한다
-    private static final String MSG_CREATED = "공간 등록이 완료되었습니다.";
-    private static final String MSG_LIST = "공간 목록 조회에 성공했습니다.";
-    private static final String MSG_MY_LIST = "내 공간 목록 조회에 성공했습니다.";
-    private static final String MSG_DETAIL = "공간 상세 조회에 성공했습니다.";
-    private static final String MSG_UPDATED = "공간 정보가 수정되었습니다.";
-    private static final String MSG_DELETED = "공간이 삭제되었습니다.";
+    private static final String MSG_CREATE_SUCCESS = "공간 등록이 완료되었습니다.";
+    private static final String MSG_GET_LIST_SUCCESS = "공간 목록 조회에 성공했습니다.";
+    private static final String MSG_GET_MY_LIST_SUCCESS = "내 공간 목록 조회에 성공했습니다.";
+    private static final String MSG_GET_DETAIL_SUCCESS = "공간 상세 조회에 성공했습니다.";
+    private static final String MSG_UPDATE_SUCCESS = "공간 정보가 수정되었습니다.";
+    private static final String MSG_DELETE_SUCCESS = "공간이 삭제되었습니다.";
 
     private final SpaceService spaceService;
 
@@ -42,7 +42,7 @@ public class SpaceController {
     public ApiResponse<SpaceResponse> create(@AuthenticationPrincipal Long userId,
                                              @RequestBody @Valid SpaceCreateRequest request) {
         SpaceResponse response = spaceService.create(userId, request);
-        return ApiResponse.success(MSG_CREATED, response);
+        return ApiResponse.success(MSG_CREATE_SUCCESS, response);
     }
 
     // GET /api/spaces — 공간 목록 조회: 검색/필터/정렬/페이징 (비로그인 허용)
@@ -54,7 +54,7 @@ public class SpaceController {
                                                   @RequestParam(defaultValue = "0") int page,
                                                   @RequestParam(defaultValue = "10") int size) {
         SpaceListResponse response = spaceService.getList(keyword, minArea, maxRent, sort, page, size);
-        return ApiResponse.success(MSG_LIST, response);
+        return ApiResponse.success(MSG_GET_LIST_SUCCESS, response);
     }
 
     // GET /api/spaces/my — 내가 등록한 공간 목록 (인증 필요)
@@ -62,14 +62,14 @@ public class SpaceController {
     @GetMapping("/my")
     public ApiResponse<List<SpaceListItemResponse>> getMy(@AuthenticationPrincipal Long userId) {
         List<SpaceListItemResponse> response = spaceService.getMy(userId);
-        return ApiResponse.success(MSG_MY_LIST, response);
+        return ApiResponse.success(MSG_GET_MY_LIST_SUCCESS, response);
     }
 
     // GET /api/spaces/{spaceId} — 공간 상세 조회 (비로그인 허용)
     @GetMapping("/{spaceId}")
     public ApiResponse<SpaceDetailResponse> getDetail(@PathVariable Long spaceId) {
         SpaceDetailResponse response = spaceService.getDetail(spaceId);
-        return ApiResponse.success(MSG_DETAIL, response);
+        return ApiResponse.success(MSG_GET_DETAIL_SUCCESS, response);
     }
 
     // PATCH /api/spaces/{spaceId} — 공간 부분수정 (등록자 본인만)
@@ -78,7 +78,7 @@ public class SpaceController {
                                              @PathVariable Long spaceId,
                                              @RequestBody @Valid SpaceUpdateRequest request) {
         SpaceResponse response = spaceService.update(userId, spaceId, request);
-        return ApiResponse.success(MSG_UPDATED, response);
+        return ApiResponse.success(MSG_UPDATE_SUCCESS, response);
     }
 
     // DELETE /api/spaces/{spaceId} — 공간 삭제 (Soft Delete, 등록자 본인만)
@@ -86,6 +86,6 @@ public class SpaceController {
     public ApiResponse<SpaceDeleteResponse> delete(@AuthenticationPrincipal Long userId,
                                                    @PathVariable Long spaceId) {
         SpaceDeleteResponse response = spaceService.delete(userId, spaceId);
-        return ApiResponse.success(MSG_DELETED, response);
+        return ApiResponse.success(MSG_DELETE_SUCCESS, response);
     }
 }
