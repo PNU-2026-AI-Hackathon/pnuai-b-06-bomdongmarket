@@ -2,6 +2,7 @@ import { ArrowLeft, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -17,6 +18,7 @@ import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTr
 
 // 상품 상세와 생산 이력, 수량 선택, 구매 CTA를 제공하는 마켓 상세 화면입니다.
 export function ProductDetailPage() {
+  const requireAuth = useRequireAuth();
   const { productId } = useParams();
   const [item, setItem] = useState<MarketItem | null>(null);
   const [status, setStatus] = useState<AsyncStatus>('idle');
@@ -108,7 +110,7 @@ export function ProductDetailPage() {
                 </Button>
               </div>
             </div>
-            <Button className="mt-5 w-full">
+            <Button className="mt-5 w-full" onClick={() => requireAuth()}>
               <ShoppingBag className="h-5 w-5" aria-hidden />
               {formatCurrency(item.price * quantity)} 구매하기
             </Button>

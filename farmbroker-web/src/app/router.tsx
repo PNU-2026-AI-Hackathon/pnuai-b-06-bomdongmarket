@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage } from '@/pages/auth';
@@ -17,16 +18,18 @@ export function AppRouter() {
       <Route element={<AppLayout />}>
         <Route element={<HomePage />} path={ROUTES.home} />
         <Route element={<LoginPage />} path={ROUTES.login} />
-        <Route element={<DashboardPage />} path={ROUTES.dashboard} />
         <Route element={<SpacesPage />} path={ROUTES.spaces} />
-        <Route element={<SpaceCreatePage />} path={ROUTES.newSpace} />
         <Route element={<SpaceDetailPage />} path="/spaces/:spaceId" />
         <Route element={<FarmerPage />} path={ROUTES.farmer} />
-        <Route element={<ProfitPredictionPage />} path={ROUTES.prediction} />
-        <Route element={<ContractsPage />} path={ROUTES.contracts} />
         <Route element={<MarketPage />} path={ROUTES.market} />
         <Route element={<ProductDetailPage />} path="/market/:productId" />
-        <Route element={<MyPage />} path={ROUTES.myPage} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardPage />} path={ROUTES.dashboard} />
+          <Route element={<SpaceCreatePage />} path={ROUTES.newSpace} />
+          <Route element={<ProfitPredictionPage />} path={ROUTES.prediction} />
+          <Route element={<ContractsPage />} path={ROUTES.contracts} />
+          <Route element={<MyPage />} path={ROUTES.myPage} />
+        </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />
       </Route>
     </Routes>

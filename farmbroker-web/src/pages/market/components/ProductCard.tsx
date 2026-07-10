@@ -1,6 +1,7 @@
 import { Plus, Route } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -14,6 +15,8 @@ interface ProductCardProps {
 
 // 마켓 목록의 2열/세로 카드에서 상품 신선도와 구매 액션을 보여줍니다.
 export function ProductCard({ item }: ProductCardProps) {
+  const requireAuth = useRequireAuth();
+
   return (
     <Card className="overflow-hidden">
       <Link to={ROUTES.productDetail(item.productId)}>
@@ -40,7 +43,11 @@ export function ProductCard({ item }: ProductCardProps) {
             {formatCurrency(item.price)}
             <span className="text-xs font-semibold text-slate-500"> / {item.unit}</span>
           </span>
-          <Button aria-label={`${item.name} 담기`} size="sm">
+          <Button
+            aria-label={`${item.name} 담기`}
+            onClick={() => requireAuth()}
+            size="sm"
+          >
             <Plus className="h-4 w-4" aria-hidden />
             담기
           </Button>

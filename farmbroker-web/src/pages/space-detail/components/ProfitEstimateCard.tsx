@@ -1,5 +1,6 @@
 import { Bot, ChartNoAxesCombined, Send } from 'lucide-react';
 
+import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -20,6 +21,8 @@ export function ProfitEstimateCard({
   status,
   onRun,
 }: ProfitEstimateCardProps) {
+  const requireAuth = useRequireAuth();
+
   if (status === 'loading') {
     return <LoadingState label="AI 추천을 실행하는 중입니다" />;
   }
@@ -101,7 +104,7 @@ export function ProfitEstimateCard({
             ))}
           </div>
 
-          <Button className="mt-5 w-full">
+          <Button className="mt-5 w-full" onClick={() => requireAuth()}>
             <Send className="h-5 w-5" aria-hidden />
             매칭 신청 보내기
           </Button>
