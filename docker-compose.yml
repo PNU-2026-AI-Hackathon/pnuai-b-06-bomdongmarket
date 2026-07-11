@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: farmbroker-db
+    environment:
+      # 값은 .env 에서 주입 (없으면 compose 가 에러로 멈춤 — 커밋 파일엔 secret 미포함)
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 를 .env 에 설정하세요 (cp .env.example .env)}
+      MYSQL_DATABASE: farmbroker
+      TZ: Asia/Seoul
+    ports:
+      # 로컬 MySQL(3306)과 충돌하지 않도록 호스트는 3307 사용
+      # Workbench 등에서 localhost:3307 로 접속
+      - "3307:3306"
+    volumes:
+      - farmbroker-mysql-data:/var/lib/mysql
+      # 최초 실행(볼륨이 비어 있을 때)에만 이 폴더의 *.sql 이 자동 실행됨 — 시드 데이터 공유용
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      # 초기화 중 임시 서버는 TCP를 받지 않으므로 127.0.0.1(TCP) 핑으로 준비 완료를 판별
+      test: ["CMD-SHELL", "mysqladmin ping -h127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./farmbroker
+    container_name: farmbroker-api
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:mysql://db:3306/farmbroker?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: root
+      # 값은 .env 에서 주입 (커밋 파일엔 secret 미포함)
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 를 .env 에 설정하세요}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 를 .env 에 설정하세요}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./farmbroker-web
+    container_name: farmbroker-web
+    ports:
+      # CORS 허용 Origin(http://localhost:5173)과 맞추기 위해 5173으로 매핑
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  farmbroker-mysql-data:
