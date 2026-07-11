@@ -189,6 +189,19 @@ public class SpaceService {
                 .toList();
     }
 
+    // 매칭 수락 시 BE3 accept() 트랜잭션 안에서 호출된다.
+    // 전파는 반드시 REQUIRED(기본값) — REQUIRES_NEW로 바꾸면 매칭 수락 롤백 시 status만 남는 사고가 난다.
+    // 클래스 기본이 readOnly라 쓰기 @Transactional을 별도 부착한다 (작업명세서 5.2).
+    @Transactional
+    public void markMatched(Long spaceId) {
+        Space space = spaceRepository.findById(spaceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
+        if (space.isDeleted() || space.getStatus() != SpaceStatus.AVAILABLE) {
+            throw new BusinessException(ErrorCode.SPACE_NOT_AVAILABLE);
+        }
+        space.markMatched();
+    }
+
     private void validateOwner(Space space, Long userId) {
         if (!space.getOwner().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.NOT_SPACE_OWNER);
