@@ -179,6 +179,14 @@ export async function deleteSpace(spaceId: number): Promise<SpaceDeleteResult> {
 }
 
 export async function getRecommendation(spaceId: number): Promise<AiRecommendation> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<AiRecommendation>(ENDPOINTS.ai.recommend, {
+      method: 'POST',
+      body: { spaceId },
+    });
+    return response.data;
+  }
+
   await mockDelay();
   return { ...mockRecommendation, spaceId };
 }

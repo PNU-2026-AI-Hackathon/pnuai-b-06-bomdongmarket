@@ -1,4 +1,5 @@
 import { Bot, ChartNoAxesCombined, Send } from 'lucide-react';
+import { useState } from 'react';
 
 import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
@@ -13,6 +14,9 @@ interface ProfitEstimateCardProps {
   recommendation: AiRecommendation | null;
   status: AsyncStatus;
   onRun: () => void;
+  matchingStatus: AsyncStatus;
+  matchingError: string | null;
+  onApply: (message: string) => void;
 }
 
 // AI 추천 결과를 수익 예측과 매칭 신청 CTA로 이어주는 상세 페이지 보조 패널입니다.
@@ -20,8 +24,14 @@ export function ProfitEstimateCard({
   recommendation,
   status,
   onRun,
+  matchingStatus,
+  matchingError,
+  onApply,
 }: ProfitEstimateCardProps) {
   const requireAuth = useRequireAuth();
+  const [message, setMessage] = useState(
+    '이 공간에서 스마트팜을 운영하고 싶습니다. 매칭 상담을 요청드립니다.',
+  );
 
   if (status === 'loading') {
     return <LoadingState label="AI 추천을 실행하는 중입니다" />;
@@ -104,9 +114,36 @@ export function ProfitEstimateCard({
             ))}
           </div>
 
-          <Button className="mt-5 w-full" onClick={() => requireAuth()}>
+          <label className="mt-5 block text-sm font-bold text-ink-900">
+            매칭 신청 메시지
+            <textarea
+              className="mt-2 min-h-24 w-full rounded-app border border-leaf-100 bg-white px-3 py-3 text-sm font-normal text-ink-900 focus:border-leaf-500 focus:outline-none focus:ring-2 focus:ring-leaf-200"
+              maxLength={500}
+              onChange={(event) => setMessage(event.target.value)}
+              value={message}
+            />
+          </label>
+          {matchingError ? (
+            <p className="mt-3 text-sm font-semibold text-red-700" role="alert">
+              {matchingError}
+            </p>
+          ) : null}
+          {matchingStatus === 'success' ? (
+            <p className="mt-3 text-sm font-semibold text-leaf-700" role="status">
+              매칭 신청이 완료되었습니다.
+            </p>
+          ) : null}
+          <Button
+            className="mt-5 w-full"
+            disabled={
+              !message.trim() ||
+              matchingStatus === 'loading' ||
+              matchingStatus === 'success'
+            }
+            onClick={() => requireAuth(() => onApply(message.trim()))}
+          >
             <Send className="h-5 w-5" aria-hidden />
-            매칭 신청 보내기
+            {matchingStatus === 'loading' ? '신청 중...' : '매칭 신청 보내기'}
           </Button>
         </div>
       )}

@@ -138,6 +138,12 @@ export interface CropDetail extends CropSummary {
   dataSource: 'SEED' | 'AI';
 }
 
+export interface CropSearchParams {
+  keyword?: string;
+  category?: string;
+  difficulty?: CropDifficulty;
+}
+
 export interface CropRecommendation {
   cropName: string;
   cropId: number | null;
@@ -155,13 +161,51 @@ export interface AiRecommendation {
   createdAt: string;
 }
 
-export interface MatchingRequest {
+export interface AiRecommendationInput {
+  spaceId: number;
+  preferredCrop?: string;
+  purpose?: string;
+  additionalInfo?: string;
+}
+
+export interface MatchingApplyInput {
+  spaceId: number;
+  message: string;
+}
+
+export interface MatchingApplyResult extends MatchingApplyInput {
+  matchingId: number;
+  farmerId: number;
+  ownerId: number;
+  status: MatchingStatus;
+  createdAt: string;
+}
+
+export interface MatchingStatusResult {
+  matchingId: number;
+  status: MatchingStatus;
+  respondedAt: string;
+}
+
+export interface MyMatching {
   matchingId: number;
   spaceId: number;
   spaceTitle: string;
   spaceImageUrl: string | null;
   monthlyRent: number;
   ownerNickname: string;
+  status: MatchingStatus;
+  createdAt: string;
+  respondedAt: string | null;
+}
+
+export interface MatchingRequest {
+  matchingId: number;
+  spaceId: number;
+  spaceTitle: string;
+  spaceImageUrl?: string | null;
+  monthlyRent?: number;
+  ownerNickname?: string;
   farmerId: number;
   farmerNickname: string;
   message: string;
