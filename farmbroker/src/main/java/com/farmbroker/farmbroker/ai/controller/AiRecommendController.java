@@ -5,6 +5,8 @@ import com.farmbroker.farmbroker.ai.dto.AiRecommendRequest;
 import com.farmbroker.farmbroker.ai.dto.AiRecommendResponse;
 import com.farmbroker.farmbroker.ai.service.AiRecommendService;
 import com.farmbroker.farmbroker.common.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 // AI 추천 엔드포인트 컨트롤러.
 // 권한은 로그인만 요구(역할 제한 없음) — OWNER도 "내 공간에 뭘 키우면 좋을까"를 조회할 수 있게 열어둔다 (팀 확정).
+@Tag(name = "AI 추천", description = "AI 작물/공간 활용 추천 API (로그인 필요, 역할 제한 없음)")
 @RestController
 @RequestMapping("/ai")
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class AiRecommendController {
     private final AiRecommendService aiRecommendService;
 
     // POST /api/ai/recommend — 작물 및 공간 활용 추천
+    @Operation(summary = "작물 및 공간 활용 추천", description = "AI 호출 실패 시 이전 추천 결과로 폴백해 성공 응답을 반환한다.")
     @PostMapping("/recommend")
     public ApiResponse<AiRecommendResponse> recommend(@RequestBody @Valid AiRecommendRequest request,
                                                       @AuthenticationPrincipal Long userId) {
