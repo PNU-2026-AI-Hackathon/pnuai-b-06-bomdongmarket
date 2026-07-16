@@ -1,0 +1,19 @@
+﻿key,value,unit,description
+air_density_kg_m3,1.204,kg/m3,공기 밀도
+air_specific_heat_j_kg_k,1005,J/kgK,공기 정압비열
+air_changes_per_hour,0.125,1/hour,시간당 환기수 ACH
+hvac_cop,4.0,ratio,냉난방 성능계수
+sensible_heat_ratio,0.75,ratio,현열비 SHR
+atmospheric_pressure_pa,101325,Pa,대기압
+dry_air_gas_constant_j_kg_k,287.05,J/kgK,건조공기 기체상수
+water_vapor_gas_constant_j_kg_k,461.5,J/kgK,수증기 기체상수
+humidity_ratio_constant,0.622,ratio,건조공기 기체상수와 수증기 기체상수의 비
+latent_heat_kwh_kg,0.68153,kWh/kg,20도 기준 잠열
+dehumidification_sec_kwh_kg,0.5,kWh/kg,제습 SEC
+humidification_sec_kwh_kg,0.07,kWh/kg,가습 SEC
+other_water_l_m2_day,0.2,L/m2day,공실 전체면적 기준 기타 용수
+water_rate_krw_m3,750,KRW/m3,수도 단일요율
+electricity_rate_krw_kwh,155,KRW/kWh,전기 단일요율
+minimum_wage_krw_hour,10320,KRW/hour,최저시급
+labor_hours_per_kg,0.5,hour/kg,생산량당 노동량
+depreciation_and_other_cost_krw_month,100000,KRW/month,임시 감가상각 등 기타 월 비용
