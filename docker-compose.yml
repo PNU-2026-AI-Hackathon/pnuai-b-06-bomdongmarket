@@ -34,6 +34,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 를 .env 에 설정하세요}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 를 .env 에 설정하세요}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY 를 .env 에 설정하세요}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     depends_on:
       db:
         condition: service_healthy
