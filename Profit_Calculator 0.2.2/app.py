@@ -1,4 +1,4 @@
-"""Profit Calculator 0.2.1 Streamlit 대시보드."""
+"""Profit Calculator 0.2.2 Streamlit 대시보드."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from main import DATA_DIR, calculate_all_sites
 
 
 st.set_page_config(
-    page_title="Profit Calculator 0.2.1",
+    page_title="Profit Calculator 0.2.2",
     page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -494,7 +494,7 @@ selected_sites = [label_to_site[label] for label in selected_labels]
 st.markdown(
     f"""
     <div class="hero">
-        <div class="hero-kicker">Profit Calculator · Version 0.2.1</div>
+        <div class="hero-kicker">Profit Calculator · Version 0.2.2</div>
         <h1>실내농장 수익성 대시보드</h1>
         <p>공간, 생산, 에너지, 운영비와 두 가지 수익배분 방식을 연결해 월 기준 사업성을 한눈에 비교합니다.</p>
         <div class="hero-badge">● {len(selected_sites)}개 사업장 분석 중 · 12개월 환경조건 반영</div>
