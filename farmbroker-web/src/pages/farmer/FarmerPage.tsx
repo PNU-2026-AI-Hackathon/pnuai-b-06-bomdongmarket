@@ -1,4 +1,4 @@
-import { Filter, MapPinned, Search } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 import { EmptyState } from '@/components/common/EmptyState';
@@ -6,21 +6,15 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { farmerFilterChips } from '@/pages/farmer/constants/farmerContent';
 import { RecommendationCard } from '@/pages/farmer/components/RecommendationCard';
 import { useFarmerRecommendations } from '@/pages/farmer/hooks/useFarmerRecommendations';
 
-// 도심 농부가 추천 공간을 탐색하고 매칭 상세로 이어지는 화면입니다.
+// 도심 농부가 등록된 공간을 탐색하고 상세의 AI 추천으로 이어지는 화면입니다.
 export function FarmerPage() {
   const { recommendations, status, error, reload } = useFarmerRecommendations();
   const [keyword, setKeyword] = useState('');
-  const [activeFilter, setActiveFilter] = useState('면적');
-
-  // 현재 데모에서는 검색어 필터만 실제로 적용하고, 칩은 발표 중 조건 선택 UI를 보여주는 용도입니다.
   const filtered = recommendations.filter((item) =>
-    `${item.title} ${item.address} ${item.recommendedCrop}`
-      .toLowerCase()
-      .includes(keyword.toLowerCase()),
+    `${item.title} ${item.address}`.toLowerCase().includes(keyword.toLowerCase()),
   );
 
   return (
@@ -30,43 +24,28 @@ export function FarmerPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
             농부 매칭
           </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-900 sm:text-4xl">추천 공간</h1>
+          <h1 className="mt-2 text-3xl font-black text-ink-900 sm:text-4xl">
+            매칭 가능한 공간
+          </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            매칭 점수, 예상 수익, 추천 작물, 월세를 비교한 뒤 매칭 신청을 보낼 수
-            있습니다.
+            등록된 공간의 면적과 월세를 비교하고, 상세 화면에서 실제 공간 정보에 기반한 AI
+            작물 추천을 확인할 수 있습니다.
           </p>
         </div>
         <div className="rounded-app border border-leaf-100 bg-white p-3 text-sm font-semibold text-leaf-800 shadow-card">
-          <MapPinned className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
-          부산 스마트팜 지도 미리보기
+          <Sparkles className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
+          상세 화면에서 AI 추천 확인
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 rounded-app border border-leaf-100 bg-white p-4 shadow-card lg:grid-cols-[1fr_auto]">
+      <div className="mt-6 rounded-app border border-leaf-100 bg-white p-4 shadow-card">
         <Input
           aria-label="추천 공간 검색"
           icon={<Search className="h-4 w-4" aria-hidden />}
-          placeholder="작물, 지역, 공간명 검색"
+          placeholder="지역 또는 공간명 검색"
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" aria-hidden />
-          {farmerFilterChips.map((chip) => (
-            <button
-              key={chip}
-              className={`min-h-10 rounded-full px-3 text-sm font-bold transition ${
-                activeFilter === chip
-                  ? 'bg-leaf-700 text-white'
-                  : 'bg-leaf-50 text-leaf-800 hover:bg-leaf-100'
-              }`}
-              onClick={() => setActiveFilter(chip)}
-              type="button"
-            >
-              {chip}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="mt-6 grid gap-4">
@@ -82,7 +61,7 @@ export function FarmerPage() {
         {status === 'success' && filtered.length === 0 ? (
           <EmptyState
             title="추천 공간이 없습니다"
-            description="검색어를 지우거나 다른 필터를 선택해보세요."
+            description="검색어를 지우거나 다른 지역 또는 공간명을 입력해보세요."
           />
         ) : null}
         {status === 'success'
