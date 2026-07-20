@@ -138,48 +138,50 @@ def print_site_result(site: dict[str, object]) -> None:
             f"{format_kwh(float(electricity_month['total_environment_energy_kwh'])):>11}"
         )
 
-    print("\n[10 수익 - 방식 1: 최저시급 지급]")
+    print("\n[10 수익 및 계약형태 추천]")
     print(
         f"  월 기초비용 {format_krw(float(profit['monthly_base_cost_krw']))} | "
-        f"월 운영비용 {format_krw(float(profit['regular_operating_cost_krw']))} | "
-        f"월 영업이익 {format_krw(float(profit['regular_operating_profit_krw']))}"
+        f"월 운영비용 {format_krw(float(profit['monthly_operating_cost_krw']))} | "
+        f"월 영업이익 {format_krw(float(profit['monthly_operating_profit_krw']))}"
     )
     print(
-        f"  공간 대여자 예상수익(배분율 0.8) "
-        f"{format_krw(float(profit['regular_landlord_income_krw']))} | "
-        f"사업장 영업이익 {format_krw(float(profit['regular_business_profit_krw']))}"
-    )
-
-    print("[10 수익 - 방식 2: 농부 비례배분]")
-    print(
-        f"  월 운영비용 {format_krw(float(profit['shared_operating_cost_krw']))} | "
-        f"배분 전 영업이익 {format_krw(float(profit['shared_operating_profit_krw']))}"
+        f"  공간 대여자 예상수익(배분율 "
+        f"{float(profit['landlord_share_ratio']):.1f}) "
+        f"{format_krw(float(profit['landlord_expected_income_krw']))} | "
+        f"원하는 월세 {format_krw(float(profit['desired_monthly_rent_krw']))} | "
+        f"차이 {format_krw(float(profit['rent_income_difference_krw']))}"
     )
     print(
-        f"  공간 대여자(0.6) {format_krw(float(profit['shared_landlord_income_krw']))} | "
-        f"농부(0.2) {format_krw(float(profit['shared_farmer_income_krw']))} | "
-        f"사업장(잔여 0.2) {format_krw(float(profit['shared_business_profit_krw']))}"
+        f"  사업장 영업이익 "
+        f"{format_krw(float(profit['business_operating_profit_krw']))} | "
+        f"추천 {profit['recommendation']} ({profit['contract_type']})"
     )
 
 
 def print_total_result(sites: list[dict[str, object]]) -> None:
-    """전체 사업장의 두 수익 방식 합계를 출력한다."""
+    """공간×작물 비교 시나리오의 합계와 추천 개수를 출력한다."""
 
     def total(section: str, key: str) -> float:
         return sum(float(site[section][key]) for site in sites)  # type: ignore[index]
 
     print("\n" + "#" * 104)
-    print(f"{len(sites)}개 사업장 전체 월 합계")
+    print(f"{len(sites)}개 공간×작물 시나리오 비교 요약")
     print("#" * 104)
-    print(f"전체 월 매출: {format_krw(total('sales', 'monthly_revenue_krw'))}")
     print(
-        "방식 1 | "
-        f"공간 대여자 예상수익 {format_krw(total('profit', 'regular_landlord_income_krw'))} | "
-        f"사업 영업이익 {format_krw(total('profit', 'regular_business_profit_krw'))}"
+        "아래 합계는 같은 공간의 대안 작물을 모두 더한 비교용 단순 합계입니다."
+    )
+    print(f"시나리오 월 매출 합계: {format_krw(total('sales', 'monthly_revenue_krw'))}")
+    print(
+        f"공간 대여자 예상수익 합계 "
+        f"{format_krw(total('profit', 'landlord_expected_income_krw'))} | "
+        f"사업 영업이익 합계 "
+        f"{format_krw(total('profit', 'business_operating_profit_krw'))}"
+    )
+    long_term_count = sum(
+        bool(site["profit"]["is_long_term_recommended"])  # type: ignore[index]
+        for site in sites
     )
     print(
-        "방식 2 | "
-        f"공간 대여자 예상수익 {format_krw(total('profit', 'shared_landlord_income_krw'))} | "
-        f"농부 예상수익 {format_krw(total('profit', 'shared_farmer_income_krw'))} | "
-        f"사업 영업이익 {format_krw(total('profit', 'shared_business_profit_krw'))}"
+        f"추천 개수 | 장기계약형 {long_term_count}개 | "
+        f"단기계약형 {len(sites) - long_term_count}개"
     )

@@ -1,4 +1,0 @@
-﻿site_id,site_name,crop_name,total_area_m2,cultivable_ratio,module_layers,ceiling_height_m
-S001,서울 샘플 농장,상추,120,0.72,4,2.7
-S002,인천 샘플 농장,딸기,180,0.65,3,2.7
-S003,수원 샘플 농장,바질,95,0.78,5,2.7
