@@ -20,6 +20,8 @@ import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -27,19 +29,24 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// AI 작물/공간 활용 추천 로직.
-// 흐름: 공간 검증 → 프롬프트 조립(백과사전 후보 포함) → Gemini 호출 →
-// JSON 파싱(실패 시 1회 재시도) → 추천 이력 저장(작물명이 백과사전에 있으면 crop_id 연결) → 응답.
-// Gemini 장애(AI_TIMEOUT/AI_QUOTA_EXCEEDED) 시 같은 공간의 최근 저장 결과를 fallback으로 반환한다 (시연 안정성).
+// AI 작물/공간 활용 추천 로직 (structured output 방식).
+// 흐름: 공간 검증 → 검증된 작물 백과사전 전체를 Gemini에 제공 → structured JSON 추천 →
+//   의미 검증 → 추천 이력 저장(crop_id 연결) → 응답.
+// Gemini 장애(AI_TIMEOUT/AI_QUOTA_EXCEEDED) 시 같은 공간의 최근 저장 결과를 fallback으로 반환한다.
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AiRecommendService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiRecommendService.class);
 
     private final GeminiClient geminiClient;
     private final RecommendPromptBuilder promptBuilder;
@@ -61,14 +68,15 @@ public class AiRecommendService {
         }
 
         List<Crop> crops = cropRepository.findAll();
-        Map<String, Crop> cropByName = crops.stream()
-                .collect(Collectors.toMap(Crop::getName, Function.identity()));
-        String prompt = promptBuilder.build(space, request.getPreferredCrop(), request.getPurpose(),
-                request.getAdditionalInfo(), crops.stream().map(Crop::getName).toList());
+        Map<Long, Crop> cropById = crops.stream()
+                .collect(Collectors.toMap(Crop::getId, Function.identity()));
+
+        String prompt = promptBuilder.build(space, request.getPreferredCrop(),
+                request.getPurpose(), request.getAdditionalInfo(), toCatalogJson(crops));
 
         GeminiRecommendOutput output;
         try {
-            output = callAndParse(prompt);
+            output = callStructuredAndParse(prompt, cropById.keySet());
         } catch (BusinessException e) {
             AiRecommendOutcome fallback = tryFallback(e.getErrorCode(), space);
             if (fallback != null) {
@@ -90,11 +98,11 @@ public class AiRecommendService {
 
         int order = 0;
         for (GeminiRecommendOutput.CropItem item : output.recommendedCrops()) {
-            String name = item.cropName() == null ? "" : item.cropName().trim();
+            Crop crop = cropById.get(item.cropId());
             recommendation.addRecommendedCrop(RecommendedCrop.builder()
-                    .crop(cropByName.get(name)) // 백과사전에 없는 작물이면 null (이름만 저장)
-                    .cropName(name)
-                    .reason(item.reason())
+                    .crop(crop)
+                    .cropName(crop.getName())
+                    .reason(item.reason().trim())
                     .displayOrder(order++)
                     .build());
         }
@@ -103,35 +111,70 @@ public class AiRecommendService {
         return new AiRecommendOutcome(toResponse(recommendation, space), false);
     }
 
-    // Gemini 호출 + JSON 파싱. 파싱 실패(형식 오류·작물 목록 누락) 시 1회 재호출하고,
+    // Structured output을 파싱하고 의미 검증한다. 형식 또는 의미 오류 시 1회만 재시도하며,
     // 그래도 실패하면 AI_RESPONSE_INVALID. 호출 자체의 실패(타임아웃/쿼터)는 GeminiClient가 던진다.
-    private GeminiRecommendOutput callAndParse(String prompt) {
+    private GeminiRecommendOutput callStructuredAndParse(String prompt, Set<Long> validCropIds) {
         for (int attempt = 0; attempt < 2; attempt++) {
-            String text = geminiClient.generateJson(prompt);
+            String text = geminiClient.generateStructured(prompt);
             try {
-                GeminiRecommendOutput output = objectMapper.readValue(stripFences(text), GeminiRecommendOutput.class);
-                if (output.recommendedCrops() != null && !output.recommendedCrops().isEmpty()) {
+                GeminiRecommendOutput output = objectMapper.readValue(text, GeminiRecommendOutput.class);
+                if (isValidOutput(output, validCropIds)) {
                     return output;
                 }
-            } catch (JacksonException ignored) {
-                // 재시도 1회
+                log.warn("[AI 추천] 파싱은 됐으나 추천 작물이 비어 있음 (attempt {}): {}", attempt, text);
+            } catch (JacksonException e) {
+                log.warn("[AI 추천] 최종 응답 JSON 파싱 실패 (attempt {}): {}", attempt, text);
             }
         }
         throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
     }
 
-    // responseMimeType을 JSON으로 강제하지만, 모델이 마크다운 펜스(```json)를 붙이는 경우를 방어
-    private String stripFences(String text) {
-        String stripped = text.strip();
-        if (stripped.startsWith("```")) {
-            int firstLineEnd = stripped.indexOf('\n');
-            stripped = firstLineEnd >= 0 ? stripped.substring(firstLineEnd + 1) : "";
-            int fenceEnd = stripped.lastIndexOf("```");
-            if (fenceEnd >= 0) {
-                stripped = stripped.substring(0, fenceEnd);
-            }
+    private boolean isValidOutput(GeminiRecommendOutput output, Set<Long> validCropIds) {
+        if (output == null || output.recommendedCrops() == null
+                || output.recommendedCrops().size() < 2 || output.recommendedCrops().size() > 3
+                || output.layoutSuggestion() == null || output.layoutSuggestion().isBlank()
+                || output.cautions() == null) {
+            return false;
         }
-        return stripped.strip();
+        Set<Long> recommendedIds = output.recommendedCrops().stream()
+                .map(GeminiRecommendOutput.CropItem::cropId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        return recommendedIds.size() == output.recommendedCrops().size()
+                && validCropIds.containsAll(recommendedIds)
+                && output.recommendedCrops().stream()
+                .allMatch(item -> item.reason() != null && !item.reason().isBlank());
+    }
+
+    // 후보 조회 결과 — 추천 판단에 필요한 요약 필드. null 값이 있을 수 있어 LinkedHashMap 사용(Map.of는 null 불가)
+    private Map<String, Object> cropSummaryMap(Crop crop) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", crop.getId());
+        map.put("name", crop.getName());
+        map.put("category", crop.getCategory());
+        map.put("difficulty", crop.getDifficulty().name());
+        map.put("growingPeriodDays", crop.getGrowingPeriodDays());
+        map.put("avgPricePerKg", crop.getAvgPricePerKg());
+        return map;
+    }
+
+    private Map<String, Object> cropDetailMap(Crop crop) {
+        Map<String, Object> map = cropSummaryMap(crop);
+        map.put("optimalTempMin", crop.getOptimalTempMin());
+        map.put("optimalTempMax", crop.getOptimalTempMax());
+        map.put("optimalHumidity", crop.getOptimalHumidity());
+        map.put("lightRequirement", crop.getLightRequirement() != null ? crop.getLightRequirement().name() : null);
+        map.put("yieldPerSqmKg", crop.getYieldPerSqmKg());
+        map.put("description", crop.getDescription());
+        return map;
+    }
+
+    private String toCatalogJson(List<Crop> crops) {
+        try {
+            return objectMapper.writeValueAsString(crops.stream().map(this::cropDetailMap).toList());
+        } catch (JacksonException e) {
+            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
+        }
     }
 
     // Gemini 장애 시 같은 공간의 최근 저장 결과 재사용 — 없으면 null을 반환해 원래 예외를 그대로 던지게 한다

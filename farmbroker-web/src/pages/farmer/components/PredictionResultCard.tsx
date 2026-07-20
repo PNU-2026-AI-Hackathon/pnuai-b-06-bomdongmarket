@@ -2,8 +2,8 @@ import { Save, Send } from 'lucide-react';
 
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
-import { predictionMetrics } from '@/pages/farmer/constants/farmerContent';
-import { formatCurrency } from '@/utils/format';
+
+const predictionMetricLabels = ['예상 월 매출', '예상 운영비', '예상 순수익'] as const;
 
 // 수익 예측 결과 화면의 핵심 수치를 한눈에 보이도록 정리합니다.
 export function PredictionResultCard() {
@@ -26,12 +26,10 @@ export function PredictionResultCard() {
       </div>
 
       <div className="mt-6 grid gap-3 md:grid-cols-3">
-        {predictionMetrics.map((metric) => (
-          <div key={metric.label} className="rounded-app bg-leaf-50 p-4">
-            <p className="text-xs font-semibold text-slate-500">{metric.label}</p>
-            <p className="mt-2 text-xl font-black text-ink-900">
-              {formatCurrency(metric.value)}
-            </p>
+        {predictionMetricLabels.map((label) => (
+          <div key={label} className="rounded-app bg-leaf-50 p-4">
+            <p className="text-xs font-semibold text-slate-500">{label}</p>
+            <p className="mt-2 text-xl font-black text-ink-900">계산 전</p>
           </div>
         ))}
       </div>
