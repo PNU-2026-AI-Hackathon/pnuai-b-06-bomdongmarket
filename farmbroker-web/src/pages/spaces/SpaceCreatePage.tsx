@@ -1,4 +1,4 @@
-import { ArrowRight, Camera, CheckCircle2, Upload } from 'lucide-react';
+import { ArrowRight, Camera, CheckCircle2 } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,29 +14,38 @@ export function SpaceCreatePage() {
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const imageUrls = String(formData.get('imageUrls') ?? '')
+      .split(/[\n,]/)
+      .map((url) => url.trim())
+      .filter(Boolean);
+
     setIsSaving(true);
+    setError(null);
 
-    // 데모에서는 FormData를 API 요청 DTO와 같은 모양으로 정리한 뒤 mock 서비스에 전달합니다.
-    // 이 변환부만 실제 업로드/주소검색 API와 연결하면 화면 컴포넌트는 그대로 유지할 수 있습니다.
-    await createSpace({
-      title: String(formData.get('title')),
-      address: String(formData.get('address')),
-      area: Number(formData.get('area')),
-      monthlyRent: Number(formData.get('monthlyRent')),
-      floor: Number(formData.get('floor')),
-      hasWater: formData.get('hasWater') === 'on',
-      hasElectricity: formData.get('hasElectricity') === 'on',
-      hasVentilation: formData.get('hasVentilation') === 'on',
-      description: String(formData.get('description')),
-      imageUrls: [],
-    });
-
-    setIsSaving(false);
-    setSaved(true);
+    try {
+      await createSpace({
+        title: String(formData.get('title')),
+        address: String(formData.get('address')),
+        area: Number(formData.get('area')),
+        monthlyRent: Number(formData.get('monthlyRent')),
+        floor: Number(formData.get('floor')),
+        hasWater: formData.get('hasWater') === 'on',
+        hasElectricity: formData.get('hasElectricity') === 'on',
+        hasVentilation: formData.get('hasVentilation') === 'on',
+        description: String(formData.get('description')),
+        imageUrls,
+      });
+      setSaved(true);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '공간 등록에 실패했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -68,14 +77,16 @@ export function SpaceCreatePage() {
               min={1}
               name="area"
               placeholder="예: 66"
+              required
               type="number"
             />
-            <Input label="층수" name="floor" placeholder="예: 2" type="number" />
+            <Input label="층수" name="floor" placeholder="예: 2" required type="number" />
             <Input
               label="희망 월세"
               min={0}
               name="monthlyRent"
               placeholder="예: 500000"
+              required
               type="number"
             />
           </div>
@@ -123,19 +134,33 @@ export function SpaceCreatePage() {
             </div>
             <Camera className="h-8 w-8 text-leaf-700" aria-hidden />
           </div>
-          <button
-            className="mt-4 flex min-h-28 w-full flex-col items-center justify-center rounded-app border border-dashed border-leaf-300 bg-leaf-50 text-sm font-semibold text-leaf-800"
-            type="button"
-          >
-            <Upload className="mb-2 h-6 w-6" aria-hidden />
-            사진 업로드
-          </button>
+          <p className="mt-4 rounded-app border border-dashed border-leaf-300 bg-leaf-50 p-4 text-sm font-semibold leading-6 text-leaf-800">
+            Swagger 명세에는 별도 업로드 API가 없어 공개 이미지 URL을 줄 단위로
+            입력합니다.
+          </p>
+          <label className="mt-4 block text-sm font-medium text-ink-700">
+            이미지 URL
+            <textarea
+              className="mt-2 min-h-24 w-full rounded-app border border-leaf-100 bg-white px-3 py-3 text-sm text-ink-900 focus:border-leaf-500 focus:outline-none focus:ring-2 focus:ring-leaf-200"
+              name="imageUrls"
+              placeholder="https://example.com/space.jpg"
+            />
+          </label>
         </Card>
+
+        {error ? (
+          <div
+            className="rounded-app border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
+            role="alert"
+          >
+            {error}
+          </div>
+        ) : null}
 
         {saved ? (
           <div className="rounded-app border border-leaf-200 bg-leaf-50 p-4 text-leaf-900">
-            <CheckCircle2 className="inline h-5 w-5 align-[-4px]" aria-hidden /> 공간이
-            데모 데이터에 저장되었습니다. 수익 예측 화면으로 이어서 확인해보세요.
+            <CheckCircle2 className="inline h-5 w-5 align-[-4px]" aria-hidden /> 공간
+            등록이 완료되었습니다. 수익 예측 화면으로 이어서 확인해보세요.
           </div>
         ) : null}
 

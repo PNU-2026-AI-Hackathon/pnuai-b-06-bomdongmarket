@@ -34,10 +34,11 @@ function validateForm(values: LoginFormValues) {
   return errors;
 }
 
-export function useLoginForm(onSuccess: () => void) {
+export function useLoginForm(onSubmit: (values: LoginFormValues) => Promise<void>) {
   const [values, setValues] = useState<LoginFormValues>({ email: '', password: '' });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const hasErrors = Object.values(errors).some(Boolean);
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -56,18 +57,22 @@ export function useLoginForm(onSuccess: () => void) {
     setErrors((current) => ({ ...current, [field]: error }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateForm(values);
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) return;
 
+    setSubmitError(null);
     setIsSubmitting(true);
-    window.setTimeout(() => {
+    try {
+      await onSubmit(values);
+    } catch (caught) {
+      setSubmitError(caught instanceof Error ? caught.message : '로그인에 실패했습니다.');
+    } finally {
       setIsSubmitting(false);
-      onSuccess();
-    }, 250);
+    }
   }
 
   return {
@@ -75,6 +80,7 @@ export function useLoginForm(onSuccess: () => void) {
     errors,
     hasErrors,
     isSubmitting,
+    submitError,
     handleBlur,
     handleChange,
     handleSubmit,

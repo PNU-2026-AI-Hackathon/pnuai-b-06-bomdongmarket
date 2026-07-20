@@ -1,8 +1,11 @@
 import { createContext, useContext } from 'react';
+import type { LoginInput, User } from '@/types/api';
 
 export interface AuthContextValue {
   isAuthenticated: boolean;
-  login: () => void;
+  user: User | null;
+  login: (input: LoginInput) => Promise<User>;
+  logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

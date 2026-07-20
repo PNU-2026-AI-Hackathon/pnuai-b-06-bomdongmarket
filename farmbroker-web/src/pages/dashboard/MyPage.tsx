@@ -1,5 +1,6 @@
 import { ChevronRight, UserRound } from 'lucide-react';
 
+import { useAuth } from '@/auth/authContext';
 import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -7,6 +8,14 @@ import { profileMenuItems } from '@/pages/dashboard/constants/dashboardContent';
 
 // 모바일 와이어프레임의 마이페이지 항목을 단순하고 데모 가능한 목록으로 구성합니다.
 export function MyPage() {
+  const { user } = useAuth();
+  const roleLabel =
+    user?.role === 'FARMER'
+      ? '도심 농부'
+      : user?.role === 'CONSUMER'
+        ? '소비자'
+        : '공간 제공자';
+
   return (
     <PageContainer narrow>
       <Card className="p-5">
@@ -15,9 +24,11 @@ export function MyPage() {
             <UserRound className="h-8 w-8" aria-hidden />
           </span>
           <div>
-            <h1 className="text-2xl font-black text-ink-900">그린스페이스랩</h1>
+            <h1 className="text-2xl font-black text-ink-900">
+              {user?.nickname ?? '그린스페이스랩'}
+            </h1>
             <div className="mt-2">
-              <Badge tone="green">공간 제공자</Badge>
+              <Badge tone="green">{roleLabel}</Badge>
             </div>
           </div>
         </div>

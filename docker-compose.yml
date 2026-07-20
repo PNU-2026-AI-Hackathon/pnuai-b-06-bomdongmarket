@@ -27,15 +27,12 @@ services:
     container_name: farmbroker-api
     ports:
       - "8080:8080"
+    # application.yml은 환경변수 이름만 정의하고 실제 값은 커밋되지 않는 .env에서 주입합니다.
+    env_file:
+      - .env
     environment:
-      DB_URL: jdbc:mysql://db:3306/farmbroker?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-      DB_USERNAME: root
-      # 값은 .env 에서 주입 (커밋 파일엔 secret 미포함)
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 를 .env 에 설정하세요}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 를 .env 에 설정하세요}
-      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY 를 .env 에 설정하세요}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      # .env에 DB_URL이 없던 기존 개발 환경도 컨테이너 DB를 사용하도록 기본값을 둡니다.
+      DB_URL: ${DB_URL:-jdbc:mysql://db:3306/farmbroker?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
     depends_on:
       db:
         condition: service_healthy

@@ -1,34 +1,70 @@
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AuthContext } from '@/auth/authContext';
-
-const AUTH_SESSION_KEY = 'farmbroker.authenticated';
+import {
+  AUTH_SESSION_CHANGED_EVENT,
+  clearAuthSession,
+  getAccessToken,
+  getStoredUser,
+  saveAuthSession,
+  updateStoredUser,
+} from '@/auth/session';
+import { getCurrentUser, login as requestLogin } from '@/services/authService';
+import type { LoginInput, User } from '@/types/api';
 
 interface AuthProviderProps {
   children: ReactNode;
   initialAuthenticated?: boolean;
 }
 
-function readStoredSession() {
-  return window.sessionStorage.getItem(AUTH_SESSION_KEY) === 'true';
-}
-
-// 실제 인증 API가 연결되기 전까지 현재 탭의 로그인 상태를 유지하는 데모 Provider입니다.
 export function AuthProvider({ children, initialAuthenticated }: AuthProviderProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => initialAuthenticated ?? readStoredSession(),
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    initialAuthenticated === undefined ? Boolean(getAccessToken()) : initialAuthenticated,
   );
+
+  useEffect(() => {
+    function syncSession() {
+      setIsAuthenticated(Boolean(getAccessToken()));
+      setUser(getStoredUser());
+    }
+
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, syncSession);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, syncSession);
+  }, []);
+
+  useEffect(() => {
+    if (!getAccessToken()) return;
+
+    void getCurrentUser()
+      .then((currentUser) => {
+        updateStoredUser(currentUser);
+        setUser(currentUser);
+      })
+      .catch(() => {
+        clearAuthSession();
+      });
+  }, []);
 
   const value = useMemo(
     () => ({
       isAuthenticated,
-      login: () => {
-        window.sessionStorage.setItem(AUTH_SESSION_KEY, 'true');
+      user,
+      login: async (input: LoginInput) => {
+        const result = await requestLogin(input);
+        saveAuthSession(result);
+        setUser(result.user);
         setIsAuthenticated(true);
+        return result.user;
+      },
+      logout: () => {
+        clearAuthSession();
+        setUser(null);
+        setIsAuthenticated(false);
       },
     }),
-    [isAuthenticated],
+    [isAuthenticated, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

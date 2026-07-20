@@ -6,10 +6,23 @@ import type {
   AiRecommendation,
   PageResponse,
   SpaceCreateInput,
+  SpaceDeleteResult,
   SpaceDetail,
+  SpaceMutationResult,
   SpaceSearchParams,
   SpaceSummary,
+  SpaceUpdateInput,
 } from '@/types/api';
+
+function buildSearchParams(params: SpaceSearchParams) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') searchParams.set(key, String(value));
+  });
+
+  return searchParams.toString();
+}
 
 function toSummary(space: SpaceDetail): SpaceSummary {
   // 목록 카드에는 상세 필드가 필요 없으므로 API 명세의 요약 DTO 형태로 잘라냅니다.
@@ -55,9 +68,9 @@ export async function getSpaces(
   params: SpaceSearchParams = {},
 ): Promise<PageResponse<SpaceSummary>> {
   if (!USE_MOCKS) {
-    // 실제 서버 연결 시에는 query parameter를 그대로 전달해 백엔드 검색/정렬과 맞춥니다.
+    const query = buildSearchParams(params);
     const response = await apiRequest<PageResponse<SpaceSummary>>(
-      `${ENDPOINTS.spaces.list}?${new URLSearchParams(params as Record<string, string>)}`,
+      `${ENDPOINTS.spaces.list}${query ? `?${query}` : ''}`,
     );
     return response.data;
   }
@@ -70,7 +83,10 @@ export async function getSpaces(
 export async function getSpaceDetail(spaceId: number): Promise<SpaceDetail> {
   if (!USE_MOCKS) {
     const response = await apiRequest<SpaceDetail>(ENDPOINTS.spaces.detail(spaceId));
-    return response.data;
+    return {
+      ...response.data,
+      imageUrl: response.data.imageUrls[0] ?? null,
+    };
   }
 
   await mockDelay();
@@ -82,27 +98,93 @@ export async function getSpaceDetail(spaceId: number): Promise<SpaceDetail> {
 }
 
 export async function getMySpaces(): Promise<SpaceSummary[]> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<SpaceSummary[]>(ENDPOINTS.spaces.my);
+    return response.data;
+  }
+
   await mockDelay();
   return mockSpaces.map(toSummary);
 }
 
-export async function createSpace(input: SpaceCreateInput): Promise<SpaceDetail> {
+export async function createSpace(input: SpaceCreateInput): Promise<SpaceMutationResult> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<SpaceMutationResult>(ENDPOINTS.spaces.create, {
+      method: 'POST',
+      body: input,
+    });
+    return response.data;
+  }
+
   await mockDelay();
-  // 실제 POST 응답처럼 생성된 ID와 시간값을 붙여 등록 완료 화면을 자연스럽게 보여줍니다.
   return {
-    ...mockSpaces[0],
     ...input,
     spaceId: 99,
-    imageUrl: input.imageUrls?.[0] ?? mockSpaces[0].imageUrl,
     imageUrls: input.imageUrls ?? [],
     status: 'AVAILABLE',
-    owner: { userId: 1, nickname: '데모 공간 제공자' },
+    ownerId: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 }
 
+export async function updateSpace(
+  spaceId: number,
+  input: SpaceUpdateInput,
+): Promise<SpaceMutationResult> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<SpaceMutationResult>(
+      ENDPOINTS.spaces.detail(spaceId),
+      { method: 'PATCH', body: input },
+    );
+    return response.data;
+  }
+
+  await mockDelay();
+  const space = mockSpaces.find((item) => item.spaceId === spaceId);
+  if (!space) throw new Error('공간을 찾을 수 없습니다');
+
+  return {
+    title: input.title ?? space.title,
+    address: input.address ?? space.address,
+    area: input.area ?? space.area,
+    monthlyRent: input.monthlyRent ?? space.monthlyRent,
+    floor: input.floor ?? space.floor,
+    hasWater: input.hasWater ?? space.hasWater,
+    hasElectricity: input.hasElectricity ?? space.hasElectricity,
+    hasVentilation: input.hasVentilation ?? space.hasVentilation,
+    description: input.description ?? space.description,
+    imageUrls: input.imageUrls ?? space.imageUrls,
+    spaceId,
+    status: input.status ?? space.status,
+    ownerId: space.owner.userId,
+    createdAt: space.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export async function deleteSpace(spaceId: number): Promise<SpaceDeleteResult> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<SpaceDeleteResult>(
+      ENDPOINTS.spaces.detail(spaceId),
+      { method: 'DELETE' },
+    );
+    return response.data;
+  }
+
+  await mockDelay();
+  return { spaceId, deleted: true };
+}
+
 export async function getRecommendation(spaceId: number): Promise<AiRecommendation> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<AiRecommendation>(ENDPOINTS.ai.recommend, {
+      method: 'POST',
+      body: { spaceId },
+    });
+    return response.data;
+  }
+
   await mockDelay();
   return { ...mockRecommendation, spaceId };
 }

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import {
-  getContracts,
-  getDashboardMetrics,
-  getReceivedMatchings,
-} from '@/services/dashboardService';
+import { getDashboardData } from '@/services/dashboardService';
+import { acceptMatching, rejectMatching } from '@/services/matchingService';
 import type { ContractSummary, DashboardMetric, MatchingRequest } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
@@ -15,20 +12,18 @@ export function useDashboard() {
   const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [updatingMatchingId, setUpdatingMatchingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
     setError(null);
 
     try {
-      const [metricResult, matchingResult, contractResult] = await Promise.all([
-        getDashboardMetrics(),
-        getReceivedMatchings(),
-        getContracts(),
-      ]);
-      setMetrics(metricResult);
-      setMatchings(matchingResult);
-      setContracts(contractResult);
+      const result = await getDashboardData();
+      setMetrics(result.metrics);
+      setMatchings(result.matchings);
+      setContracts(result.contracts);
       setStatus('success');
     } catch (caught) {
       setError(
@@ -42,5 +37,57 @@ export function useDashboard() {
     void load();
   }, [load]);
 
-  return { metrics, matchings, contracts, status, error, reload: load };
+  const respondToMatching = useCallback(
+    async (matchingId: number, action: 'accept' | 'reject') => {
+      setUpdatingMatchingId(matchingId);
+      setActionError(null);
+      try {
+        const result =
+          action === 'accept'
+            ? await acceptMatching(matchingId)
+            : await rejectMatching(matchingId);
+        setMatchings((current) =>
+          current.map((matching) =>
+            matching.matchingId === matchingId
+              ? {
+                  ...matching,
+                  status: result.status,
+                  respondedAt: result.respondedAt,
+                }
+              : matching,
+          ),
+        );
+        setContracts((current) =>
+          current.map((contract) =>
+            contract.contractId === matchingId
+              ? {
+                  ...contract,
+                  status: action === 'accept' ? '완료' : '검토',
+                  period: action === 'accept' ? '협의 완료' : contract.period,
+                }
+              : contract,
+          ),
+        );
+      } catch (caught) {
+        setActionError(
+          caught instanceof Error ? caught.message : '매칭 처리에 실패했습니다.',
+        );
+      } finally {
+        setUpdatingMatchingId(null);
+      }
+    },
+    [],
+  );
+
+  return {
+    metrics,
+    matchings,
+    contracts,
+    status,
+    error,
+    actionError,
+    updatingMatchingId,
+    reload: load,
+    respondToMatching,
+  };
 }

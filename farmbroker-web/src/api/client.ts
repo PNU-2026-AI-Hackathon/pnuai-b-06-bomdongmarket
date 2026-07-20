@@ -1,4 +1,5 @@
 import { APP_INFO } from '@/constants/appInfo';
+import { clearAuthSession, getAccessToken } from '@/auth/session';
 import type { ApiResponse } from '@/types/api';
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
@@ -6,28 +7,54 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   token?: string;
 };
 
-export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
+export const USE_MOCKS =
+  import.meta.env.MODE === 'test' || import.meta.env.VITE_USE_MOCKS === 'true';
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly errorCode?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 export async function apiRequest<T>(
   endpoint: string,
   { body, headers, token, ...options }: RequestOptions = {},
 ): Promise<ApiResponse<T>> {
-  // mock을 끄고 실제 백엔드를 연결할 때 모든 서비스가 이 래퍼를 통과합니다.
-  // 토큰 처리와 공통 ApiResponse 파싱을 한곳에 모아 API 명세 변경 영향을 줄입니다.
+  const requestHeaders = new Headers(headers);
+  const accessToken = token ?? getAccessToken();
+
+  if (body !== undefined && !requestHeaders.has('Content-Type')) {
+    requestHeaders.set('Content-Type', 'application/json');
+  }
+  if (accessToken && !requestHeaders.has('Authorization')) {
+    requestHeaders.set('Authorization', `Bearer ${accessToken}`);
+  }
+
   const response = await fetch(`${APP_INFO.baseUrl}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: requestHeaders,
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-  const payload = (await response.json()) as ApiResponse<T>;
+  let payload: ApiResponse<T> | null = null;
+  try {
+    payload = (await response.json()) as ApiResponse<T>;
+  } catch {
+    // 프록시/서버 장애로 JSON이 아닌 응답이 오더라도 아래에서 일관된 오류로 변환합니다.
+  }
 
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.message || '요청 처리에 실패했습니다');
+  if (!response.ok || !payload?.success) {
+    if (response.status === 401 && accessToken) clearAuthSession();
+    throw new ApiError(
+      payload?.message || '요청 처리에 실패했습니다.',
+      response.status,
+      payload?.errorCode,
+    );
   }
 
   return payload;

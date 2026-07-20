@@ -16,6 +16,15 @@ describe('Dashboard pages', () => {
     expect(screen.getAllByText(/도심농부 김민준/i).length).toBeGreaterThan(0);
   });
 
+  it('받은 매칭 신청을 수락한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<DashboardPage />);
+
+    await user.click((await screen.findAllByRole('button', { name: '수락' }))[0]);
+
+    expect(await screen.findByText('수락됨')).toBeInTheDocument();
+  });
+
   it('계약 카드를 렌더링하고 상태 탭 클릭에 반응한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ContractsPage />);

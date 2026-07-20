@@ -20,11 +20,12 @@ export function LoginPage() {
     errors,
     hasErrors,
     isSubmitting,
+    submitError,
     handleBlur,
     handleChange,
     handleSubmit,
-  } = useLoginForm(() => {
-    login();
+  } = useLoginForm(async (values) => {
+    await login(values);
     navigate(resolveReturnLocation(location.state, ROUTES.dashboard), { replace: true });
   });
 
@@ -46,6 +47,14 @@ export function LoginPage() {
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">
           <form className="grid gap-5" noValidate onSubmit={handleSubmit}>
+            {submitError ? (
+              <div
+                className="rounded-app border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700"
+                role="alert"
+              >
+                {submitError}
+              </div>
+            ) : null}
             <Input
               autoComplete="email"
               errorMessage={errors.email}

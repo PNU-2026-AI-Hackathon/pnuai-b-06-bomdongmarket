@@ -19,9 +19,12 @@ export function SpaceDetailPage() {
     recommendation,
     status,
     recommendationStatus,
+    matchingStatus,
+    matchingError,
     error,
     reload,
     loadRecommendation,
+    sendMatchingRequest,
   } = useSpaceDetail(spaceId);
 
   return (
@@ -51,6 +54,9 @@ export function SpaceDetailPage() {
           <div className="grid gap-5">
             <SpaceInfoPanel space={space} />
             <ProfitEstimateCard
+              matchingError={matchingError}
+              matchingStatus={matchingStatus}
+              onApply={sendMatchingRequest}
               onRun={loadRecommendation}
               recommendation={recommendation}
               status={recommendationStatus}

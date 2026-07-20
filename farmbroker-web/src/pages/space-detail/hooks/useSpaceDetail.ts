@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getRecommendation, getSpaceDetail } from '@/services/spaceService';
+import { applyMatching } from '@/services/matchingService';
 import type { AiRecommendation, SpaceDetail } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
@@ -10,6 +11,8 @@ export function useSpaceDetail(spaceId: number) {
   const [recommendation, setRecommendation] = useState<AiRecommendation | null>(null);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [recommendationStatus, setRecommendationStatus] = useState<AsyncStatus>('idle');
+  const [matchingStatus, setMatchingStatus] = useState<AsyncStatus>('idle');
+  const [matchingError, setMatchingError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -27,6 +30,23 @@ export function useSpaceDetail(spaceId: number) {
       setStatus('error');
     }
   }, [spaceId]);
+
+  const sendMatchingRequest = useCallback(
+    async (message: string) => {
+      setMatchingStatus('loading');
+      setMatchingError(null);
+      try {
+        await applyMatching({ spaceId, message });
+        setMatchingStatus('success');
+      } catch (caught) {
+        setMatchingError(
+          caught instanceof Error ? caught.message : '매칭 신청에 실패했습니다.',
+        );
+        setMatchingStatus('error');
+      }
+    },
+    [spaceId],
+  );
 
   const loadRecommendation = useCallback(async () => {
     setRecommendationStatus('loading');
@@ -49,8 +69,11 @@ export function useSpaceDetail(spaceId: number) {
     recommendation,
     status,
     recommendationStatus,
+    matchingStatus,
+    matchingError,
     error,
     reload: load,
     loadRecommendation,
+    sendMatchingRequest,
   };
 }

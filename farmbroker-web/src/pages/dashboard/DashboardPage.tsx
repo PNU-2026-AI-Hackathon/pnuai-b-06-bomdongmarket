@@ -13,7 +13,17 @@ import { useDashboard } from '@/pages/dashboard/hooks/useDashboard';
 
 // 로그인 이후의 홈 대시보드로, 소유자 관점의 요약과 신청 검토 흐름을 제공합니다.
 export function DashboardPage() {
-  const { metrics, matchings, contracts, status, error, reload } = useDashboard();
+  const {
+    metrics,
+    matchings,
+    contracts,
+    status,
+    error,
+    actionError,
+    updatingMatchingId,
+    reload,
+    respondToMatching,
+  } = useDashboard();
 
   return (
     <PageContainer>
@@ -51,6 +61,14 @@ export function DashboardPage() {
             message={error ?? '대시보드를 불러오지 못했습니다'}
             onRetry={reload}
           />
+        </div>
+      ) : null}
+      {actionError ? (
+        <div
+          className="mt-6 rounded-app border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
+          role="alert"
+        >
+          {actionError}
         </div>
       ) : null}
 
@@ -103,7 +121,13 @@ export function DashboardPage() {
               </h2>
               <div className="mt-4 grid gap-4">
                 {matchings.map((request) => (
-                  <MatchingRequestCard key={request.matchingId} request={request} />
+                  <MatchingRequestCard
+                    isUpdating={updatingMatchingId === request.matchingId}
+                    key={request.matchingId}
+                    onAccept={() => void respondToMatching(request.matchingId, 'accept')}
+                    onReject={() => void respondToMatching(request.matchingId, 'reject')}
+                    request={request}
+                  />
                 ))}
               </div>
             </section>

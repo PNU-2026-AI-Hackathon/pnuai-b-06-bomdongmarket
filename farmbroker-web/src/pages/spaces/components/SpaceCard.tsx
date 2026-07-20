@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { ROUTES } from '@/constants/routes';
 import type { SpaceSummary } from '@/types/api';
 import { formatArea, formatCurrency } from '@/utils/format';
@@ -17,15 +18,11 @@ interface SpaceCardProps {
 export function SpaceCard({ space, compact = false }: SpaceCardProps) {
   return (
     <Card className="overflow-hidden transition hover:-translate-y-0.5 hover:border-leaf-300 hover:shadow-lift">
-      {space.imageUrl ? (
-        <img
-          alt={space.title}
-          className="h-44 w-full object-cover"
-          src={space.imageUrl}
-        />
-      ) : (
-        <div className="h-44 bg-leaf-100" aria-hidden />
-      )}
+      <RemoteImage
+        alt={space.title}
+        className="h-44 w-full object-cover"
+        src={space.imageUrl}
+      />
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div>

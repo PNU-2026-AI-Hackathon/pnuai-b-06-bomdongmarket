@@ -7,11 +7,13 @@ import { FarmerPage } from '@/pages/farmer/FarmerPage';
 import { ProfitPredictionPage } from '@/pages/farmer/ProfitPredictionPage';
 
 describe('Farmer pages', () => {
-  it('추천 공간을 렌더링하고 키워드 필터링을 지원한다', async () => {
+  it('백엔드 공간 정보를 렌더링하고 키워드 필터링을 지원한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<FarmerPage />);
 
-    expect(await screen.findByText(/적합도 94%/i)).toBeInTheDocument();
+    expect(await screen.findAllByText(/상세에서 AI 작물 추천/i)).not.toHaveLength(0);
+    expect(screen.queryByText(/적합도/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/예상 수익/i)).not.toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: /추천 공간 검색/i }), '서면');
 
     await waitFor(() => {

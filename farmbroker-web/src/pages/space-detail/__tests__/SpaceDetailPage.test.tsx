@@ -20,4 +20,17 @@ describe('SpaceDetailPage', () => {
     expect(await screen.findByText(/배치 제안/i)).toBeInTheDocument();
     expect(screen.getAllByText(/버터헤드 상추/i).length).toBeGreaterThan(0);
   });
+
+  it('로그인 사용자가 추천 결과에서 매칭을 신청한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceDetailPage />, {
+      authenticated: true,
+      route: '/spaces/1',
+    });
+
+    await user.click(await screen.findByRole('button', { name: /AI 추천 실행/i }));
+    await user.click(await screen.findByRole('button', { name: /매칭 신청 보내기/i }));
+
+    expect(await screen.findByText('매칭 신청이 완료되었습니다.')).toBeInTheDocument();
+  });
 });
