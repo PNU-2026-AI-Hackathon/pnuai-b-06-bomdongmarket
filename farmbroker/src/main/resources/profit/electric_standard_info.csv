@@ -1,0 +1,4 @@
+﻿key,value,unit,description
+led_photon_efficiency_umol_j,2.8,umol/J,LED 광자효율
+heat_conversion_rate,0.95,ratio,조명 발열 전환율
+wall_u_value_w_m2_k,1.2,W/m2K,벽체 열관류율
