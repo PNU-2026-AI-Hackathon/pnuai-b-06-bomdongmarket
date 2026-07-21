@@ -1,5 +1,5 @@
 import { ArrowRight, Lock, Mail } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { resolveReturnLocation } from '@/auth/redirect';
 import { useAuth } from '@/auth/authContext';
@@ -28,6 +28,11 @@ export function LoginPage() {
     await login(values);
     navigate(resolveReturnLocation(location.state, ROUTES.dashboard), { replace: true });
   });
+  const signupCompleted =
+    typeof location.state === 'object' &&
+    location.state !== null &&
+    'signupCompleted' in location.state &&
+    location.state.signupCompleted === true;
 
   return (
     <PageContainer
@@ -46,6 +51,14 @@ export function LoginPage() {
         </div>
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">
+          {signupCompleted ? (
+            <div
+              className="mb-5 rounded-app border border-leaf-200 bg-leaf-50 p-3 text-sm font-semibold text-leaf-800"
+              role="status"
+            >
+              회원가입이 완료되었습니다. 새 계정으로 로그인해 주세요.
+            </div>
+          ) : null}
           <form className="grid gap-5" noValidate onSubmit={handleSubmit}>
             {submitError ? (
               <div
@@ -93,12 +106,12 @@ export function LoginPage() {
           </form>
           <p className="mt-5 text-center text-sm text-slate-600">
             봄동마켓이 처음이신가요?{' '}
-            <button
+            <Link
               className="rounded-sm font-bold text-leaf-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 focus-visible:ring-offset-2"
-              type="button"
+              to={ROUTES.signup}
             >
               회원가입
-            </button>
+            </Link>
           </p>
         </Card>
       </div>

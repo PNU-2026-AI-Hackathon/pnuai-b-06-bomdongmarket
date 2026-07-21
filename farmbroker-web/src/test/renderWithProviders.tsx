@@ -11,7 +11,7 @@ interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
 
 export function renderWithProviders(
   ui: ReactElement,
-  { authenticated = false, route = '/', ...options }: RenderWithProvidersOptions = {},
+  { authenticated, route = '/', ...options }: RenderWithProvidersOptions = {},
 ) {
   window.history.pushState({}, 'Test page', route);
 

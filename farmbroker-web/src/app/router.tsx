@@ -1,9 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import { GuestOnlyRoute } from '@/auth/GuestOnlyRoute';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
-import { LoginPage } from '@/pages/auth';
+import { LoginPage, SignupPage } from '@/pages/auth';
 import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
 import { FarmerPage, ProfitPredictionPage } from '@/pages/farmer';
 import { HomePage } from '@/pages/home';
@@ -17,7 +18,10 @@ export function AppRouter() {
       {/* AppLayout 아래의 모든 화면은 공통 헤더와 모바일 하단 탭을 공유합니다. */}
       <Route element={<AppLayout />}>
         <Route element={<HomePage />} path={ROUTES.home} />
-        <Route element={<LoginPage />} path={ROUTES.login} />
+        <Route element={<GuestOnlyRoute />}>
+          <Route element={<LoginPage />} path={ROUTES.login} />
+          <Route element={<SignupPage />} path={ROUTES.signup} />
+        </Route>
         <Route element={<SpacesPage />} path={ROUTES.spaces} />
         <Route element={<SpaceDetailPage />} path="/spaces/:spaceId" />
         <Route element={<FarmerPage />} path={ROUTES.farmer} />
