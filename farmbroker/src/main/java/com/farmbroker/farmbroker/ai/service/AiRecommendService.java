@@ -7,7 +7,10 @@ import com.farmbroker.farmbroker.ai.dto.AiRecommendOutcome;
 import com.farmbroker.farmbroker.ai.dto.AiRecommendRequest;
 import com.farmbroker.farmbroker.ai.dto.AiRecommendResponse;
 import com.farmbroker.farmbroker.ai.dto.GeminiRecommendOutput;
+import com.farmbroker.farmbroker.ai.dto.ProfitEstimateResponse;
 import com.farmbroker.farmbroker.ai.prompt.RecommendPromptBuilder;
+import com.farmbroker.farmbroker.profit.ProfitCalculator;
+import com.farmbroker.farmbroker.profit.SpaceInputs;
 import com.farmbroker.farmbroker.ai.repository.AiRecommendationRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
@@ -56,6 +59,7 @@ public class AiRecommendService {
     private final SpaceContractAdapter spaceContractAdapter; // BE2 SpaceService 계약 제공 시 교체
     private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
+    private final ProfitCalculator profitCalculator; // structured 추천 후 서버가 직접 호출하는 결정론적 수익 계산기
 
     @Transactional
     public AiRecommendOutcome recommend(Long userId, AiRecommendRequest request) {
@@ -197,7 +201,26 @@ public class AiRecommendService {
                         rc.getCrop() != null ? rc.getCrop().getAvgPricePerKg() : null
                 ))
                 .toList();
-        return AiRecommendResponse.of(recommendation, space.getId(), items, fromJson(recommendation.getCautionsJson()));
+        return AiRecommendResponse.of(recommendation, space.getId(), items,
+                fromJson(recommendation.getCautionsJson()), buildProfitEstimate(recommendation, space));
+    }
+
+    // 대표 작물(추천 순서상 계산기가 지원하는 첫 작물)로 서버가 수익을 계산한다.
+    // 공간 면적·월세는 DB 값을 쓰고, 재배 파라미터가 없는 항목은 SpaceInputs의 표준 가정값을 사용한다(응답에 노출).
+    // 지원 작물(수익 계산기 데이터에 존재)이 없으면 null — 프론트는 이 경우 계산 근거 카드를 숨긴다.
+    private ProfitEstimateResponse buildProfitEstimate(AiRecommendation recommendation, SpaceSummary space) {
+        if (space.getArea() == null || space.getArea().doubleValue() <= 0) {
+            return null;
+        }
+        SpaceInputs inputs = SpaceInputs.fromSpace(
+                space.getArea().doubleValue(),
+                space.getMonthlyRent() != null ? space.getMonthlyRent() : 0.0);
+        return recommendation.getRecommendedCrops().stream()
+                .map(RecommendedCrop::getCropName)
+                .filter(profitCalculator::supports)
+                .findFirst()
+                .map(cropName -> ProfitEstimateResponse.from(profitCalculator.estimate(inputs, cropName)))
+                .orElse(null);
     }
 
     // 예상 수확량(kg) = 백과사전의 ㎡당 수확량 × 공간 면적 (매칭된 작물에만 제공)

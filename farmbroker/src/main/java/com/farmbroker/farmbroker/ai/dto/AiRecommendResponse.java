@@ -26,27 +26,34 @@ public class AiRecommendResponse {
     private final List<String> cautions;
     @Schema(description = "추천 생성 또는 저장 시각", example = "2026-07-18T10:30:00")
     private final LocalDateTime createdAt;
+    @Schema(description = "대표 추천 작물의 서버 계산 예상 수익(월평균). 계산 가능한 작물이 없으면 null", nullable = true)
+    private final ProfitEstimateResponse profitEstimate;
 
     private AiRecommendResponse(Long recommendationId, Long spaceId, List<RecommendedCropItem> recommendedCrops,
-                                String layoutSuggestion, List<String> cautions, LocalDateTime createdAt) {
+                                String layoutSuggestion, List<String> cautions, LocalDateTime createdAt,
+                                ProfitEstimateResponse profitEstimate) {
         this.recommendationId = recommendationId;
         this.spaceId = spaceId;
         this.recommendedCrops = recommendedCrops;
         this.layoutSuggestion = layoutSuggestion;
         this.cautions = cautions;
         this.createdAt = createdAt;
+        this.profitEstimate = profitEstimate;
     }
 
-    // cautions는 엔티티에 JSON 문자열로 저장돼 있어 서비스에서 파싱해 넘긴다
+    // cautions는 엔티티에 JSON 문자열로 저장돼 있어 서비스에서 파싱해 넘긴다.
+    // profitEstimate는 대표 작물이 수익 계산기 데이터에 있을 때만 채워지고 아니면 null.
     public static AiRecommendResponse of(AiRecommendation recommendation, Long spaceId,
-                                         List<RecommendedCropItem> recommendedCrops, List<String> cautions) {
+                                         List<RecommendedCropItem> recommendedCrops, List<String> cautions,
+                                         ProfitEstimateResponse profitEstimate) {
         return new AiRecommendResponse(
                 recommendation.getId(),
                 spaceId,
                 recommendedCrops,
                 recommendation.getLayoutSuggestion(),
                 cautions,
-                recommendation.getCreatedAt()
+                recommendation.getCreatedAt(),
+                profitEstimate
         );
     }
 
