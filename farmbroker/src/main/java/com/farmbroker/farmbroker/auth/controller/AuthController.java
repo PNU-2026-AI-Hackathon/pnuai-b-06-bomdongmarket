@@ -9,6 +9,7 @@ import com.farmbroker.farmbroker.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 // 인증 관련 엔드포인트를 노출하는 컨트롤러.
@@ -34,5 +35,13 @@ public class AuthController {
     public ApiResponse<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ApiResponse.success("로그인에 성공했습니다.", response);
+    }
+
+    // POST /api/auth/logout — 인증 필요 (SecurityConfig의 anyRequest().authenticated()로 보호)
+    // stateless JWT 구조라 서버는 인증만 확인하고, 실제 토큰 폐기는 클라이언트가 저장한 토큰을 삭제해 처리한다.
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@AuthenticationPrincipal Long userId) {
+        authService.logout(userId);
+        return ApiResponse.success("로그아웃되었습니다.", null);
     }
 }
