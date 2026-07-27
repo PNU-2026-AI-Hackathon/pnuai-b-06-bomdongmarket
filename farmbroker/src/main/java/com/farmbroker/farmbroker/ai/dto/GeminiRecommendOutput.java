@@ -14,6 +14,6 @@ public record GeminiRecommendOutput(
 ) {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record CropItem(String cropName, String reason) {
+    public record CropItem(Long cropId, String reason) {
     }
 }

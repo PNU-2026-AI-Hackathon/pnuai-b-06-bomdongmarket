@@ -22,8 +22,7 @@ import java.util.Map;
 // Gemini API 호출을 격리하는 클라이언트.
 // 서비스 로직이 외부 API의 요청/응답 형식을 모르게 해 모델 교체·모킹·테스트를 쉽게 한다.
 // ObjectMapper는 Boot 4 기본인 Jackson 3(tools.jackson) 빈을 주입받는다 (Jackson 2 자동 설정은 Boot 4에서 제거됨).
-// - responseMimeType=application/json으로 JSON 응답 강제
-// - 타임아웃: connect 3s / read 15s → 초과 시 AI_TIMEOUT(504)
+// - 타임아웃: connect 3s / read 15s → 초과 시 AI_TIMEOUT(504) (function calling은 왕복마다 15s 적용)
 // - 429 → AI_QUOTA_EXCEEDED, 그 외 API 오류/응답 구조 이상 → AI_RESPONSE_INVALID
 // - API 키는 GEMINI_API_KEY 환경변수로 주입 (커밋 금지)
 @Component
@@ -53,18 +52,48 @@ public class GeminiClient {
                 .build();
     }
 
-    // 프롬프트를 보내고 모델이 생성한 JSON 문자열(본문 텍스트)을 반환한다
-    public String generateJson(String prompt) {
-        Map<String, Object> requestBody = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                // thinkingBudget 0: 2.5 계열은 thinking(추론)이 기본 활성화라 응답이 read 타임아웃(15s)을
-                // 초과할 수 있어 비활성화한다. 2.0 등 thinking 미지원 모델로 바꿀 때는 이 필드를 제거해야 한다.
-                "generationConfig", Map.of(
-                        "responseMimeType", "application/json",
-                        "thinkingConfig", Map.of("thinkingBudget", 0)
-                )
-        );
+    public String generateStructured(String prompt) {
+        JsonNode parts = callGenerateContent(Map.of(
+                        "contents", List.of(Map.of(
+                                "role", "user",
+                                "parts", List.of(Map.of("text", prompt)))),
+                        "generationConfig", buildGenerationConfig()))
+                .path("candidates").path(0).path("content").path("parts");
+        return extractText(parts);
+    }
 
+    private Map<String, Object> buildGenerationConfig() {
+        Map<String, Object> cropItemSchema = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "cropId", Map.of("type", "integer", "description", "후보 목록의 작물 ID"),
+                        "reason", Map.of("type", "string", "description", "공간 조건에 근거한 추천 이유")
+                ),
+                "required", List.of("cropId", "reason")
+        );
+        Map<String, Object> responseSchema = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "recommendedCrops", Map.of(
+                                "type", "array", "minItems", 2, "maxItems", 3,
+                                "items", cropItemSchema),
+                        "layoutSuggestion", Map.of("type", "string"),
+                        "cautions", Map.of(
+                                "type", "array", "items", Map.of("type", "string"))
+                ),
+                "required", List.of("recommendedCrops", "layoutSuggestion", "cautions")
+        );
+        return Map.of(
+                "responseMimeType", "application/json",
+                "responseSchema", responseSchema,
+                "temperature", 0.2,
+                "maxOutputTokens", 2048,
+                "thinkingConfig", Map.of("thinkingBudget", 0)
+        );
+    }
+
+    // 공통 POST — 예외를 도메인 에러 코드로 변환한다
+    private JsonNode callGenerateContent(Map<String, Object> requestBody) {
         String responseBody;
         try {
             responseBody = restClient.post()
@@ -79,21 +108,26 @@ public class GeminiClient {
             }
             throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
         } catch (ResourceAccessException e) {
-            // connect/read 타임아웃 및 네트워크 단절
-            throw new BusinessException(ErrorCode.AI_TIMEOUT);
+            throw new BusinessException(ErrorCode.AI_TIMEOUT); // connect/read 타임아웃·네트워크 단절
         }
-
         try {
-            JsonNode text = objectMapper.readTree(responseBody)
-                    .path("candidates").path(0)
-                    .path("content").path("parts").path(0)
-                    .path("text");
-            if (text.isMissingNode() || text.asText().isBlank()) {
-                throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
-            }
-            return text.asText();
+            return objectMapper.readTree(responseBody);
         } catch (JacksonException e) {
             throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
         }
+    }
+
+    // 응답 parts의 모든 text 파트를 이어붙인다
+    private String extractText(JsonNode parts) {
+        StringBuilder sb = new StringBuilder();
+        for (JsonNode part : parts) {
+            if (part.has("text")) {
+                sb.append(part.path("text").asText());
+            }
+        }
+        if (sb.isEmpty()) {
+            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
+        }
+        return sb.toString();
     }
 }
