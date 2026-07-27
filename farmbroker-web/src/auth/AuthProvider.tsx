@@ -35,16 +35,20 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
   }, []);
 
   useEffect(() => {
-    if (!getAccessToken()) return;
+    // 로그인 응답에서 토큰과 사용자를 함께 저장하므로 일반적인 새로고침에서는
+    // 저장된 사용자로 즉시 복원합니다. 직접 URL(/signup 등) 접근 때마다 /users/me를
+    // 다시 호출하면 해당 요청의 실패가 정상 세션을 지우는 원인이 될 수 있습니다.
+    if (!getAccessToken() || getStoredUser()) return;
 
     void getCurrentUser()
       .then((currentUser) => {
         updateStoredUser(currentUser);
         setUser(currentUser);
       })
-      .catch(() => {
-        clearAuthSession();
-      });
+      // 401 응답은 apiRequest가 세션을 정리합니다. 네트워크 오류나 일시적인
+      // 서버 장애까지 로그아웃으로 취급하면 새로고침·직접 URL 접근 직후
+      // 헤더가 비로그인 상태로 바뀌므로 저장된 세션은 그대로 유지합니다.
+      .catch(() => undefined);
   }, []);
 
   const value = useMemo(

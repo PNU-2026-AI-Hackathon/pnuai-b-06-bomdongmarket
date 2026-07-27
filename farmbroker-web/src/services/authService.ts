@@ -29,7 +29,12 @@ export async function login(input: LoginInput): Promise<LoginResult> {
 export async function signup(input: SignupInput): Promise<User> {
   if (USE_MOCKS) {
     await mockDelay();
-    return { ...mockUser, ...input, userId: 2 };
+    return {
+      userId: 2,
+      email: input.email,
+      nickname: input.nickname,
+      role: input.role,
+    };
   }
 
   const response = await apiRequest<User>(ENDPOINTS.auth.signup, {

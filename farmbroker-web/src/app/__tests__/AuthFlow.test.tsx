@@ -1,8 +1,9 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AppRouter } from '@/app/router';
+import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 async function login(user: ReturnType<typeof userEvent.setup>) {
@@ -12,6 +13,8 @@ async function login(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('인증 후 원래 위치 복귀', () => {
+  beforeEach(() => clearAuthSession());
+
   it('보호된 공간 등록 페이지에서 로그인 후 원래 페이지로 돌아온다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<AppRouter />, { route: '/spaces/new' });
@@ -71,5 +74,35 @@ describe('인증 후 원래 위치 복귀', () => {
     renderWithProviders(<AppRouter />, { authenticated: true, route: '/dashboard' });
 
     expect(await screen.findByText('등록 공간')).toBeInTheDocument();
+  });
+
+  it.each([
+    { route: '/login', authHeading: '봄동마켓 로그인' },
+    { route: '/signup', authHeading: '봄동마켓 회원가입' },
+  ])('저장된 로그인 상태에서 $route 접근 시 홈으로 이동한다', async ({ route, authHeading }) => {
+    saveAuthSession({
+      accessToken: 'test-access-token',
+      user: {
+        userId: 2,
+        email: 'farmer@example.com',
+        nickname: '도시농부',
+        role: 'FARMER',
+      },
+    });
+
+    // AuthProvider의 테스트용 강제 상태가 아니라 실제 저장 세션을 복원합니다.
+    renderWithProviders(<AppRouter />, { route });
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '비어 있는 공간이 동네의 가장 가까운 농장이 됩니다.',
+      }),
+    ).toBeInTheDocument();
+    const header = within(screen.getByRole('banner'));
+
+    expect(screen.queryByRole('heading', { name: authHeading })).not.toBeInTheDocument();
+    expect(header.getByRole('link', { name: '도시농부 마이페이지' })).toBeInTheDocument();
+    expect(header.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
+    expect(header.queryByRole('link', { name: /공간 등록|등록/ })).not.toBeInTheDocument();
   });
 });
