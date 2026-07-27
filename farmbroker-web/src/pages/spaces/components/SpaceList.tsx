@@ -37,10 +37,12 @@ export function SpaceList({ spaces, status, error, onRetry }: SpaceListProps) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
       {spaces.map((space) => (
-        <SpaceCard key={space.spaceId} space={space} />
+        <li key={space.spaceId}>
+          <SpaceCard space={space} />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

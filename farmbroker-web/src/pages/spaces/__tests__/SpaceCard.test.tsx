@@ -11,7 +11,9 @@ describe('SpaceCard', () => {
 
     renderWithProviders(<SpaceCard space={space} />);
 
-    expect(screen.getByText(space.title)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: space.title }),
+    ).toBeInTheDocument();
     expect(screen.getByText('매칭 가능')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /자세히 보기/i })).toHaveAttribute(
       'href',
