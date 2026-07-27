@@ -12,7 +12,10 @@ export function LoadingState({
       role="status"
     >
       <div className="text-center">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-leaf-100 border-t-leaf-700" />
+        <div
+          className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-line border-t-action"
+          aria-hidden
+        />
         <p className="mt-4 text-sm font-medium text-slate-600">{label}</p>
       </div>
     </div>
