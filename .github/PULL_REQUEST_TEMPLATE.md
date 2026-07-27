@@ -2,6 +2,13 @@
 
 <!-- 이 PR이 해결하는 문제와 변경 목적을 간단히 설명해 주세요. -->
 
+## 변경 영역
+
+- [ ] Frontend
+- [ ] Backend
+- [ ] Infrastructure
+- [ ] Documentation / Other
+
 ## 주요 변경사항
 
 - <!-- 변경 내용을 항목별로 적어 주세요. -->
