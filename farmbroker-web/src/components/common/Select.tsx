@@ -27,8 +27,12 @@ export function Select({
     [props['aria-describedby'], messageId].filter(Boolean).join(' ') || undefined;
 
   return (
-    <label className="block text-sm font-medium text-content-muted" htmlFor={selectId}>
-      {label ? <span className="mb-2 block">{label}</span> : null}
+    <div className="block text-sm font-medium text-content-muted">
+      {label ? (
+        <label className="mb-2 block" htmlFor={selectId}>
+          {label}
+        </label>
+      ) : null}
       <span className="relative block">
         {icon ? (
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle">
@@ -65,6 +69,6 @@ export function Select({
           {helperText}
         </span>
       ) : null}
-    </label>
+    </div>
   );
 }

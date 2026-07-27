@@ -103,17 +103,17 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - 상태: `interactive`는 hover에서 작은 lift와 경계 강조만 제공한다.
 - 접근성: `Card` 자체는 `div`이며 의미 구조는 호출부의 `section`, `article`, `li`로 제공한다. 클릭 이벤트를 `Card`에 직접 달지 않는다.
 
-### Input과 Select
+### Input, Select, Textarea
 
-- 목적: text/number 입력과 단일 선택의 공통 field shell
+- 목적: text/number 입력, 단일 선택, 여러 줄 입력의 공통 field shell
 - 상태: default, hover, focus, disabled, invalid
-- slot: `label`, `icon`, `helperText`, `errorMessage`
+- slot: 공통 `label`, `helperText`, `errorMessage`; Input/Select는 선택 `icon`
 - 접근성:
   - 명시적 `id`, `name`, 또는 생성 ID로 label을 연결한다.
   - helper/error는 `aria-describedby`로 연결한다.
   - 오류는 `aria-invalid`와 `role="alert"`을 함께 쓴다.
   - 시각 label을 생략하면 정확한 `aria-label`을 제공한다.
-- 크기: 기본 44px. 한 화면에서 임의로 높이를 바꾸지 않는다.
+- 크기: Input/Select는 기본 44px이다. Textarea는 용도에 맞춰 표준 spacing scale의 `min-height`만 조정하고 field shell은 재작성하지 않는다.
 
 ### Badge
 
@@ -126,7 +126,8 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 
 - 목적: 목록·폼 화면의 eyebrow, h1, 설명, 보조/주요 action 계층
 - slot: `eyebrow`, `title`, 선택 `description`, 선택 `action`
-- 반응형: 모바일 세로 배치, `sm` 이상에서 제목과 action을 양끝 정렬한다.
+- 정렬: 기본 `left`; 인증처럼 중앙 정렬이 정보 구조에 맞을 때 `center`
+- 반응형: 모바일 세로 배치, 기본 `sm` 이상에서 제목과 action을 양끝 정렬한다. 긴 목록 제목은 `actionBreakpoint="lg"`로 충돌을 피한다.
 - 접근성: 내부 title은 h1이다. 한 페이지에서 한 번만 사용한다.
 
 ### LoadingState, EmptyState, ErrorState
@@ -163,7 +164,9 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 | Card                                           | 규격화         | variant/padding 추가, 기존 default 호환 |
 | Input                                          | 규격화         | 생성 ID와 공통 field style 적용         |
 | Select                                         | 신규 규격      | `/spaces`에서 시험                      |
-| PageHeader                                     | 신규 규격      | `/spaces`에서 시험                      |
+| Textarea                                       | 신규 규격      | 등록 메모·URL·매칭 메시지에 적용        |
+| PageHeader                                     | 확장 적용      | 목록·폼·인증 정렬과 action breakpoint   |
 | LoadingState                                   | 규격화         | spinner를 보조기술에서 숨김             |
 | 공간 목록 `/spaces`                            | 시험 적용 완료 | 대표 화면                               |
-| 나머지 화면                                    | 미적용         | `UI_AUDIT.md`의 화면별 backlog로 이동   |
+| 목록·등록·인증·상세 보조 화면                  | 선택 적용 완료 | 반복 헤더·필드·카드·링크만 교체         |
+| 홈 캠페인·대시보드 고유 영역                   | 유지           | 고유 정보 구조와 시각 예외 보존         |

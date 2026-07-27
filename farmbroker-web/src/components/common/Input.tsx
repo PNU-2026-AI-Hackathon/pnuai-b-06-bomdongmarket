@@ -26,8 +26,12 @@ export function Input({
     [props['aria-describedby'], messageId].filter(Boolean).join(' ') || undefined;
 
   return (
-    <label className="block text-sm font-medium text-content-muted" htmlFor={inputId}>
-      {label ? <span className="mb-2 block">{label}</span> : null}
+    <div className="block text-sm font-medium text-content-muted">
+      {label ? (
+        <label className="mb-2 block" htmlFor={inputId}>
+          {label}
+        </label>
+      ) : null}
       <span className="relative block">
         {icon ? (
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle">
@@ -62,6 +66,6 @@ export function Input({
           {helperText}
         </span>
       ) : null}
-    </label>
+    </div>
   );
 }
