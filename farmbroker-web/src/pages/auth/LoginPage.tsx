@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/authContext';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
+import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { useLoginForm } from '@/pages/auth/hooks/useLoginForm';
@@ -40,15 +41,12 @@ export function LoginPage() {
       narrow
     >
       <div className="w-full max-w-md">
-        <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
-            Welcome back
-          </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-900">봄동마켓 로그인</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            계정 정보를 입력하면 확인된 권한으로 서비스를 이용할 수 있습니다.
-          </p>
-        </div>
+        <PageHeader
+          align="center"
+          description="계정 정보를 입력하면 확인된 권한으로 서비스를 이용할 수 있습니다."
+          eyebrow="Welcome back"
+          title="봄동마켓 로그인"
+        />
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">
           {signupCompleted ? (

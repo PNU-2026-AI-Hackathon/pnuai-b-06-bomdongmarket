@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { ProfitEstimateCard } from '@/pages/space-detail/components/ProfitEstimateCard';
@@ -30,7 +31,11 @@ export function SpaceDetailPage() {
   return (
     <PageContainer>
       <Link
-        className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-leaf-700"
+        className={buttonStyles({
+          className: 'mb-5 -ml-3',
+          size: 'sm',
+          variant: 'ghost',
+        })}
         to={ROUTES.spaces}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />

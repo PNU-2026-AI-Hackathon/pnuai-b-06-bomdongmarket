@@ -86,3 +86,16 @@
 | 5    | 공간 상세       | back link, 복합 카드, textarea 포함                | 상세 전용 패턴 유지 기준 합의  | `SpaceDetailPage.test.tsx`, authenticated flow |
 | 6    | 대시보드        | icon button, quick action, 상태 카드 포함          | 공통 IconButton 계약 검토      | dashboard tests, mobile/desktop                |
 | 7    | 홈 캠페인       | 의도적인 대형 radius/그림자와 motion을 보존해야 함 | 캠페인 예외 토큰 근거 수집     | carousel keyboard/reduced-motion               |
+
+## 대표 화면 이후 선택 적용
+
+`/spaces` 시험 적용에서 확인한 계약을 반복 패턴에만 확장했다. 화면의 정보 구조, 데이터 흐름, 문구, 이미지와 업무 고유 UI는 변경하지 않았다.
+
+- 마켓·농부 매칭 목록: `PageHeader`, `Card`, 링크형 CTA를 재사용하고 기존 검색·카테고리 동작은 유지
+- 공간 등록: `PageHeader`, 카드 padding, 공통 `Textarea`를 적용하고 checkbox·sticky action은 화면 고유 패턴으로 유지
+- 로그인·회원가입: 중앙 정렬 `PageHeader`만 적용하고 인증 폼 구조와 role 선택 UI는 유지
+- 상품·공간 상세와 수익 예측: 뒤로가기 `Link`에 `buttonStyles`, 반복 카드에 padding 계약, 매칭 메시지에 `Textarea` 적용
+- 계약·마이페이지: 반복 헤더 또는 카드 padding만 선택 적용
+- 홈 캠페인과 대시보드 고유 greeting/quick action/icon button은 이번 범위에서 제외
+
+이에 따라 기존 백로그 1~5의 공통 primitive 적용은 완료했다. 대시보드와 홈은 고유 패턴을 별도 검토할 때까지 유지한다.
