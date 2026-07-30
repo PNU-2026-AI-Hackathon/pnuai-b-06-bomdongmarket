@@ -43,6 +43,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 인증 불필요 — 회원가입 · 로그인
                 .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login").permitAll()
+                // 인증 불필요 — Swagger UI · OpenAPI 문서
+                .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // 그 외 모든 요청은 인증 필요 (다른 팀원 도메인 API도 자동 보호됨)
                 .anyRequest().authenticated()
             )
