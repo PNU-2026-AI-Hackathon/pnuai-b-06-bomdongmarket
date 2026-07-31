@@ -19,7 +19,7 @@ public class OpenAPIConfig{
                 .title("farmbroker API")
                 .description("봄동마켓 BE API 문서")
                 .version("v1"))
-
+        
         // 모든 api에 jwt Bearer 인증 기본 적용
         .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
         .components(new Components()

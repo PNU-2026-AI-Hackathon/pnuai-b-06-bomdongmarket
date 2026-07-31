@@ -1,0 +1,4 @@
+﻿crop_name,yield_per_cycle_kg_m2,cycles_per_month,marketable_rate,required_ppfd_umol_m2_s,lighting_hours_day,target_temperature_c,target_relative_humidity,daily_evapotranspiration_mm,material_cost_per_m2_cycle_krw,other_material_cost_month_krw
+상추,6,0.5,0.9,200,15,20,0.7,1.5,15000,300000
+딸기,3.1,0.5,0.9,250,16,20,0.7,3.8,11250,300000
+바질,3,0.8,0.9,250,16,24,0.65,3.5,15000,300000

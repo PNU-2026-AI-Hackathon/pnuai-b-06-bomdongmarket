@@ -11,6 +11,7 @@ import com.farmbroker.farmbroker.space.dto.SpaceDetailResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceListItemResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceListResponse;
 import com.farmbroker.farmbroker.space.dto.SpaceResponse;
+import com.farmbroker.farmbroker.space.dto.SpaceSummaryDto;
 import com.farmbroker.farmbroker.space.dto.SpaceUpdateRequest;
 import com.farmbroker.farmbroker.space.repository.SpaceImageRepository;
 import com.farmbroker.farmbroker.space.repository.SpaceRepository;
@@ -165,6 +166,40 @@ public class SpaceService {
         validateOwner(space, userId);
         space.softDelete();
         return SpaceDeleteResponse.of(spaceId, true);
+    }
+
+    // ── BE3(matching) 내부 인터페이스 (작업명세서 5.2 규약 — 임의 변경 금지) ──────
+
+    // 단건 요약 조회 — 공개 API(getDetail)와 달리 deleted 여부와 무관하게 반환한다.
+    // BE3가 신청 시 deleted를 보고 거부하고, 매칭 이력에선 삭제된 공간 제목도 노출해야 하기 때문.
+    // 존재하지 않는 spaceId만 SPACE_NOT_FOUND.
+    public SpaceSummaryDto getSummaryById(Long spaceId) {
+        Space space = spaceRepository.findById(spaceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
+        Map<Long, String> thumbnails = findThumbnails(List.of(space));
+        return SpaceSummaryDto.from(space, thumbnails.get(space.getId()));
+    }
+
+    // 배치 요약 조회 — BE3 매칭 목록용 (N+1 방지). 존재하는 공간만 담아 반환하며 예외를 던지지 않는다
+    public List<SpaceSummaryDto> getSummariesByIds(List<Long> spaceIds) {
+        List<Space> spaces = spaceRepository.findAllById(spaceIds);
+        Map<Long, String> thumbnails = findThumbnails(spaces);
+        return spaces.stream()
+                .map(space -> SpaceSummaryDto.from(space, thumbnails.get(space.getId())))
+                .toList();
+    }
+
+    // 매칭 수락 시 BE3 accept() 트랜잭션 안에서 호출된다.
+    // 전파는 반드시 REQUIRED(기본값) — REQUIRES_NEW로 바꾸면 매칭 수락 롤백 시 status만 남는 사고가 난다.
+    // 클래스 기본이 readOnly라 쓰기 @Transactional을 별도 부착한다 (작업명세서 5.2).
+    @Transactional
+    public void markMatched(Long spaceId) {
+        Space space = spaceRepository.findById(spaceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
+        if (space.isDeleted() || space.getStatus() != SpaceStatus.AVAILABLE) {
+            throw new BusinessException(ErrorCode.SPACE_NOT_AVAILABLE);
+        }
+        space.markMatched();
     }
 
     private void validateOwner(Space space, Long userId) {

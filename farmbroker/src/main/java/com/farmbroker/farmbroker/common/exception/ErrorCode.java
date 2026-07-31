@@ -25,7 +25,22 @@ public enum ErrorCode {
 
     // ── 공통 ─────────────────────────────────────────────────────────────────
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
+
+    // ── matching (소유: 백엔드 3) ─────────────────────────────────────────────
+    MATCHING_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 신청입니다."),
+    MATCHING_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 매칭에 대한 권한이 없습니다."),
+    MATCHING_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 매칭 신청입니다."),
+    MATCHING_DUPLICATED(HttpStatus.CONFLICT, "이미 신청한 공간입니다."),
+    MATCHING_SELF_APPLY(HttpStatus.BAD_REQUEST, "본인 소유 공간에는 신청할 수 없습니다."),
+
+    // ── ai (소유: 백엔드 3) ──────────────────────────────────────────────────
+    AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다."),
+    AI_RESPONSE_INVALID(HttpStatus.BAD_GATEWAY, "AI 응답 처리에 실패했습니다."),
+    AI_QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "AI 요청 한도를 초과했습니다."),
+
+    // ── crop (소유: 백엔드 3) ────────────────────────────────────────────────
+    CROP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 작물입니다.");
 
     private final HttpStatus status;
     private final String defaultMessage;
