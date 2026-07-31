@@ -61,4 +61,13 @@ public class AuthService {
 
         return LoginResponse.of(accessToken, user);
     }
+
+    // 로그아웃 — 현재는 Access Token만 쓰는 stateless 구조라 서버가 보관하는 세션/토큰이 없다.
+    // 따라서 실제 토큰 폐기는 클라이언트가 저장한 토큰을 삭제하는 방식으로 처리하고,
+    // 서버는 인증된 사용자의 요청임을 확인하는 역할만 한다.
+    // (추후 토큰 블랙리스트 방식으로 확장할 경우, 이 메서드에서 해당 토큰을 무효화하면 된다.
+    //  이때 JwtAuthenticationFilter의 검증 로직도 함께 수정이 필요하므로 공용 계약 변경에 주의할 것.)
+    public void logout(Long userId) {
+        // no-op: 클라이언트 방식 로그아웃이라 서버 측 상태 변경이 없다.
+    }
 }

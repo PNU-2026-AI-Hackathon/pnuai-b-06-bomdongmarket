@@ -2,10 +2,9 @@ package com.farmbroker.farmbroker;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-// @EnableJpaAuditing: User.createdAt 필드의 @CreatedDate가 자동으로 채워지도록 JPA Auditing 기능을 활성화.
-@EnableJpaAuditing
+// JPA Auditing(@CreatedDate 자동 채움)은 common.config.JpaAuditingConfig 에서 활성화한다.
+// (@WebMvcTest 등 웹 슬라이스 테스트에서 JPA metamodel 오류가 나지 않도록 메인 클래스에서 분리)
 @SpringBootApplication
 public class FarmbrokerApplication {
 
