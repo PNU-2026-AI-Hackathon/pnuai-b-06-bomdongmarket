@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend UI Consistency"
+  short_description: "기존 디자인 시스템에 맞춰 프론트엔드 UI를 구현하고 검토"
+  default_prompt: "Use $frontend-ui-consistency to implement this frontend UI change using the repository's existing design system and verify interaction, accessibility, and responsive behavior."
