@@ -1,4 +1,4 @@
-"""0.3.2 핵심 계산과 Excel 출력 회귀 테스트."""
+"""0.4.1 핵심 계산과 Excel 출력 회귀 테스트."""
 
 from __future__ import annotations
 
@@ -19,6 +19,15 @@ from water_cost_calculation import calculate_water_cost
 
 
 class ProfitCalculationTest(unittest.TestCase):
+    def test_optional_web_interface_and_dependencies_are_removed(self) -> None:
+        project_dir = Path(__file__).resolve().parents[1]
+        requirements = (project_dir / "requirements.txt").read_text(
+            encoding="utf-8"
+        ).lower()
+
+        self.assertFalse((project_dir / "app.py").exists())
+        self.assertEqual(requirements.strip(), "openpyxl>=3.1")
+
     def test_water_cost_includes_drainage_ratio(self) -> None:
         result = calculate_water_cost(
             {"total_area_m2": 100.0},
@@ -121,11 +130,16 @@ class ProfitCalculationTest(unittest.TestCase):
             )
             self.assertEqual(workbook["요약"].max_row, 13)
             self.assertEqual(workbook["요약"].max_column, 29)
+            self.assertEqual(
+                workbook["요약"]["A1"].value,
+                "Profit Calculator 0.4.1 · 3×3 수익성 비교",
+            )
             self.assertEqual(workbook["요약"]["A5"].value, "S001-상추")
             self.assertEqual(workbook["요약"]["A13"].value, "S003-바질")
             self.assertEqual(workbook["요약"]["M4"].value, "배액률")
             self.assertEqual(workbook["요약"]["O4"].value, "월 배액량(m³)")
             self.assertEqual(workbook["월별전력량"].max_row, 111)
+            self.assertEqual(workbook["입력기준"]["C4"].value, "0.4.1")
             self.assertEqual(workbook["검증"].max_row, 22)
 
 

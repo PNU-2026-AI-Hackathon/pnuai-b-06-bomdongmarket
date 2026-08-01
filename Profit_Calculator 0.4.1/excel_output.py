@@ -136,7 +136,7 @@ def _create_summary_sheet(
         "추천 방식",
         "계약 형태",
     ]
-    _style_title(sheet, "A1:AC1", "Profit Calculator 0.3.2 · 3×3 수익성 비교")
+    _style_title(sheet, "A1:AC1", "Profit Calculator 0.4.1 · 3×3 수익성 비교")
     sheet["A2"] = "생성 시각"
     sheet["B2"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sheet["D2"] = "분석 기준"
@@ -393,7 +393,7 @@ def _create_assumptions_sheet(
     _style_header(sheet, 3, 1, len(headers))
     water = _section(sites[0], "water")
     rows = [
-        ("버전", "프로그램 버전", "0.3.2", "배액률·배액량과 수도 종합단가 반영"),
+        ("버전", "프로그램 버전", "0.4.1", "콘솔·Excel 출력 중심으로 구조 간소화"),
         ("시나리오", "조합 방식", "공간 × 작물", "모든 공간에 모든 작물을 각각 적용"),
         ("수도", "배액률", f"{float(water['drainage_ratio']):.0%}", "standard_info.csv 공통값; 모든 작물에 동일 적용"),
         ("수도", "수도 종합단가", f"{float(water['water_rate_krw_m3']):,.0f} 원/m³", "standard_info.csv 입력"),
