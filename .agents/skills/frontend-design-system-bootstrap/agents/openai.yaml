@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Design System Bootstrap"
+  short_description: "현행 UI 패턴을 감사해 프로젝트 디자인 시스템으로 정리"
+  default_prompt: "Use $frontend-design-system-bootstrap to audit this frontend, formalize its existing design patterns, and pilot them on one representative screen."

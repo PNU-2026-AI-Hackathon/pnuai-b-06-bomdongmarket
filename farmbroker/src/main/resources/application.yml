@@ -1,0 +1,30 @@
+spring:
+  config:
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:../.env[.properties]"
+  datasource:
+    url: "${DB_URL:jdbc:mysql://localhost:3307/farmbroker?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}"
+    username: "${DB_USERNAME:root}"
+    password: "${DB_PASSWORD}"
+  jpa:
+    hibernate:
+      ddl-auto: "${JPA_DDL_AUTO:update}"
+    open-in-view: "${JPA_OPEN_IN_VIEW:false}"
+    show-sql: "${JPA_SHOW_SQL:false}"
+    properties:
+      hibernate:
+        format_sql: "${JPA_FORMAT_SQL:false}"
+
+server:
+  servlet:
+    context-path: "${SERVER_CONTEXT_PATH:/api}"
+
+jwt:
+  secret: "${JWT_SECRET}"
+  expiration: "${JWT_EXPIRATION:86400000}"
+
+gemini:
+  api-key: "${GEMINI_API_KEY:}"
+  model: "${GEMINI_MODEL:gemini-2.5-flash}"
+  base-url: "${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}"
