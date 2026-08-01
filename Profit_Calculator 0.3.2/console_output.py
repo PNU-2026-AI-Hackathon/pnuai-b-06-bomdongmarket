@@ -103,7 +103,11 @@ def print_site_result(site: dict[str, object]) -> None:
     )
     print(
         "[7 수도비] "
-        f"월 용수량 {format_number(float(water['monthly_total_water_m3']), 3)}m³ | "
+        f"배액률 {float(water['drainage_ratio']):.0%} | "
+        f"작물 순소비 {format_number(float(water['monthly_evapotranspiration_l']) / 1000.0, 3)}m³ | "
+        f"배액 {format_number(float(water['monthly_drainage_l']) / 1000.0, 3)}m³ | "
+        f"기타 {format_number(float(water['monthly_other_water_l']) / 1000.0, 3)}m³ | "
+        f"월 총 용수량 {format_number(float(water['monthly_total_water_m3']), 3)}m³ | "
         f"월 수도비 {format_krw(float(water['monthly_water_cost_krw']))}"
     )
     print(

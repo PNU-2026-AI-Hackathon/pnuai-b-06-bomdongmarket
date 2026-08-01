@@ -118,6 +118,11 @@ def _create_summary_sheet(
         "월 매출(원)",
         "월평균 전력량(kWh)",
         "월 전기비(원)",
+        "배액률",
+        "월 작물 순소비량(m³)",
+        "월 배액량(m³)",
+        "월 기타 용수량(m³)",
+        "월 총 용수량(m³)",
         "월 수도비(원)",
         "월 재료비(원)",
         "월 인건비(원)",
@@ -131,7 +136,7 @@ def _create_summary_sheet(
         "추천 방식",
         "계약 형태",
     ]
-    _style_title(sheet, "A1:X1", "Profit Calculator 0.3.1 · 3×3 수익성 비교")
+    _style_title(sheet, "A1:AC1", "Profit Calculator 0.3.2 · 3×3 수익성 비교")
     sheet["A2"] = "생성 시각"
     sheet["B2"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sheet["D2"] = "분석 기준"
@@ -167,6 +172,11 @@ def _create_summary_sheet(
                 sales["monthly_revenue_krw"],
                 electricity["average_monthly_energy_kwh"],
                 electricity["monthly_electricity_cost_krw"],
+                water["drainage_ratio"],
+                float(water["monthly_evapotranspiration_l"]) / 1000.0,
+                float(water["monthly_drainage_l"]) / 1000.0,
+                float(water["monthly_other_water_l"]) / 1000.0,
+                water["monthly_total_water_m3"],
                 water["monthly_water_cost_krw"],
                 material["monthly_material_cost_krw"],
                 labor["monthly_labor_cost_krw"],
@@ -183,44 +193,45 @@ def _create_summary_sheet(
         )
 
     last_row = 4 + len(sites)
-    _add_table(sheet, f"A4:X{last_row}", "ProfitScenarioSummary")
+    _add_table(sheet, f"A4:AC{last_row}", "ProfitScenarioSummary")
     sheet.freeze_panes = "D5"
-    sheet.auto_filter.ref = f"A4:X{last_row}"
+    sheet.auto_filter.ref = f"A4:AC{last_row}"
 
     for row in range(5, last_row + 1):
-        for column in range(1, 25):
+        for column in range(1, 30):
             cell = sheet.cell(row=row, column=column)
             cell.font = Font(name="맑은 고딕", size=10)
             cell.alignment = Alignment(vertical="center")
-        for column in (5, 6, 8, 9):
+        for column in (5, 6, 8, 9, 14, 15, 16, 17):
             sheet.cell(row=row, column=column).number_format = NUMBER_FORMAT
-        for column in (7, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22):
+        for column in (7, 10, 12, 18, 19, 20, 21, 22, 23, 25, 26, 27):
             sheet.cell(row=row, column=column).number_format = CURRENCY_FORMAT
         sheet.cell(row=row, column=11).number_format = INTEGER_FORMAT
-        sheet.cell(row=row, column=19).number_format = PERCENT_FORMAT
+        sheet.cell(row=row, column=13).number_format = PERCENT_FORMAT
+        sheet.cell(row=row, column=24).number_format = PERCENT_FORMAT
 
     negative_fill = PatternFill("solid", fgColor=ROSE)
     positive_fill = PatternFill("solid", fgColor=MINT)
-    for column in ("R", "T", "U", "V"):
+    for column in ("W", "Y", "Z", "AA"):
         target = f"{column}5:{column}{last_row}"
         sheet.conditional_formatting.add(
             target,
             CellIsRule(operator="lessThan", formula=["0"], fill=negative_fill),
         )
     sheet.conditional_formatting.add(
-        f"X5:X{last_row}",
-        FormulaRule(formula=["$X5=\"장기계약형\""], fill=positive_fill),
+        f"AC5:AC{last_row}",
+        FormulaRule(formula=["$AC5=\"장기계약형\""], fill=positive_fill),
     )
     sheet.conditional_formatting.add(
-        f"X5:X{last_row}",
-        FormulaRule(formula=["$X5=\"단기계약형\""], fill=PatternFill("solid", fgColor=AMBER)),
+        f"AC5:AC{last_row}",
+        FormulaRule(formula=["$AC5=\"단기계약형\""], fill=PatternFill("solid", fgColor=AMBER)),
     )
 
     _autofit_with_caps(sheet, max_width=26)
     sheet.column_dimensions["A"].width = 18
     sheet.column_dimensions["C"].width = 18
-    sheet.column_dimensions["W"].width = 34
-    sheet.column_dimensions["X"].width = 15
+    sheet.column_dimensions["AB"].width = 34
+    sheet.column_dimensions["AC"].width = 15
 
 
 def _detail_metrics(site: dict[str, object]) -> list[tuple[str, str, float, str]]:
@@ -248,6 +259,11 @@ def _detail_metrics(site: dict[str, object]) -> list[tuple[str, str, float, str]
         ("5. 습도", "월 증발산량", float(humidity["monthly_evapotranspiration_kg"]), "kg"),
         ("6. 전기비", "월평균 총 전력량", float(electricity["average_monthly_energy_kwh"]), "kWh"),
         ("6. 전기비", "월 전기비", float(electricity["monthly_electricity_cost_krw"]), "원"),
+        ("7. 수도비", "배액률", float(water["drainage_ratio"]), "%"),
+        ("7. 수도비", "월 작물 순소비량", float(water["monthly_evapotranspiration_l"]) / 1000.0, "m³"),
+        ("7. 수도비", "월 배액량", float(water["monthly_drainage_l"]) / 1000.0, "m³"),
+        ("7. 수도비", "월 작물 관수량", float(water["monthly_crop_irrigation_l"]) / 1000.0, "m³"),
+        ("7. 수도비", "월 기타 용수량", float(water["monthly_other_water_l"]) / 1000.0, "m³"),
         ("7. 수도비", "월 총 용수량", float(water["monthly_total_water_m3"]), "m³"),
         ("7. 수도비", "월 수도비", float(water["monthly_water_cost_krw"]), "원"),
         ("8. 재료비", "월 모종비", float(material["monthly_seedling_cost_krw"]), "원"),
@@ -295,9 +311,12 @@ def _create_detail_sheet(
     sheet.freeze_panes = "D4"
     for row in range(4, last_row + 1):
         unit = sheet.cell(row=row, column=7).value
-        sheet.cell(row=row, column=6).number_format = (
-            CURRENCY_FORMAT if unit in {"원", "원/kg"} else NUMBER_FORMAT
-        )
+        if unit in {"원", "원/kg"}:
+            sheet.cell(row=row, column=6).number_format = CURRENCY_FORMAT
+        elif unit == "%":
+            sheet.cell(row=row, column=6).number_format = PERCENT_FORMAT
+        else:
+            sheet.cell(row=row, column=6).number_format = NUMBER_FORMAT
     _autofit_with_caps(sheet)
     sheet.column_dimensions["E"].width = 26
 
@@ -361,7 +380,10 @@ def _create_energy_sheet(
     _autofit_with_caps(sheet)
 
 
-def _create_assumptions_sheet(workbook: Workbook) -> None:
+def _create_assumptions_sheet(
+    workbook: Workbook,
+    sites: list[dict[str, object]],
+) -> None:
     sheet = workbook.create_sheet("입력기준")
     sheet.sheet_view.showGridLines = False
     _style_title(sheet, "A1:D1", "모델 기준 및 입력 파일")
@@ -369,9 +391,12 @@ def _create_assumptions_sheet(workbook: Workbook) -> None:
     sheet.append([])
     sheet.append(headers)
     _style_header(sheet, 3, 1, len(headers))
+    water = _section(sites[0], "water")
     rows = [
-        ("버전", "프로그램 버전", "0.3.1", "수익 추천 및 3×3 비교 반영"),
+        ("버전", "프로그램 버전", "0.3.2", "배액률·배액량과 수도 종합단가 반영"),
         ("시나리오", "조합 방식", "공간 × 작물", "모든 공간에 모든 작물을 각각 적용"),
+        ("수도", "배액률", f"{float(water['drainage_ratio']):.0%}", "standard_info.csv 공통값; 모든 작물에 동일 적용"),
+        ("수도", "수도 종합단가", f"{float(water['water_rate_krw_m3']):,.0f} 원/m³", "standard_info.csv 입력"),
         ("수익", "공간 대여자 배분비율", "0.8", "contraction_info.csv 입력"),
         ("추천", "장기계약형", "예상수익 ≥ 원하는 월세", "두 금액이 같아도 장기계약형"),
         ("추천", "단기계약형", "적자 또는 예상수익 < 원하는 월세", "적자 금액은 그대로 출력"),
@@ -397,26 +422,39 @@ def _create_checks_sheet(
     _style_title(sheet, "A1:G1", "계산 결과 검증")
     sheet["A2"] = "MODEL STATUS"
     sheet["A2"].font = Font(name="맑은 고딕", bold=True, color=SLATE)
-    sheet["B2"] = f'=IF(COUNTIF(G5:G{4 + len(sites)},"FAIL")=0,"PASS","FAIL")'
+    sheet["B2"] = f'=IF(COUNTIF(G5:G{4 + len(sites) * 2},"FAIL")=0,"PASS","FAIL")'
     sheet["B2"].font = Font(name="맑은 고딕", bold=True)
     headers = ["시나리오ID", "검증 항목", "실제값", "기대값", "차이", "허용오차", "상태"]
     sheet.append([])
     sheet.append(headers)
     _style_header(sheet, 4, 1, len(headers))
 
-    for index, site in enumerate(sites, start=5):
-        summary_row = index
-        sheet.cell(index, 1, site["scenario_id"])
-        sheet.cell(index, 2, "월 영업이익 = 공간 대여자 예상수익 + 사업장 영업이익")
-        sheet.cell(index, 3, f"='요약'!R{summary_row}")
-        sheet.cell(index, 4, f"='요약'!T{summary_row}+'요약'!V{summary_row}")
-        sheet.cell(index, 5, f"=C{index}-D{index}")
-        sheet.cell(index, 6, 0.5)
-        sheet.cell(index, 7, f'=IF(ABS(E{index})<=F{index},"PASS","FAIL")')
-        for column in range(3, 7):
-            sheet.cell(index, column).number_format = CURRENCY_FORMAT
+    for offset, site in enumerate(sites):
+        summary_row = 5 + offset
+        profit_row = 5 + offset * 2
+        water_row = profit_row + 1
 
-    last_row = 4 + len(sites)
+        sheet.cell(profit_row, 1, site["scenario_id"])
+        sheet.cell(profit_row, 2, "월 영업이익 = 공간 대여자 예상수익 + 사업장 영업이익")
+        sheet.cell(profit_row, 3, f"='요약'!W{summary_row}")
+        sheet.cell(profit_row, 4, f"='요약'!Y{summary_row}+'요약'!AA{summary_row}")
+        sheet.cell(profit_row, 5, f"=C{profit_row}-D{profit_row}")
+        sheet.cell(profit_row, 6, 0.5)
+        sheet.cell(profit_row, 7, f'=IF(ABS(E{profit_row})<=F{profit_row},"PASS","FAIL")')
+        for column in range(3, 7):
+            sheet.cell(profit_row, column).number_format = CURRENCY_FORMAT
+
+        sheet.cell(water_row, 1, site["scenario_id"])
+        sheet.cell(water_row, 2, "월 총 용수량 = 작물 순소비량 + 배액량 + 기타 용수량")
+        sheet.cell(water_row, 3, f"='요약'!Q{summary_row}")
+        sheet.cell(water_row, 4, f"='요약'!N{summary_row}+'요약'!O{summary_row}+'요약'!P{summary_row}")
+        sheet.cell(water_row, 5, f"=C{water_row}-D{water_row}")
+        sheet.cell(water_row, 6, 0.001)
+        sheet.cell(water_row, 7, f'=IF(ABS(E{water_row})<=F{water_row},"PASS","FAIL")')
+        for column in range(3, 7):
+            sheet.cell(water_row, column).number_format = "0.000"
+
+    last_row = 4 + len(sites) * 2
     _add_table(sheet, f"A4:G{last_row}", "ProfitModelChecks")
     sheet.conditional_formatting.add(
         f"G5:G{last_row}",
@@ -447,7 +485,7 @@ def write_profit_output(
     _create_summary_sheet(workbook, sites)
     _create_detail_sheet(workbook, sites)
     _create_energy_sheet(workbook, sites)
-    _create_assumptions_sheet(workbook)
+    _create_assumptions_sheet(workbook, sites)
     _create_checks_sheet(workbook, sites)
     workbook.active = 0
     workbook.calculation.fullCalcOnLoad = True

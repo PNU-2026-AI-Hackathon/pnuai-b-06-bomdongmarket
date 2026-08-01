@@ -1,4 +1,4 @@
-# Profit Calculator 0.3.1
+# Profit Calculator 0.3.2
 
 실내농장 사업장의 공간·생산·매출·환경제어 에너지·운영비·수익을 월 단위로 계산하는 Python 콘솔 프로그램입니다.
 
@@ -11,7 +11,7 @@
 - 12개월 외기온도·상대습도에 따른 조명·난방·냉방 전력량 계산
 - 증발산, 환기, 냉방 제습을 반영한 가습·제습 전력량 계산
 - 조명·냉난방·가습·제습을 모두 포함한 월평균 전력비 계산
-- 수도비, 재료비, 최저시급 기준 인건비 계산
+- 작물 공통 배액률과 공실 전체면적 기준 기타 용수를 반영한 수도비 계산
 - 최저시급 기준 인건비를 포함한 월 운영비와 월 영업이익 계산
 - 월 영업이익의 80%인 공간 대여자 예상수익과 사업 영업이익 계산
 - 공간 대여자 예상수익과 원하는 월세를 비교한 장기·단기 계약형 추천
@@ -51,7 +51,7 @@ flowchart LR
 ## 프로젝트 구조
 
 ```text
-Profit_Calculator 0.3.1/
+Profit_Calculator 0.3.2/
 ├─ main.py
 ├─ console_output.py
 ├─ excel_output.py
@@ -90,14 +90,14 @@ Python 파일은 계산 블록 10개, 공통 실행 파일 1개, 출력 파일 2
 | `lighting_hvac_calculation.py` | 조명·난방·냉방 전력량 계산 |
 | `humidity_calculation.py` | 환기·증발산·냉방제습과 가습·제습 전력량 계산 |
 | `electricity_cost_calculation.py` | 환경제어 전력량 합산, 월평균, 전기비 계산 |
-| `water_cost_calculation.py` | 월 용수량과 수도비 계산 |
+| `water_cost_calculation.py` | 배액을 포함한 월 용수량과 수도비 계산 |
 | `material_cost_calculation.py` | 모종비와 기타 재료비 계산 |
 | `labor_cost_calculation.py` | 최저시급 기준 월 인건비 계산 |
 | `profit_calculation.py` | 운영비·영업이익·공간 대여자 예상수익·사업 영업이익·추천 방식 계산 |
 | `main.py` | CSV 로딩, 3개 공간×3개 작물 계산 순서 제어, Excel 생성과 콘솔 출력 |
 | `console_output.py` | 기존 1~10번 계산 블록 형식을 유지한 9개 시나리오 출력 |
 | `excel_output.py` | 계산 결과를 `output/Profit_Output.xlsx`에 저장 |
-| `app.py` | 3×3 비교와 계약 추천을 제공하는 Streamlit 웹 대시보드 |
+| `app.py` | 3×3 비교·계약 추천·배액 포함 수도비를 제공하는 Streamlit 웹 대시보드 |
 
 ## 실행 환경과 방법
 
@@ -112,7 +112,7 @@ python -m pip install -r requirements.txt
 ### 콘솔 출력
 
 ```powershell
-cd "C:\Users\user\Desktop\해커톤 프로젝트\Profit_Calculator 0.3.1"
+cd "C:\Users\user\Desktop\해커톤 프로젝트\Profit_Calculator 0.3.2"
 python main.py
 ```
 
@@ -124,7 +124,7 @@ python main.py
 4. 조명·냉난방 전력량
 5. 가습·제습 전력량
 6. 월평균 총 전력량과 전기비
-7. 용수량과 수도비
+7. 작물 순소비량·배액량·기타 용수량과 수도비
 8. 모종비와 재료비
 9. 노동시간과 인건비
 10. 운영비·영업이익·공간 대여자 예상수익·사업 영업이익·추천 계약형
@@ -138,7 +138,7 @@ python main.py
 Streamlit이 설치된 Anaconda 환경을 활성화한 뒤 실행합니다.
 
 ```powershell
-cd "C:\Users\user\Desktop\해커톤 프로젝트\Profit_Calculator 0.3.1"
+cd "C:\Users\user\Desktop\해커톤 프로젝트\Profit_Calculator 0.3.2"
 python -m streamlit run app.py
 ```
 
@@ -147,6 +147,7 @@ python -m streamlit run app.py
 - `3×3 비교`: 공간·작물별 매출, 비용, 예상수익과 비교 그래프
 - `계약 추천`: 원하는 월세와 공간 대여자 예상수익 비교 및 장기·단기 계약형 추천
 - `월별 에너지`: 시나리오별 12개월 에너지 추이와 상세 표
+- `용수·수도비`: 배액률, 작물 순소비량, 배액량, 기타 용수량과 월 수도비
 - `계산 상세`: 1~10번 계산 블록의 주요 중간값
 - `입력 데이터`: 계산에 사용된 CSV 원본 확인
 
@@ -234,7 +235,8 @@ CSV 파일은 모두 UTF-8 형식으로 읽습니다. 코드에 직접 값을 �
 | 제습 SEC | 0.5 kWh/kg |
 | 가습 SEC | 0.07 kWh/kg |
 | 기타 용수 | 0.2 L/m²/day |
-| 수도 단일요율 | 750 원/m³ |
+| 배액률 | 0.3 (배액량 / 작물 관수량) |
+| 수도 종합단가 | 2,300 원/m³ |
 | 전기 단일요율 | 155 원/kWh |
 | 최저시급 | 10,320 원/hour |
 | 생산량당 노동량 | 0.5 hour/kg |
@@ -611,6 +613,29 @@ E_{average,month}\times155
 
 ### 7. 수도비 계산
 
+작물의 월 증발산량을 작물이 실제로 소비한 순용수량으로 봅니다. 모든 작물에 동일한 배액률 `0.3`을 적용하며, 배액을 포함한 작물 관수량은 순용수량을 `1 - 배액률`로 나누어 계산합니다.
+
+```math
+r_{drain}
+=
+\frac{W_{drain,L}}{W_{crop,irrigation,L}}
+=0.3
+```
+
+```math
+W_{crop,irrigation,L}
+=
+\frac{W_{crop,L}}{1-r_{drain}}
+```
+
+월 배액량:
+
+```math
+W_{drain,L}
+=
+W_{crop,irrigation,L}-W_{crop,L}
+```
+
 기타 용수는 재배면적이 아닌 공실 전체면적을 기준으로 계산합니다.
 
 ```math
@@ -624,13 +649,15 @@ A_{total}\times0.2\times\frac{365}{12}
 ```math
 W_{total,m^3}
 =
-\frac{W_{crop,L}+W_{other,L}}{1000}
+\frac{W_{crop,irrigation,L}+W_{other,L}}{1000}
+=
+\frac{\dfrac{W_{crop,L}}{1-r_{drain}}+W_{other,L}}{1000}
 ```
 
 수도비:
 
 ```math
-WaterCost=W_{total,m^3}\times750
+WaterCost=W_{total,m^3}\times2{,}300
 ```
 
 ### 8. 재료비 계산
@@ -735,7 +762,8 @@ LandlordIncome-DesiredMonthlyRent
 - 외부에 노출된 벽은 두 면으로 가정합니다.
 - 현재 세 공간의 천장 높이 입력값은 2.5 m입니다.
 - `1 mm × 1 m² = 1 L = 1 kg`으로 증발산량을 변환합니다.
-- 전기비와 수도비는 단일요율로 계산합니다.
+- 전기비는 단일요율, 수도비는 `2,300원/m³`의 종합단가로 계산합니다.
+- 배액률은 `standard_info.csv`의 공통값 `0.3`을 사용하며 모든 작물에 동일하게 적용합니다.
 - 외기조건은 12개월별로 계산한 후 총 전력량을 산술평균합니다.
 - 계산은 내부적으로 실수 정밀도를 유지합니다. 콘솔과 Streamlit 출력에서는 원화를 `3,421원`, 전력량을 `12,014 kWh`처럼 각각 정수로 일반 반올림하여 표시합니다.
 - 적자가 발생하면 배분 수익도 음수로 표시합니다. 별도의 `max(0, profit)` 처리는 하지 않습니다.
@@ -771,9 +799,9 @@ LandlordIncome-DesiredMonthlyRent
 
 | 공간 | 상추 | 딸기 | 바질 |
 |---|---|---|---|
-| 부산 금정구 농장 | 단기계약형 | 장기계약형 | 단기계약형 |
+| 부산 금정구 농장 | 단기계약형 | 장기계약형 | 장기계약형 |
 | 부산 해운대 농장 | 단기계약형 | 장기계약형 | 단기계약형 |
-| 부산 사하구 농장 | 단기계약형 | 장기계약형 | 단기계약형 |
+| 부산 사하구 농장 | 단기계약형 | 장기계약형 | 장기계약형 |
 
 현재 입력 기준 추천 결과는 장기계약형 3개, 단기계약형 6개입니다. 음수 수익은 계산 오류가 아니라 설정된 생산량·판매가격·인건비·전력비 조합에 따른 결과이며, 9개 합계는 같은 공간의 대체 작물 시나리오까지 더한 비교 참고값입니다.
 

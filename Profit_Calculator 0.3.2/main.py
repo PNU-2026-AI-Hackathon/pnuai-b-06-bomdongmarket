@@ -1,4 +1,4 @@
-"""Profit Calculator 0.3.1 계산 실행 및 콘솔 진입점."""
+"""Profit Calculator 0.3.2 계산 실행 및 콘솔 진입점."""
 
 from __future__ import annotations
 

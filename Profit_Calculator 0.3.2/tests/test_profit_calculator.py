@@ -1,4 +1,4 @@
-"""0.3.1 핵심 계산과 Excel 출력 회귀 테스트."""
+"""0.3.2 핵심 계산과 Excel 출력 회귀 테스트."""
 
 from __future__ import annotations
 
@@ -15,9 +15,49 @@ from profit_calculation import (
     SHORT_TERM_RECOMMENDATION,
     calculate_profit,
 )
+from water_cost_calculation import calculate_water_cost
 
 
 class ProfitCalculationTest(unittest.TestCase):
+    def test_water_cost_includes_drainage_ratio(self) -> None:
+        result = calculate_water_cost(
+            {"total_area_m2": 100.0},
+            {"monthly_evapotranspiration_kg": 1_000.0},
+            {
+                "drainage_ratio": 0.3,
+                "other_water_l_m2_day": 0.2,
+                "water_rate_krw_m3": 2_300.0,
+            },
+        )
+
+        expected_crop_irrigation_l = 1_000.0 / 0.7
+        expected_drainage_l = expected_crop_irrigation_l - 1_000.0
+        expected_other_water_l = 100.0 * 0.2 * (365.0 / 12.0)
+        expected_total_m3 = (
+            expected_crop_irrigation_l + expected_other_water_l
+        ) / 1_000.0
+
+        self.assertAlmostEqual(
+            result["monthly_crop_irrigation_l"], expected_crop_irrigation_l
+        )
+        self.assertAlmostEqual(result["monthly_drainage_l"], expected_drainage_l)
+        self.assertAlmostEqual(result["monthly_total_water_m3"], expected_total_m3)
+        self.assertAlmostEqual(
+            result["monthly_water_cost_krw"], expected_total_m3 * 2_300.0
+        )
+
+    def test_drainage_ratio_must_be_less_than_one(self) -> None:
+        with self.assertRaisesRegex(ValueError, "배액률"):
+            calculate_water_cost(
+                {"total_area_m2": 100.0},
+                {"monthly_evapotranspiration_kg": 1_000.0},
+                {
+                    "drainage_ratio": 1.0,
+                    "other_water_l_m2_day": 0.2,
+                    "water_rate_krw_m3": 2_300.0,
+                },
+            )
+
     def test_all_spaces_are_combined_with_all_crops(self) -> None:
         scenarios = calculate_all_sites()
 
@@ -80,9 +120,13 @@ class ProfitCalculationTest(unittest.TestCase):
                 ["요약", "계산상세", "월별전력량", "입력기준", "검증"],
             )
             self.assertEqual(workbook["요약"].max_row, 13)
+            self.assertEqual(workbook["요약"].max_column, 29)
             self.assertEqual(workbook["요약"]["A5"].value, "S001-상추")
             self.assertEqual(workbook["요약"]["A13"].value, "S003-바질")
+            self.assertEqual(workbook["요약"]["M4"].value, "배액률")
+            self.assertEqual(workbook["요약"]["O4"].value, "월 배액량(m³)")
             self.assertEqual(workbook["월별전력량"].max_row, 111)
+            self.assertEqual(workbook["검증"].max_row, 22)
 
 
 if __name__ == "__main__":
