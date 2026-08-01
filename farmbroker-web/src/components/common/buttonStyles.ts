@@ -5,10 +5,10 @@ type ButtonSize = 'sm' | 'md' | 'lg';
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-action text-content-inverse shadow-lift hover:bg-action-hover disabled:bg-leaf-300 disabled:shadow-none disabled:hover:bg-leaf-300',
+    'bg-action text-content-inverse shadow-lift hover:bg-action-hover disabled:bg-action/60 disabled:shadow-none disabled:hover:bg-action/60',
   secondary: 'bg-soil-300 text-ink-900 hover:bg-soil-500 focus-visible:ring-action',
   outline:
-    'border border-line-strong bg-surface text-action hover:border-leaf-400 hover:bg-action-soft',
+    'border border-line-strong bg-surface text-action hover:border-action hover:bg-action-soft',
   ghost: 'bg-transparent text-content-muted hover:bg-action-soft hover:text-action',
   danger:
     'bg-feedback-danger text-content-inverse hover:bg-red-800 focus-visible:ring-red-400',
