@@ -107,7 +107,7 @@ python -m pip install -r requirements.txt
 ### 콘솔 출력
 
 ```powershell
-cd "C:\Users\user\Desktop\해커톤 프로젝트\Profit_Calculator 0.4.1"
+cd "Profit_Calculator 0.4.1"
 python main.py
 ```
 
