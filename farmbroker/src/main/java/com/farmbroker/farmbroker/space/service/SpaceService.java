@@ -34,7 +34,9 @@ import java.util.List;
 import java.util.Map;
 
 // space 도메인 비즈니스 로직.
-// 역할(OWNER) 체크는 시큐리티 authorities가 아닌 여기서 수동으로 수행한다 (JWT 필터가 권한을 싣지 않는 팀 정책).
+// 공간 등록은 역할을 요구하지 않는다 — 등록 행위 자체가 OWNER 역할을 부여한다.
+// 역할이 필요한 검사는 시큐리티 authorities가 아닌 서비스 레이어에서 user.hasRole(...)로 수행한다
+// (JWT 필터가 권한을 싣지 않는 팀 정책).
 // 클래스 기본은 readOnly 트랜잭션 — 쓰기 메서드에는 개별 @Transactional을 부착한다.
 @Service
 @RequiredArgsConstructor
@@ -45,14 +47,12 @@ public class SpaceService {
     private final SpaceImageRepository spaceImageRepository;
     private final UserRepository userRepository;
 
-    // 공간 등록 — OWNER 역할만 가능. ownerId는 항상 인증 컨텍스트의 userId를 쓴다.
+    // 공간 등록 — 로그인한 회원이면 누구나 가능하고, 등록에 성공하면 OWNER 역할을 얻는다.
+    // ownerId는 항상 인증 컨텍스트의 userId를 쓴다.
     @Transactional
     public SpaceResponse create(Long userId, SpaceCreateRequest request) {
         User owner = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        if (!owner.hasRole(UserRole.OWNER)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_ROLE);
-        }
 
         Space space = spaceRepository.save(Space.builder()
                 .owner(owner)
@@ -68,6 +68,10 @@ public class SpaceService {
                 .build());
 
         List<String> imageUrls = saveImages(space, request.getImageUrls());
+
+        // 공간을 실제로 내놓은 시점에 공간 제공자가 된다. 같은 트랜잭션이라 더티 체킹으로 반영된다.
+        owner.addRole(UserRole.OWNER);
+
         return SpaceResponse.from(space, imageUrls);
     }
 
