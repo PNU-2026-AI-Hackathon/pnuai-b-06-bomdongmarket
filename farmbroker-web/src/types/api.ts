@@ -25,7 +25,9 @@ export interface User {
   userId: number;
   email: string;
   nickname: string;
-  role: UserRole;
+  // 역할은 가입 시 고르는 값이 아니라 활동에 따라 누적된다.
+  // 가입 시 CONSUMER, 공간을 등록하면 OWNER, 매칭이 수락되면 FARMER가 더해진다.
+  roles: UserRole[];
 }
 
 export interface LoginInput {
@@ -40,7 +42,6 @@ export interface LoginResult {
 
 export interface SignupInput extends LoginInput {
   nickname: string;
-  role: UserRole;
 }
 
 export interface PageResponse<T> {

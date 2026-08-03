@@ -86,7 +86,7 @@ describe('인증 후 원래 위치 복귀', () => {
         userId: 2,
         email: 'farmer@example.com',
         nickname: '도시농부',
-        role: 'FARMER',
+        roles: ['FARMER'],
       },
     });
 
