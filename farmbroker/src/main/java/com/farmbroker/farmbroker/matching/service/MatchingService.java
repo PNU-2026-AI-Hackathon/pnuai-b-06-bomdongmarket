@@ -32,8 +32,9 @@ import java.util.stream.Collectors;
 // Space 접근은 협의된 내부 계약(getSummaryById 등 — 현재는 BE3 임시 SpaceContractAdapter)만 사용하고
 // SpaceRepository를 직접 주입하지 않는다 — 엔티티 연관관계 세팅에만 EntityManager.getReference로
 // 프록시를 얻어 불필요한 SELECT 없이 FK만 저장한다.
-// 역할(FARMER) 검증은 JWT 필터가 authorities를 비워두므로(백엔드 1 규약)
-// Security 애노테이션 대신 서비스 레이어에서 User 조회 후 직접 체크한다.
+// 매칭 신청에는 역할 제한이 없다 — FARMER를 요구하면 "농사를 지어야 농부가 되는데
+// 농부가 아니면 신청을 못 하는" 순환이 생긴다. 대신 신청이 수락되어 실제로 재배가 확정된 시점에
+// 신청자에게 FARMER 역할을 부여한다.
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -46,11 +47,9 @@ public class MatchingService {
 
     @Transactional
     public MatchingApplyResponse apply(Long userId, MatchingApplyRequest request) {
+        // 역할 검증 없음 — 조회는 Matching 엔티티의 farmer 연관관계를 채우기 위한 것이다.
         User farmer = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        if (!farmer.hasRole(UserRole.FARMER)) {
-            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
-        }
 
         SpaceSummary space = spaceContractAdapter.getSummaryById(request.getSpaceId()); // 미존재 시 SPACE_NOT_FOUND
         if (space.isDeleted()) {
@@ -105,7 +104,8 @@ public class MatchingService {
                 .toList();
     }
 
-    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 나머지 REQUESTED 자동 REJECTED.
+    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 나머지 REQUESTED 자동 REJECTED
+    // ④ 신청자에게 FARMER 역할 부여.
     // 공간 상태 전환은 백엔드 2 제공 markMatched()로만 수행(직접 UPDATE 금지) —
     // 내부에서 AVAILABLE·미삭제를 검증해 위반 시 SPACE_NOT_AVAILABLE(409)을 던지고 수락 전체가 롤백된다.
     @Transactional
@@ -116,6 +116,10 @@ public class MatchingService {
         spaceContractAdapter.markMatched(matching.getSpace().getId());
         matchingRepository.rejectRemainingRequested(
                 matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
+
+        // 재배가 확정된 시점에 신청자가 농부가 된다 — 거절(reject)에는 부여하지 않는다.
+        // 같은 트랜잭션이라 더티 체킹으로 반영되고, 공간 상태 전환이 실패하면 함께 롤백된다.
+        matching.getFarmer().addRole(UserRole.FARMER);
 
         return MatchingStatusResponse.from(matching);
     }
