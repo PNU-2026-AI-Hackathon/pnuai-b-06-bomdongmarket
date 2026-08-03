@@ -48,7 +48,7 @@ public class MatchingService {
     public MatchingApplyResponse apply(Long userId, MatchingApplyRequest request) {
         User farmer = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        if (farmer.getRole() != UserRole.FARMER) {
+        if (!farmer.hasRole(UserRole.FARMER)) {
             throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
         }
 

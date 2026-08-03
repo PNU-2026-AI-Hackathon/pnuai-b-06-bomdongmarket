@@ -50,7 +50,7 @@ public class SpaceService {
     public SpaceResponse create(Long userId, SpaceCreateRequest request) {
         User owner = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        if (owner.getRole() != UserRole.OWNER) {
+        if (!owner.hasRole(UserRole.OWNER)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_ROLE);
         }
 
