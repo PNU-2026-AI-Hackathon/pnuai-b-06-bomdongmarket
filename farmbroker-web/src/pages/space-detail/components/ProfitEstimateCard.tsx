@@ -1,12 +1,12 @@
-import { Bot, ChartNoAxesCombined, Send } from 'lucide-react';
-import { useState } from 'react';
+import { Bot, ChartNoAxesCombined } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { LoadingState } from '@/components/common/LoadingState';
-import { Textarea } from '@/components/common/Textarea';
+import { buttonStyles } from '@/components/common/buttonStyles';
+import { ROUTES } from '@/constants/routes';
 import type { AiRecommendation } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatCurrency, formatNumber } from '@/utils/format';
@@ -15,9 +15,6 @@ interface ProfitEstimateCardProps {
   recommendation: AiRecommendation | null;
   status: AsyncStatus;
   onRun: () => void;
-  matchingStatus: AsyncStatus;
-  matchingError: string | null;
-  onApply: (message: string) => void;
 }
 
 // AI 추천 결과를 수익 예측과 매칭 신청 CTA로 이어주는 상세 페이지 보조 패널입니다.
@@ -25,15 +22,7 @@ export function ProfitEstimateCard({
   recommendation,
   status,
   onRun,
-  matchingStatus,
-  matchingError,
-  onApply,
 }: ProfitEstimateCardProps) {
-  const requireAuth = useRequireAuth();
-  const [message, setMessage] = useState(
-    '이 공간에서 스마트팜을 운영하고 싶습니다. 매칭 상담을 요청드립니다.',
-  );
-
   if (status === 'loading') {
     return <LoadingState label="AI 추천을 실행하는 중입니다" />;
   }
@@ -115,37 +104,12 @@ export function ProfitEstimateCard({
             ))}
           </div>
 
-          <div className="mt-5">
-            <Textarea
-              className="min-h-24 font-normal"
-              label="매칭 신청 메시지"
-              maxLength={500}
-              onChange={(event) => setMessage(event.target.value)}
-              value={message}
-            />
-          </div>
-          {matchingError ? (
-            <p className="mt-3 text-sm font-semibold text-red-700" role="alert">
-              {matchingError}
-            </p>
-          ) : null}
-          {matchingStatus === 'success' ? (
-            <p className="mt-3 text-sm font-semibold text-leaf-700" role="status">
-              매칭 신청이 완료되었습니다.
-            </p>
-          ) : null}
-          <Button
-            className="mt-5 w-full"
-            disabled={
-              !message.trim() ||
-              matchingStatus === 'loading' ||
-              matchingStatus === 'success'
-            }
-            onClick={() => requireAuth(() => onApply(message.trim()))}
+          <Link
+            className={buttonStyles({ className: 'mt-5 w-full sm:w-auto' })}
+            to={`${ROUTES.spaces}?matchSpaceId=${recommendation.spaceId}#matching-request`}
           >
-            <Send className="h-5 w-5" aria-hidden />
-            {matchingStatus === 'loading' ? '신청 중...' : '매칭 신청 보내기'}
-          </Button>
+            공간 목록에서 매칭 신청하기
+          </Link>
         </div>
       )}
     </Card>

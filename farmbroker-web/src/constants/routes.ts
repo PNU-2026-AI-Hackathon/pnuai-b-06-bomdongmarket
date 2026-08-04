@@ -6,7 +6,6 @@ export const ROUTES = {
   spaces: '/spaces',
   newSpace: '/spaces/new',
   spaceDetail: (spaceId: number | string) => `/spaces/${spaceId}`,
-  farmer: '/farmer',
   prediction: '/prediction',
   contracts: '/contracts',
   market: '/market',

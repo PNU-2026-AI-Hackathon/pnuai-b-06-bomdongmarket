@@ -13,6 +13,10 @@ describe('Dashboard pages', () => {
 
     expect(await screen.findByText('등록 공간')).toBeInTheDocument();
     expect(screen.getByText(/받은 매칭 신청/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '매칭 찾기' })).toHaveAttribute(
+      'href',
+      '/spaces',
+    );
     expect(screen.getAllByText(/도심농부 김민준/i).length).toBeGreaterThan(0);
   });
 

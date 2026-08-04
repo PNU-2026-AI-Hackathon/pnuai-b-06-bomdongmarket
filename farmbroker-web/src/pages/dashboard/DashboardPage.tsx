@@ -97,7 +97,7 @@ export function DashboardPage() {
               {[
                 ['공간 등록', ROUTES.newSpace],
                 ['수익 시뮬레이션', ROUTES.prediction],
-                ['매칭 찾기', ROUTES.farmer],
+                ['매칭 찾기', ROUTES.spaces],
                 ['마켓 열기', ROUTES.market],
               ].map(([label, href]) => (
                 <Link
