@@ -1,12 +1,9 @@
 import { Bot, ChartNoAxesCombined } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { LoadingState } from '@/components/common/LoadingState';
-import { buttonStyles } from '@/components/common/buttonStyles';
-import { ROUTES } from '@/constants/routes';
 import type { AiRecommendation } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatCurrency, formatNumber } from '@/utils/format';
@@ -17,7 +14,7 @@ interface ProfitEstimateCardProps {
   onRun: () => void;
 }
 
-// AI 추천 결과를 수익 예측과 매칭 신청 CTA로 이어주는 상세 페이지 보조 패널입니다.
+// AI 추천 결과를 수익성과 작물 적합도로 요약하는 상세 페이지 보조 패널입니다.
 export function ProfitEstimateCard({
   recommendation,
   status,
@@ -103,13 +100,6 @@ export function ProfitEstimateCard({
               </div>
             ))}
           </div>
-
-          <Link
-            className={buttonStyles({ className: 'mt-5 w-full sm:w-auto' })}
-            to={`${ROUTES.spaces}?matchSpaceId=${recommendation.spaceId}#matching-request`}
-          >
-            공간 목록에서 매칭 신청하기
-          </Link>
         </div>
       )}
     </Card>

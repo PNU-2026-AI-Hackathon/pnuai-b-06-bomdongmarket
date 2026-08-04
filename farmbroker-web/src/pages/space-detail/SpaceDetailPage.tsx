@@ -9,6 +9,7 @@ import { ROUTES } from '@/constants/routes';
 import { ProfitEstimateCard } from '@/pages/space-detail/components/ProfitEstimateCard';
 import { SpaceImageGallery } from '@/pages/space-detail/components/SpaceImageGallery';
 import { SpaceInfoPanel } from '@/pages/space-detail/components/SpaceInfoPanel';
+import { SpaceMatchingRequestCard } from '@/pages/space-detail/components/SpaceMatchingRequestCard';
 import { useSpaceDetail } from '@/pages/space-detail/hooks/useSpaceDetail';
 
 // 공간 상세 조회 API와 AI 추천 API를 함께 시연하는 상세 화면입니다.
@@ -55,6 +56,7 @@ export function SpaceDetailPage() {
           <SpaceImageGallery imageUrls={space.imageUrls} title={space.title} />
           <div className="grid gap-5">
             <SpaceInfoPanel space={space} />
+            <SpaceMatchingRequestCard spaceId={space.spaceId} />
             <ProfitEstimateCard
               onRun={loadRecommendation}
               recommendation={recommendation}
