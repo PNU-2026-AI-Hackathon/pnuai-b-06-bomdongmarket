@@ -21,7 +21,9 @@ export function MetricCard({ metric }: MetricCardProps) {
         </span>
       </div>
       <p className="mt-3 text-sm text-slate-600">{metric.helper}</p>
-      <p className="mt-1 text-xs font-bold text-leaf-700">{metric.trend}</p>
+      {metric.trend ? (
+        <p className="mt-1 text-xs font-bold text-leaf-700">{metric.trend}</p>
+      ) : null}
     </Card>
   );
 }

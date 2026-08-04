@@ -11,6 +11,7 @@ describe('Dashboard pages', () => {
   it('지표, 매칭 신청, 계약 미리보기를 렌더링한다', async () => {
     renderWithProviders(<DashboardPage />);
 
+    expect(screen.getByRole('heading', { level: 1, name: '대시보드' })).toBeInTheDocument();
     expect(await screen.findByText('등록 공간')).toBeInTheDocument();
     expect(screen.getByText(/받은 매칭 신청/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '매칭 찾기' })).toHaveAttribute(
@@ -18,6 +19,8 @@ describe('Dashboard pages', () => {
       '/spaces',
     );
     expect(screen.getAllByText(/도심농부 김민준/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText('실시간')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: '공간 등록' })).toHaveLength(1);
   });
 
   it('받은 매칭 신청을 수락한다', async () => {
