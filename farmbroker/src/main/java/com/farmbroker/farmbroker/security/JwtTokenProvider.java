@@ -1,6 +1,5 @@
 package com.farmbroker.farmbroker.security;
 
-import com.farmbroker.farmbroker.user.domain.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -13,8 +12,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 // JWT 토큰의 생성 · 파싱 · 검증을 전담하는 컴포넌트.
-// subject에 userId, claim에 role을 담아 발급하고,
-// 필터에서 토큰을 받으면 userId를 꺼내 SecurityContext에 인증 정보를 세팅한다.
+// subject에 userId만 담아 발급하고, 필터에서 토큰을 받으면 userId를 꺼내
+// SecurityContext에 인증 정보를 세팅한다.
+// role은 claim에 넣지 않는다 — 역할이 활동에 따라 늘어나는 가변 값이라
+// 토큰에 박아두면 발급 직후부터 실제 값과 어긋난다. 권한 판단은 매번 DB의 User를 읽어서 한다.
 // secret과 expiration은 application.yml에서 주입받아 하드코딩을 방지한다.
 @Component
 public class JwtTokenProvider {
@@ -31,12 +32,11 @@ public class JwtTokenProvider {
         this.expiration = expiration;
     }
 
-    // 토큰 생성 — subject: userId(String), claim: role
-    public String generateToken(Long userId, UserRole role) {
+    // 토큰 생성 — subject: userId(String)
+    public String generateToken(Long userId) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("role", role.name())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration))
                 .signWith(signingKey)

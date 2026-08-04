@@ -40,7 +40,7 @@ describe('Header', () => {
         userId: 2,
         email: 'farmer@example.com',
         nickname: '도시농부',
-        role: 'FARMER',
+        roles: ['FARMER'],
       },
     });
 

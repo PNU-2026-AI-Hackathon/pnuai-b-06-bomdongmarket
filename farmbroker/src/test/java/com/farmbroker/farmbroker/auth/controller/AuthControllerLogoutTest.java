@@ -4,7 +4,6 @@ import com.farmbroker.farmbroker.auth.service.AuthService;
 import com.farmbroker.farmbroker.security.JwtAuthenticationFilter;
 import com.farmbroker.farmbroker.security.JwtTokenProvider;
 import com.farmbroker.farmbroker.security.SecurityConfig;
-import com.farmbroker.farmbroker.user.domain.UserRole;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +48,7 @@ class AuthControllerLogoutTest {
     @Test
     @DisplayName("유효한 JWT로 로그아웃을 요청하면 200을 반환한다")
     void logout_withValidToken_returns200() throws Exception {
-        String token = jwtTokenProvider.generateToken(1L, UserRole.OWNER);
+        String token = jwtTokenProvider.generateToken(1L);
 
         mockMvc.perform(post("/auth/logout")
                         .header("Authorization", "Bearer " + token))

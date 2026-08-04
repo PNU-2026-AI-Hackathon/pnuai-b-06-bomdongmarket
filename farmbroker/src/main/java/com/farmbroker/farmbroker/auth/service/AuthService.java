@@ -36,11 +36,12 @@ public class AuthService {
         // 비밀번호 BCrypt 해싱 — 평문을 DB에 저장하지 않는다
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
+        // 역할은 지정하지 않는다 — User 빌더가 기본 CONSUMER를 넣고,
+        // 이후 공간 등록(OWNER) · 매칭 수락(FARMER) 시점에 서버가 더해준다.
         User user = User.builder()
                 .email(request.getEmail())
                 .password(encodedPassword)
                 .nickname(request.getNickname())
-                .role(request.getRole())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -57,7 +58,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getRole());
+        String accessToken = jwtTokenProvider.generateToken(user.getId());
 
         return LoginResponse.of(accessToken, user);
     }
