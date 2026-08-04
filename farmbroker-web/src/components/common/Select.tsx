@@ -1,16 +1,17 @@
-import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useId, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 import { fieldControlStyles } from '@/components/common/fieldStyles';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   icon?: ReactNode;
   helperText?: string;
   errorMessage?: string;
 }
 
-// 검색, 필터, 등록 폼에서 재사용하는 라벨 포함 입력 컴포넌트입니다.
-export function Input({
+// 입력과 동일한 label, helper/error, focus 계약을 사용하는 공통 선택 필드입니다.
+export function Select({
+  children,
   label,
   icon,
   helperText,
@@ -18,17 +19,17 @@ export function Input({
   className,
   id,
   ...props
-}: InputProps) {
+}: SelectProps) {
   const generatedId = useId();
-  const inputId = id ?? props.name ?? generatedId;
-  const messageId = errorMessage || helperText ? `${inputId}-message` : undefined;
+  const selectId = id ?? props.name ?? generatedId;
+  const messageId = errorMessage || helperText ? `${selectId}-message` : undefined;
   const describedBy =
     [props['aria-describedby'], messageId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div className="block text-sm font-medium text-content-muted">
       {label ? (
-        <label className="mb-2 block" htmlFor={inputId}>
+        <label className="mb-2 block" htmlFor={selectId}>
           {label}
         </label>
       ) : null}
@@ -38,9 +39,9 @@ export function Input({
             {icon}
           </span>
         ) : null}
-        <input
+        <select
           {...props}
-          id={inputId}
+          id={selectId}
           aria-describedby={describedBy}
           aria-invalid={errorMessage ? true : props['aria-invalid']}
           className={fieldControlStyles({
@@ -48,7 +49,9 @@ export function Input({
             hasIcon: Boolean(icon),
             invalid: Boolean(errorMessage),
           })}
-        />
+        >
+          {children}
+        </select>
       </span>
       {errorMessage ? (
         <span

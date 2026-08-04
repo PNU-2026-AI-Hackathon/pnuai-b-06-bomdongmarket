@@ -8,10 +8,10 @@ const predictionMetricLabels = ['예상 월 매출', '예상 운영비', '예상
 // 수익 예측 결과 화면의 핵심 수치를 한눈에 보이도록 정리합니다.
 export function PredictionResultCard() {
   return (
-    <Card className="p-5">
+    <Card padding="lg">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
+          <p className="text-eyebrow uppercase text-accent">
             추천 작물
           </p>
           <h2 className="mt-2 text-3xl font-black text-ink-900">버터헤드 상추</h2>

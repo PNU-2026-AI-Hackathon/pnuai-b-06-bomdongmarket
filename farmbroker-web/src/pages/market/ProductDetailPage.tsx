@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -43,7 +44,11 @@ export function ProductDetailPage() {
   return (
     <PageContainer narrow>
       <Link
-        className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-leaf-700"
+        className={buttonStyles({
+          className: 'mb-5 -ml-3',
+          size: 'sm',
+          variant: 'ghost',
+        })}
         to={ROUTES.market}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -64,7 +69,7 @@ export function ProductDetailPage() {
             className="aspect-[4/3] w-full rounded-app object-cover shadow-card"
             src={item.imageUrl}
           />
-          <Card className="p-5">
+          <Card padding="lg">
             <div className="flex flex-wrap gap-2">
               {item.freshnessTags.map((tag) => (
                 <Badge key={tag} tone={tag === '오늘 수확' ? 'yellow' : 'green'}>
@@ -116,7 +121,7 @@ export function ProductDetailPage() {
             </Button>
           </Card>
 
-          <Card className="p-5">
+          <Card padding="lg">
             <h2 className="flex items-center gap-2 text-xl font-black text-ink-900">
               <Route className="h-5 w-5 text-leaf-700" aria-hidden />
               푸드 마일리지 절감
@@ -127,7 +132,7 @@ export function ProductDetailPage() {
             </p>
           </Card>
 
-          <Card className="p-5">
+          <Card padding="lg">
             <h2 className="text-xl font-black text-ink-900">생산 이력</h2>
             <div className="mt-4">
               <ProductTraceabilityTimeline />

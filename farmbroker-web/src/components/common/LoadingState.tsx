@@ -8,12 +8,15 @@ export function LoadingState({
 }: LoadingStateProps) {
   return (
     <div
-      className="flex min-h-56 items-center justify-center rounded-app border border-leaf-100 bg-white"
+      className="flex min-h-56 items-center justify-center rounded-app border border-line bg-surface"
       role="status"
     >
       <div className="text-center">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-leaf-100 border-t-leaf-700" />
-        <p className="mt-4 text-sm font-medium text-slate-600">{label}</p>
+        <div
+          className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-line border-t-action"
+          aria-hidden
+        />
+        <p className="mt-4 text-sm font-medium text-content-muted">{label}</p>
       </div>
     </div>
   );

@@ -3,8 +3,27 @@
 @tailwind utilities;
 
 :root {
-  color: #102016;
-  background: #f6f8f3;
+  --color-canvas: 246 248 243;
+  --color-surface: 255 255 255;
+  --color-surface-subtle: 242 248 241;
+  --color-line: 220 239 217;
+  --color-line-strong: 185 221 180;
+  --color-content: 16 32 22;
+  --color-content-muted: 71 85 105;
+  --color-content-subtle: 100 116 139;
+  --color-content-inverse: 255 255 255;
+  --color-action: 40 90 49;
+  --color-action-hover: 35 72 43;
+  --color-action-soft: 220 239 217;
+  --color-accent: 127 84 41;
+  --color-accent-soft: 244 234 210;
+  --color-danger: 185 28 28;
+  --color-danger-soft: 254 242 242;
+  --color-success: 40 90 49;
+  --color-success-soft: 242 248 241;
+
+  color: rgb(var(--color-content));
+  background: rgb(var(--color-canvas));
   font-family:
     Inter,
     Pretendard,
@@ -29,7 +48,12 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(242, 248, 241, 0.86), rgba(251, 247, 239, 0.7)), #f6f8f3;
+    linear-gradient(
+      180deg,
+      rgb(var(--color-surface-subtle) / 0.86),
+      rgb(var(--color-accent-soft) / 0.42)
+    ),
+    rgb(var(--color-canvas));
 }
 
 button,
@@ -50,7 +74,18 @@ a {
 
 @layer base {
   :focus-visible {
-    outline: 3px solid rgba(189, 136, 56, 0.48);
+    outline: 3px solid rgb(var(--color-action));
     outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

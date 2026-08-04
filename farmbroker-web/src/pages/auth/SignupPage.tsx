@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
+import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { useSignupForm } from '@/pages/auth/hooks/useSignupForm';
@@ -49,15 +50,12 @@ export function SignupPage() {
   return (
     <PageContainer className="pb-28 pt-10 sm:pt-14 lg:py-16" narrow>
       <div className="mx-auto w-full max-w-2xl">
-        <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
-            Join Farm Broker
-          </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-900">봄동마켓 회원가입</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            이용 목적에 맞는 유형을 선택하고 도심 스마트팜 여정을 시작하세요.
-          </p>
-        </div>
+        <PageHeader
+          align="center"
+          description="이용 목적에 맞는 유형을 선택하고 도심 스마트팜 여정을 시작하세요."
+          eyebrow="Join Farm Broker"
+          title="봄동마켓 회원가입"
+        />
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">
           <form className="grid gap-5" noValidate onSubmit={handleSubmit}>
