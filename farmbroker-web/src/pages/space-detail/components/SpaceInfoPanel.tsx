@@ -19,7 +19,7 @@ const facilityIcons = {
 // 공간 상세의 핵심 조건, 등록자 정보, 임대료를 카드 하나로 요약합니다.
 export function SpaceInfoPanel({ space }: SpaceInfoPanelProps) {
   return (
-    <Card className="p-5">
+    <Card padding="lg">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={space.status === 'AVAILABLE' ? 'green' : 'slate'}>
           {getSpaceStatusLabel(space.status)}

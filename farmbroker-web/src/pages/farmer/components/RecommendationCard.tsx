@@ -2,6 +2,7 @@ import { ArrowRight, MapPin, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/common/Badge';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { RemoteImage } from '@/components/common/RemoteImage';
 import { ROUTES } from '@/constants/routes';
@@ -53,7 +54,10 @@ export function RecommendationCard({ recommendation }: RecommendationCardProps) 
             </div>
           </div>
           <Link
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-app bg-leaf-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-leaf-800 sm:w-auto"
+            className={buttonStyles({
+              className: 'mt-4 w-full sm:w-auto',
+              variant: 'primary',
+            })}
             to={ROUTES.spaceDetail(recommendation.spaceId)}
           >
             자세히 보기 <ArrowRight className="h-4 w-4" aria-hidden />

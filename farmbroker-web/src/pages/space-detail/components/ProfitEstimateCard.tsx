@@ -6,6 +6,7 @@ import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { LoadingState } from '@/components/common/LoadingState';
+import { Textarea } from '@/components/common/Textarea';
 import type { AiRecommendation } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatCurrency, formatNumber } from '@/utils/format';
@@ -45,7 +46,7 @@ export function ProfitEstimateCard({
   const operatingCost = Math.round(expectedRevenue * 0.34);
 
   return (
-    <Card className="p-5">
+    <Card padding="lg">
       <div className="flex items-center justify-between gap-4">
         <div>
           <Badge tone="blue">AI 추천</Badge>
@@ -114,15 +115,15 @@ export function ProfitEstimateCard({
             ))}
           </div>
 
-          <label className="mt-5 block text-sm font-bold text-ink-900">
-            매칭 신청 메시지
-            <textarea
-              className="mt-2 min-h-24 w-full rounded-app border border-leaf-100 bg-white px-3 py-3 text-sm font-normal text-ink-900 focus:border-leaf-500 focus:outline-none focus:ring-2 focus:ring-leaf-200"
+          <div className="mt-5">
+            <Textarea
+              className="min-h-24 font-normal"
+              label="매칭 신청 메시지"
               maxLength={500}
               onChange={(event) => setMessage(event.target.value)}
               value={message}
             />
-          </label>
+          </div>
           {matchingError ? (
             <p className="mt-3 text-sm font-semibold text-red-700" role="alert">
               {matchingError}

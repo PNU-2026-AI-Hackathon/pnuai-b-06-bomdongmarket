@@ -15,7 +15,7 @@ export function MyPage() {
 
   return (
     <PageContainer narrow>
-      <Card className="p-5">
+      <Card padding="lg">
         <div className="flex items-center gap-4">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-leaf-100 text-leaf-800">
             <UserRound className="h-8 w-8" aria-hidden />

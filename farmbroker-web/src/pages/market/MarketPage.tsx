@@ -1,9 +1,11 @@
 import { MapPin, Search } from 'lucide-react';
 
+import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
+import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
@@ -17,26 +19,20 @@ export function MarketPage() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
-            로컬 마켓
-          </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-900 sm:text-4xl">
-            가까운 스마트팜에서 온 신선한 농산물
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            수확일, 푸드 마일리지, 생산 이력, 바로 담기 기능으로 로컬 농산물을
-            비교해보세요.
-          </p>
-        </div>
-        <div className="rounded-app border border-leaf-100 bg-white p-3 text-sm font-semibold text-leaf-800 shadow-card">
-          <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
-          부산 반경 8km 이내
-        </div>
-      </div>
+      <PageHeader
+        action={
+          <Card className="text-sm font-semibold text-action" padding="sm">
+            <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
+            부산 반경 8km 이내
+          </Card>
+        }
+        actionBreakpoint="lg"
+        description="수확일, 푸드 마일리지, 생산 이력, 바로 담기 기능으로 로컬 농산물을 비교해보세요."
+        eyebrow="로컬 마켓"
+        title="가까운 스마트팜에서 온 신선한 농산물"
+      />
 
-      <div className="mt-6 grid gap-3 rounded-app border border-leaf-100 bg-white p-4 shadow-card lg:grid-cols-[1fr_auto]">
+      <Card className="mt-6 grid gap-3 lg:grid-cols-[1fr_auto]" padding="md">
         <Input
           aria-label="상품 검색"
           icon={<Search className="h-4 w-4" aria-hidden />}
@@ -48,7 +44,7 @@ export function MarketPage() {
           {marketCategories.map((option) => (
             <button
               key={option}
-              className={`min-h-10 rounded-full px-3 text-sm font-bold transition ${
+              className={`min-h-control rounded-full px-3 text-sm font-bold transition ${
                 category === option
                   ? 'bg-leaf-700 text-white'
                   : 'bg-leaf-50 text-leaf-800 hover:bg-leaf-100'
@@ -60,7 +56,7 @@ export function MarketPage() {
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       <div className="mt-6">
         {status === 'loading' || status === 'idle' ? (
