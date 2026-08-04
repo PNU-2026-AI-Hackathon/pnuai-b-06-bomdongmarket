@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { createSpace } from '@/services/spaceService';
@@ -51,14 +53,11 @@ export function SpaceCreatePage() {
   return (
     <PageContainer narrow>
       <div className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
-          공간 등록
-        </p>
-        <h1 className="mt-2 text-3xl font-black text-ink-900">새 재배 공간 등록</h1>
+        <PageHeader eyebrow="공간 등록" title="새 재배 공간 등록" />
       </div>
 
       <form className="grid gap-5" onSubmit={handleSubmit}>
-        <Card className="grid gap-4 p-5">
+        <Card className="grid gap-4" padding="lg">
           <Input
             label="공간 이름"
             name="title"
@@ -92,7 +91,7 @@ export function SpaceCreatePage() {
           </div>
         </Card>
 
-        <Card className="p-5">
+        <Card padding="lg">
           <h2 className="text-lg font-bold text-ink-900">공간 조건</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {[
@@ -114,17 +113,17 @@ export function SpaceCreatePage() {
               </label>
             ))}
           </div>
-          <label className="mt-4 block text-sm font-medium text-ink-700">
-            상세 메모
-            <textarea
-              className="mt-2 min-h-28 w-full rounded-app border border-leaf-100 bg-white px-3 py-3 text-sm text-ink-900 focus:border-leaf-500 focus:outline-none focus:ring-2 focus:ring-leaf-200"
+          <div className="mt-4">
+            <Textarea
+              className="min-h-28"
+              label="상세 메모"
               name="description"
               placeholder="예: 채광이 좋고 수도 사용이 가능하며 다단 재배 선반을 배치할 수 있는 상가 공간입니다."
             />
-          </label>
+          </div>
         </Card>
 
-        <Card className="p-5">
+        <Card padding="lg">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-ink-900">사진 업로드</h2>
@@ -138,14 +137,14 @@ export function SpaceCreatePage() {
             Swagger 명세에는 별도 업로드 API가 없어 공개 이미지 URL을 줄 단위로
             입력합니다.
           </p>
-          <label className="mt-4 block text-sm font-medium text-ink-700">
-            이미지 URL
-            <textarea
-              className="mt-2 min-h-24 w-full rounded-app border border-leaf-100 bg-white px-3 py-3 text-sm text-ink-900 focus:border-leaf-500 focus:outline-none focus:ring-2 focus:ring-leaf-200"
+          <div className="mt-4">
+            <Textarea
+              className="min-h-24"
+              label="이미지 URL"
               name="imageUrls"
               placeholder="https://example.com/space.jpg"
             />
-          </label>
+          </div>
         </Card>
 
         {error ? (

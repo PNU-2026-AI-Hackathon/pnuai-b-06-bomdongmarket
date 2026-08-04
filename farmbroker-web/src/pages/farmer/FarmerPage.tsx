@@ -1,10 +1,12 @@
 import { Search, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
+import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
+import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { RecommendationCard } from '@/pages/farmer/components/RecommendationCard';
 import { useFarmerRecommendations } from '@/pages/farmer/hooks/useFarmerRecommendations';
@@ -19,26 +21,20 @@ export function FarmerPage() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
-            농부 매칭
-          </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-900 sm:text-4xl">
-            매칭 가능한 공간
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            등록된 공간의 면적과 월세를 비교하고, 상세 화면에서 실제 공간 정보에 기반한 AI
-            작물 추천을 확인할 수 있습니다.
-          </p>
-        </div>
-        <div className="rounded-app border border-leaf-100 bg-white p-3 text-sm font-semibold text-leaf-800 shadow-card">
-          <Sparkles className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
-          상세 화면에서 AI 추천 확인
-        </div>
-      </div>
+      <PageHeader
+        action={
+          <Card className="text-sm font-semibold text-action" padding="sm">
+            <Sparkles className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
+            상세 화면에서 AI 추천 확인
+          </Card>
+        }
+        actionBreakpoint="lg"
+        description="등록된 공간의 면적과 월세를 비교하고, 상세 화면에서 실제 공간 정보에 기반한 AI 작물 추천을 확인할 수 있습니다."
+        eyebrow="농부 매칭"
+        title="매칭 가능한 공간"
+      />
 
-      <div className="mt-6 rounded-app border border-leaf-100 bg-white p-4 shadow-card">
+      <Card className="mt-6" padding="md">
         <Input
           aria-label="추천 공간 검색"
           icon={<Search className="h-4 w-4" aria-hidden />}
@@ -46,7 +42,7 @@ export function FarmerPage() {
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
         />
-      </div>
+      </Card>
 
       <div className="mt-6 grid gap-4">
         {status === 'loading' || status === 'idle' ? (

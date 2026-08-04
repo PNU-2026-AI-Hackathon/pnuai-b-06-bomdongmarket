@@ -10,8 +10,18 @@ describe('SpacesPage', () => {
   it('mock 서비스의 등록 공간을 렌더링한다', async () => {
     renderWithProviders(<SpacesPage />);
 
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: /스마트팜으로 전환 가능한 도심 공간 찾기/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('search', { name: /공간 검색 및 정렬/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/등록된 공간을 불러오는 중입니다/i)).toBeInTheDocument();
     expect(await screen.findByText(/부산대 앞 20평 상가 공실/i)).toBeInTheDocument();
+    expect(screen.getByRole('list')).toBeInTheDocument();
   });
 
   it('키워드로 공간을 필터링한다', async () => {
