@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import { RemoteImage } from '@/components/common/RemoteImage';
 
 interface SpaceImageGalleryProps {
   title: string;
@@ -9,9 +11,13 @@ interface SpaceImageGalleryProps {
 export function SpaceImageGallery({ title, imageUrls }: SpaceImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(imageUrls[0]);
 
+  useEffect(() => {
+    setSelectedImage(imageUrls[0]);
+  }, [imageUrls]);
+
   return (
     <div>
-      <img
+      <RemoteImage
         alt={title}
         className="aspect-[4/3] w-full rounded-app object-cover shadow-card"
         src={selectedImage}
@@ -26,7 +32,12 @@ export function SpaceImageGallery({ title, imageUrls }: SpaceImageGalleryProps) 
               onClick={() => setSelectedImage(imageUrl)}
               type="button"
             >
-              <img alt="" className="aspect-square w-full object-cover" src={imageUrl} />
+              <RemoteImage
+                alt=""
+                className="aspect-square w-full object-cover"
+                decorativeFallback
+                src={imageUrl}
+              />
             </button>
           ))}
         </div>
