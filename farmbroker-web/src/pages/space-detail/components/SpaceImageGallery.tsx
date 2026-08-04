@@ -24,10 +24,10 @@ export function SpaceImageGallery({ title, imageUrls }: SpaceImageGalleryProps) 
       />
       {imageUrls.length > 1 ? (
         <div className="mt-3 grid grid-cols-4 gap-2">
-          {imageUrls.map((imageUrl) => (
+          {imageUrls.map((imageUrl, index) => (
             <button
-              key={imageUrl}
-              aria-label={`이미지 ${imageUrls.indexOf(imageUrl) + 1} 보기`}
+              key={`${imageUrl}-${index}`}
+              aria-label={`이미지 ${index + 1} 보기`}
               className="overflow-hidden rounded-app border border-leaf-100 focus-visible:outline-leaf-500"
               onClick={() => setSelectedImage(imageUrl)}
               type="button"

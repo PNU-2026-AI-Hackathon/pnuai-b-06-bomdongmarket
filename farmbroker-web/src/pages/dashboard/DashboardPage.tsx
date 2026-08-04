@@ -97,7 +97,7 @@ export function DashboardPage() {
               ].map(([label, href]) => (
                 <Link
                   key={label}
-                  className="rounded-app border border-leaf-100 bg-white p-4 text-sm font-bold text-ink-900 shadow-card transition hover:border-leaf-300"
+                  className="rounded-app border border-leaf-100 bg-white p-4 text-sm font-bold text-ink-900 shadow-card transition hover:border-leaf-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
                   to={href}
                 >
                   {label}

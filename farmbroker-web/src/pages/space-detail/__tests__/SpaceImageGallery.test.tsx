@@ -13,4 +13,16 @@ describe('SpaceImageGallery', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('등록된 이미지 없음')).toBeInTheDocument();
   });
+
+  it('중복된 이미지 URL에도 순서에 맞는 썸네일 라벨을 제공한다', () => {
+    renderWithProviders(
+      <SpaceImageGallery
+        imageUrls={['https://example.com/space.jpg', 'https://example.com/space.jpg']}
+        title="중복 이미지 공간"
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '이미지 1 보기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '이미지 2 보기' })).toBeInTheDocument();
+  });
 });
