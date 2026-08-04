@@ -29,18 +29,24 @@
 
 <!-- 실행한 명령과 결과를 적어 주세요. -->
 
-## UI 체크리스트
+## UI 검토
 
-<!-- UI 변경이 없으면 해당 없음으로 표시해 주세요. -->
+<!--
+UI 변경이 있으면 `docs/DESIGN_SYSTEM.md`와 `docs/UX_GUIDELINES.md`를 기준으로
+검토 결과를 간단히 적어 주세요. 상세 체크 항목은 두 문서를 단일 기준으로 사용합니다.
 
-- [ ] `docs/DESIGN_SYSTEM.md`와 `docs/UX_GUIDELINES.md`를 확인했다.
-- [ ] 기존 디자인 토큰과 공통 UI 컴포넌트를 우선 사용했다.
-- [ ] 요청받지 않은 화면을 재설계하지 않았다.
-- [ ] loading, empty, error, success 상태를 점검했다.
-- [ ] hover, focus, active, disabled, loading 상태를 점검했다.
-- [ ] 모바일과 데스크톱 레이아웃을 점검했다.
-- [ ] 키보드 조작과 접근성 속성을 점검했다.
-- [ ] 새로운 UI 패턴을 도입했다면 관련 디자인 문서를 갱신했다.
+예시:
+- 적용 화면: `/spaces`
+- 재사용한 기반: `PageHeader`, `Select`, `Card`
+- 확인한 상태: loading / empty / error / success
+- 접근성: 키보드 순서, focus-visible, heading/label
+- 반응형: 320px, desktop
+- 검증: `npm run lint`, `npm run test`, `npm run build`
+
+UI 변경이 없으면 `해당 없음`으로 적어 주세요.
+-->
+
+- UI 검토 결과:
 
 ## 스크린샷
 
