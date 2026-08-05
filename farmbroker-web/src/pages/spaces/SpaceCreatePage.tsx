@@ -1,5 +1,5 @@
 import { ArrowRight, Camera } from 'lucide-react';
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/common/Button';
@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
+import { SpaceImageUploader } from '@/pages/spaces/components/SpaceImageUploader';
 import type { SpaceCreateLocationState } from '@/pages/spaces/types';
 
 // 공실 제공자가 API 명세의 필수 공간 필드를 입력하는 모바일 우선 등록 폼입니다.
@@ -18,14 +19,12 @@ export function SpaceCreatePage() {
   const location = useLocation();
   // 예측 화면에서 수정하러 돌아온 경우 직전 입력값을 그대로 복원합니다.
   const previous = (location.state as SpaceCreateLocationState | null)?.input;
+  // 사진은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
+  const [imageUrls, setImageUrls] = useState<string[]>(previous?.imageUrls ?? []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const imageUrls = String(formData.get('imageUrls') ?? '')
-      .split(/[\n,]/)
-      .map((url) => url.trim())
-      .filter(Boolean);
 
     const state: SpaceCreateLocationState = {
       input: {
@@ -137,23 +136,13 @@ export function SpaceCreatePage() {
             <div>
               <h2 className="text-lg font-bold text-ink-900">사진 업로드</h2>
               <p className="mt-1 text-sm text-slate-600">
-                카드에 노출될 순서대로 이미지를 등록합니다.
+                먼저 선택한 사진이 목록 카드의 대표 이미지가 됩니다.
               </p>
             </div>
             <Camera className="h-8 w-8 text-leaf-700" aria-hidden />
           </div>
-          <p className="mt-4 rounded-app border border-dashed border-leaf-300 bg-leaf-50 p-4 text-sm font-semibold leading-6 text-leaf-800">
-            Swagger 명세에는 별도 업로드 API가 없어 공개 이미지 URL을 줄 단위로
-            입력합니다.
-          </p>
           <div className="mt-4">
-            <Textarea
-              className="min-h-24"
-              defaultValue={previous?.imageUrls?.join('\n')}
-              label="이미지 URL"
-              name="imageUrls"
-              placeholder="https://example.com/space.jpg"
-            />
+            <SpaceImageUploader onChange={setImageUrls} value={imageUrls} />
           </div>
         </Card>
 

@@ -119,6 +119,12 @@ export interface SpaceDeleteResult {
   deleted: boolean;
 }
 
+export interface UploadedFile {
+  url: string;
+  originalName: string;
+  size: number;
+}
+
 export interface CropSummary {
   cropId: number;
   name: string;

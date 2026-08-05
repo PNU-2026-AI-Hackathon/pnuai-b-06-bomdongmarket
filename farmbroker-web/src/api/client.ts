@@ -28,7 +28,10 @@ export async function apiRequest<T>(
   const requestHeaders = new Headers(headers);
   const accessToken = token ?? getAccessToken();
 
-  if (body !== undefined && !requestHeaders.has('Content-Type')) {
+  // FormData는 브라우저가 boundary를 포함한 Content-Type을 직접 만들어야 하므로 건드리지 않습니다.
+  const isFormData = body instanceof FormData;
+
+  if (body !== undefined && !isFormData && !requestHeaders.has('Content-Type')) {
     requestHeaders.set('Content-Type', 'application/json');
   }
   if (accessToken && !requestHeaders.has('Authorization')) {
@@ -38,7 +41,7 @@ export async function apiRequest<T>(
   const response = await fetch(`${APP_INFO.baseUrl}${endpoint}`, {
     ...options,
     headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined || isFormData ? (body as BodyInit | undefined) : JSON.stringify(body),
   });
 
   let payload: ApiResponse<T> | null = null;

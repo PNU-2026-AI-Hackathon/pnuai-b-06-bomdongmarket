@@ -18,6 +18,9 @@ export const ENDPOINTS = {
   profit: {
     estimate: '/profit/estimate',
   },
+  files: {
+    upload: '/files',
+  },
   matchings: {
     create: '/matchings',
     myRequests: '/matchings/my-requests',

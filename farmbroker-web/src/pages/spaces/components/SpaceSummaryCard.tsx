@@ -1,5 +1,6 @@
 import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import type { SpaceCreateInput } from '@/types/api';
 import { formatArea, formatCurrency, formatNumber } from '@/utils/format';
 
@@ -53,6 +54,23 @@ export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
           </p>
         )}
       </div>
+
+      {imageCount > 0 ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-bold text-content">등록할 사진</h3>
+          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {input.imageUrls?.map((imageUrl, index) => (
+              <li key={imageUrl} className="overflow-hidden rounded-app border border-line">
+                <RemoteImage
+                  alt={`등록할 공간 사진 ${formatNumber(index + 1)}`}
+                  className="h-20 w-full object-cover"
+                  src={imageUrl}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {input.description ? (
         <div className="mt-4">
