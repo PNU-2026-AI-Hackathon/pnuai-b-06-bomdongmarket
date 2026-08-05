@@ -2,6 +2,7 @@ import { Bell, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
+import { hasRole } from '@/auth/roles';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -27,7 +28,8 @@ export function DashboardPage() {
     reload,
     respondToMatching,
   } = useDashboard();
-  const isFarmer = user?.role === 'FARMER';
+  const isOwner = hasRole(user, 'OWNER');
+  const isFarmer = hasRole(user, 'FARMER');
 
   return (
     <PageContainer>
@@ -115,7 +117,8 @@ export function DashboardPage() {
                 <SentMatchingResults matchings={sentMatchings} />
               </div>
             </section>
-          ) : (
+          ) : null}
+          {isOwner ? (
             <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
               <section aria-labelledby="received-matchings-title">
                 <h2
@@ -159,7 +162,7 @@ export function DashboardPage() {
                 </div>
               </section>
             </div>
-          )}
+          ) : null}
         </>
       ) : null}
     </PageContainer>

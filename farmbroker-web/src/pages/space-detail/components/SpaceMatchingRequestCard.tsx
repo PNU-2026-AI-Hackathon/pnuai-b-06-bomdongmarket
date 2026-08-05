@@ -13,21 +13,21 @@ interface SpaceMatchingRequestCardProps {
   spaceId: number;
 }
 
-// 공간 상세에서 농부가 바로 상담을 신청할 수 있는 카드입니다.
+// 공간 상세에서 로그인한 사용자가 바로 상담을 신청할 수 있는 카드입니다.
 export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardProps) {
-  const { isAuthenticated, user } = useAuth();
-  const isFarmer = isAuthenticated && user?.role === 'FARMER';
+  const { isAuthenticated } = useAuth();
   const [message, setMessage] = useState(
     '이 공간에서 스마트팜을 운영하고 싶습니다. 매칭 상담을 요청드립니다.',
   );
-  const { status, error, result, submit } = useMatchingApplication(spaceId, isFarmer);
+  const { status, error, result, submit } = useMatchingApplication(spaceId, isAuthenticated);
 
   if (!isAuthenticated) {
     return (
       <Card padding="lg">
         <h2 className="text-xl font-black text-content">공간 매칭 신청</h2>
         <p className="mt-2 text-body-sm text-content-muted">
-          도심 농부 계정으로 로그인하면 이 공간의 매칭 상담을 신청할 수 있습니다.
+          로그인하면 이 공간의 매칭 상담을 신청할 수 있습니다. 신청이 수락되면 도심 농부
+          역할이 추가됩니다.
         </p>
         <Link
           className="mt-5 inline-flex text-sm font-bold text-action"
@@ -35,19 +35,6 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
         >
           로그인하고 매칭 신청하기
         </Link>
-      </Card>
-    );
-  }
-
-  if (!user) return null;
-
-  if (!isFarmer) {
-    return (
-      <Card padding="lg">
-        <h2 className="text-xl font-black text-content">공간 매칭 신청</h2>
-        <p className="mt-2 text-body-sm text-content-muted">
-          매칭 신청은 도심 농부 계정에서 사용할 수 있습니다.
-        </p>
       </Card>
     );
   }

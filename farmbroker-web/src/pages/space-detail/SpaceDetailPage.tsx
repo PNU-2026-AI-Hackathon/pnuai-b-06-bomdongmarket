@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
+import { useRequireAuth } from '@/auth/useRequireAuth';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { buttonStyles } from '@/components/common/buttonStyles';
@@ -16,6 +17,7 @@ import { useSpaceDetail } from '@/pages/space-detail/hooks/useSpaceDetail';
 export function SpaceDetailPage() {
   const params = useParams();
   const spaceId = Number(params.spaceId ?? 1);
+  const requireAuth = useRequireAuth();
   const {
     space,
     recommendation,
@@ -58,7 +60,7 @@ export function SpaceDetailPage() {
             <SpaceInfoPanel space={space} />
             <SpaceMatchingRequestCard spaceId={space.spaceId} />
             <ProfitEstimateCard
-              onRun={loadRecommendation}
+              onRun={() => requireAuth(loadRecommendation)}
               recommendation={recommendation}
               status={recommendationStatus}
             />

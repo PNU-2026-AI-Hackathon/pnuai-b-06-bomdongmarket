@@ -6,6 +6,7 @@ import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { getDashboardData, type DashboardData } from '@/services/dashboardService';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import type { UserRole } from '@/types/api';
 
 vi.mock('@/services/dashboardService', () => ({ getDashboardData: vi.fn() }));
 
@@ -15,7 +16,7 @@ const farmerSession = {
     userId: 2,
     email: 'farmer@example.com',
     nickname: '도시농부',
-    role: 'FARMER' as const,
+    roles: ['FARMER'] as UserRole[],
   },
 };
 

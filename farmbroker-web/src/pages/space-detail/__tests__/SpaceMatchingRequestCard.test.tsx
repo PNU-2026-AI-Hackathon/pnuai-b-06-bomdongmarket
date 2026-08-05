@@ -6,16 +6,17 @@ import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { SpaceMatchingRequestCard } from '@/pages/space-detail/components/SpaceMatchingRequestCard';
 import { applyMatching } from '@/services/matchingService';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import type { UserRole } from '@/types/api';
 
 vi.mock('@/services/matchingService', () => ({ applyMatching: vi.fn() }));
 
-const farmerSession = {
+const consumerSession = {
   accessToken: 'farmer-token',
   user: {
     userId: 2,
     email: 'farmer@example.com',
     nickname: '도시농부',
-    role: 'FARMER' as const,
+    roles: ['CONSUMER'] as UserRole[],
   },
 };
 
@@ -37,7 +38,7 @@ describe('SpaceMatchingRequestCard', () => {
 
   it('실패한 신청의 메시지를 보존하고 다시 시도한다', async () => {
     const user = userEvent.setup();
-    saveAuthSession(farmerSession);
+    saveAuthSession(consumerSession);
     vi.mocked(applyMatching)
       .mockRejectedValueOnce(new Error('네트워크 오류'))
       .mockResolvedValueOnce({
@@ -70,7 +71,7 @@ describe('SpaceMatchingRequestCard', () => {
     const user = userEvent.setup();
     let resolveRequest:
       ((value: Awaited<ReturnType<typeof applyMatching>>) => void) | undefined;
-    saveAuthSession(farmerSession);
+    saveAuthSession(consumerSession);
     vi.mocked(applyMatching).mockImplementation(
       () =>
         new Promise((resolve) => {
