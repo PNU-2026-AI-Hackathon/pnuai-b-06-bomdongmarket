@@ -24,12 +24,13 @@ public class SpaceDetailResponse {
     private final boolean hasVentilation;
     private final String description;
     private final List<String> imageUrls;
+    private final List<String> floorPlanUrls;
     private final String status;
     private final OwnerSummary owner;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
-    private SpaceDetailResponse(Space space, List<String> imageUrls) {
+    private SpaceDetailResponse(Space space, List<String> imageUrls, List<String> floorPlanUrls) {
         this.spaceId = space.getId();
         this.title = space.getTitle();
         this.address = space.getAddress();
@@ -41,14 +42,15 @@ public class SpaceDetailResponse {
         this.hasVentilation = space.isHasVentilation();
         this.description = space.getDescription();
         this.imageUrls = imageUrls;
+        this.floorPlanUrls = floorPlanUrls;
         this.status = space.getStatus().name();
         this.owner = OwnerSummary.from(space.getOwner());
         this.createdAt = space.getCreatedAt();
         this.updatedAt = space.getUpdatedAt();
     }
 
-    public static SpaceDetailResponse from(Space space, List<String> imageUrls) {
-        return new SpaceDetailResponse(space, imageUrls);
+    public static SpaceDetailResponse from(Space space, List<String> imageUrls, List<String> floorPlanUrls) {
+        return new SpaceDetailResponse(space, imageUrls, floorPlanUrls);
     }
 
     @Getter

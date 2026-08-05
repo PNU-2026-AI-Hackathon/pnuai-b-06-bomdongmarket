@@ -26,6 +26,7 @@ public class SpaceUpdateRequest {
     private static final long RENT_MIN = 0;
     private static final int IMAGE_URL_MAX_LENGTH = 500;
     private static final int IMAGE_MAX_COUNT = 10;
+    private static final int FLOOR_PLAN_MIN_COUNT = 1;
 
     // 검증 메시지 상수
     private static final String MSG_TITLE_SIZE = "제목은 1~100자여야 합니다.";
@@ -34,6 +35,7 @@ public class SpaceUpdateRequest {
     private static final String MSG_RENT_MIN = "월세는 0 이상이어야 합니다.";
     private static final String MSG_IMAGE_URL_BLANK = "이미지 URL은 비어 있을 수 없습니다.";
     private static final String MSG_IMAGE_COUNT = "이미지는 10장까지 등록할 수 있습니다.";
+    private static final String MSG_FLOOR_PLAN_COUNT = "도면은 1~10장까지 등록할 수 있습니다.";
 
     @Size(min = TITLE_MIN_LENGTH, max = TITLE_MAX_LENGTH, message = MSG_TITLE_SIZE)
     private String title;
@@ -63,4 +65,9 @@ public class SpaceUpdateRequest {
     // null = 이미지 변경 없음, 배열 = 전체 교체(빈 배열이면 전부 삭제)
     @Size(max = IMAGE_MAX_COUNT, message = MSG_IMAGE_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> imageUrls;
+
+    // null = 도면 변경 없음, 배열 = 전체 교체.
+    // 도면은 필수 항목이므로 사진과 달리 빈 배열로 전부 지우는 것은 허용하지 않는다.
+    @Size(min = FLOOR_PLAN_MIN_COUNT, max = IMAGE_MAX_COUNT, message = MSG_FLOOR_PLAN_COUNT)
+    private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> floorPlanUrls;
 }
