@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/common/Button';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { ErrorState } from '@/components/common/ErrorState';
+import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
@@ -11,20 +12,28 @@ import { PredictionResultCard } from '@/pages/spaces/components/PredictionResult
 import { SpaceSummaryCard } from '@/pages/spaces/components/SpaceSummaryCard';
 import { useSpaceRegistration } from '@/pages/spaces/hooks/useSpaceRegistration';
 import type { SpaceCreateLocationState } from '@/pages/spaces/types';
+import type { SpaceCreateInput } from '@/types/api';
 
 // 공간 등록 폼에서 넘어온 입력값의 수익 예측을 보여주고 실제 등록을 확정하는 단계입니다.
 export function SpacePredictionPage() {
   const location = useLocation();
   const state = location.state as SpaceCreateLocationState | null;
-  const { recommendation, predictionStatus, saveStatus, saveError, submit } =
-    useSpaceRegistration();
 
   // 새로고침이나 URL 직접 진입으로 입력값이 없으면 등록 폼부터 다시 시작합니다.
   if (!state?.input) {
     return <Navigate replace to={ROUTES.newSpace} />;
   }
 
-  const { input } = state;
+  return <PredictionStep input={state.input} />;
+}
+
+interface PredictionStepProps {
+  input: SpaceCreateInput;
+}
+
+function PredictionStep({ input }: PredictionStepProps) {
+  const { estimates, predictionStatus, saveStatus, saveError, reloadPrediction, submit } =
+    useSpaceRegistration(input);
 
   if (saveStatus === 'success') {
     return (
@@ -57,7 +66,7 @@ export function SpacePredictionPage() {
     <PageContainer narrow>
       <Link
         className={buttonStyles({ className: 'mb-5 -ml-3', size: 'sm', variant: 'ghost' })}
-        state={state}
+        state={{ input }}
         to={ROUTES.newSpace}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -72,13 +81,15 @@ export function SpacePredictionPage() {
       </div>
 
       <div className="grid gap-5">
-        {predictionStatus === 'error' ? (
-          <ErrorState message="수익 예측을 불러오지 못했습니다. 입력 정보 확인 후 다시 시도해 주세요." />
-        ) : (
-          <PredictionResultCard
-            recommendation={recommendation}
-            status={predictionStatus}
+        {predictionStatus === 'loading' || predictionStatus === 'idle' ? (
+          <LoadingState label="수익 예측을 계산하는 중입니다" />
+        ) : predictionStatus === 'error' ? (
+          <ErrorState
+            message="수익 예측을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+            onRetry={() => void reloadPrediction()}
           />
+        ) : (
+          <PredictionResultCard estimates={estimates} />
         )}
 
         <SpaceSummaryCard input={input} />
@@ -96,7 +107,7 @@ export function SpacePredictionPage() {
           <Button
             className="w-full"
             disabled={saveStatus === 'loading'}
-            onClick={() => void submit(input)}
+            onClick={() => void submit()}
           >
             {saveStatus === 'loading' ? '등록 중...' : '공간 등록'}
           </Button>

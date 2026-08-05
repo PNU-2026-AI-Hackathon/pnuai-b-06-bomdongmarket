@@ -153,6 +153,49 @@ export interface CropRecommendation {
   avgPricePerKg: number | null;
 }
 
+// 서버의 결정론적 수익 계산기(ProfitCalculator) 결과입니다. 금액은 KRW/월, 적자는 음수로 옵니다.
+export interface ProfitEstimate {
+  cropName: string;
+  // 계산 근거(표준 가정값 포함)
+  totalAreaM2: number;
+  cultivableRatio: number;
+  areaUtilizationPercent: number;
+  moduleLayers: number;
+  ceilingHeightM: number;
+  availableFloorAreaM2: number;
+  cultivationAreaM2: number;
+  lightingPowerW: number;
+  averageMonthlyEnergyKwh: number;
+  // 생산·매출
+  monthlyTotalProductionKg: number;
+  monthlySalesKg: number;
+  pricePerKgKrw: number;
+  monthlyRevenueKrw: number;
+  // 비용
+  electricityCostKrw: number;
+  waterCostKrw: number;
+  materialCostKrw: number;
+  laborCostKrw: number;
+  depreciationAndOtherCostKrw: number;
+  monthlyOperatingCostKrw: number;
+  // 손익·배분·계약 추천
+  monthlyOperatingProfitKrw: number;
+  landlordShareRatio: number;
+  landlordExpectedIncomeKrw: number;
+  desiredMonthlyRentKrw: number;
+  businessOperatingProfitKrw: number;
+  operatingLoss: boolean;
+  longTermRecommended: boolean;
+  recommendation: string;
+  contractType: string;
+}
+
+// 등록 전 예측이라 spaceId 없이 공간 등록 폼의 면적·월세만 보냅니다.
+export interface ProfitEstimateInput {
+  area: number;
+  monthlyRent: number;
+}
+
 export interface AiRecommendation {
   recommendationId: number;
   spaceId: number;
@@ -160,6 +203,7 @@ export interface AiRecommendation {
   layoutSuggestion: string;
   cautions: string[];
   createdAt: string;
+  profitEstimate: ProfitEstimate | null;
 }
 
 export interface AiRecommendationInput {

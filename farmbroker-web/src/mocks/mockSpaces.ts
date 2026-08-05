@@ -157,4 +157,7 @@ export const mockRecommendation: AiRecommendation = {
     '초기에는 저전력 LED 구역부터 운영한 뒤 선반 수를 단계적으로 늘리는 편이 안전합니다.',
   ],
   createdAt: '2026-07-05T14:00:00',
+  // 수익 계산기가 지원하는 작물은 상추·딸기·바질뿐이라 '버터헤드 상추'는 매칭되지 않습니다.
+  // 이 경우 백엔드도 null을 내려주므로 mock도 동일하게 둡니다.
+  profitEstimate: null,
 };

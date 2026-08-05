@@ -15,6 +15,9 @@ export const ENDPOINTS = {
   ai: {
     recommend: '/ai/recommend',
   },
+  profit: {
+    estimate: '/profit/estimate',
+  },
   matchings: {
     create: '/matchings',
     myRequests: '/matchings/my-requests',
