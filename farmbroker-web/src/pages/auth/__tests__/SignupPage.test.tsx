@@ -8,7 +8,7 @@ import { SignupPage } from '@/pages/auth/SignupPage';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 describe('SignupPage', () => {
-  it('필수 입력값과 사용자 유형을 검증한다', async () => {
+  it('필수 입력값을 검증한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SignupPage />);
 
@@ -18,7 +18,12 @@ describe('SignupPage', () => {
     expect(screen.getByText('이메일을 입력해 주세요.')).toBeInTheDocument();
     expect(screen.getByText('비밀번호를 입력해 주세요.')).toBeInTheDocument();
     expect(screen.getByText('비밀번호 확인을 입력해 주세요.')).toBeInTheDocument();
-    expect(screen.getByText('사용자 유형을 선택해 주세요.')).toBeInTheDocument();
+  });
+
+  it('사용자 유형을 고르는 단계가 없다', () => {
+    renderWithProviders(<SignupPage />);
+
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
   });
 
   it('일치하지 않는 비밀번호를 안내한다', async () => {
@@ -46,7 +51,6 @@ describe('SignupPage', () => {
     await user.type(screen.getByLabelText('이메일'), 'farmer@example.com');
     await user.type(screen.getByLabelText('비밀번호'), '12345678');
     await user.type(screen.getByLabelText('비밀번호 확인'), '12345678');
-    await user.click(screen.getByRole('radio', { name: /^농부/ }));
     await user.click(screen.getByRole('button', { name: '회원가입' }));
 
     expect(

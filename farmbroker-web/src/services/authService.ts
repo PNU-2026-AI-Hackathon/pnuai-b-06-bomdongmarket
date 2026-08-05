@@ -3,11 +3,12 @@ import { ENDPOINTS } from '@/api/endpoints';
 import { mockDelay } from '@/mocks/handlers';
 import type { LoginInput, LoginResult, SignupInput, User } from '@/types/api';
 
+// 목 사용자는 공간을 등록해 본 소비자 — 여러 역할을 동시에 가진 상태를 기본값으로 둡니다.
 const mockUser: User = {
   userId: 1,
   email: 'owner@example.com',
   nickname: '그린스페이스랩',
-  role: 'OWNER',
+  roles: ['OWNER', 'CONSUMER'],
 };
 
 export async function login(input: LoginInput): Promise<LoginResult> {
@@ -33,7 +34,7 @@ export async function signup(input: SignupInput): Promise<User> {
       userId: 2,
       email: input.email,
       nickname: input.nickname,
-      role: input.role,
+      roles: ['CONSUMER'],
     };
   }
 

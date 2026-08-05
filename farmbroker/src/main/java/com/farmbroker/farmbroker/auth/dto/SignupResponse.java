@@ -2,7 +2,10 @@ package com.farmbroker.farmbroker.auth.dto;
 
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.domain.UserRole;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
+
+import java.util.List;
 
 // 회원가입 성공 응답의 data 필드에 들어가는 DTO.
 // User 엔티티를 직접 반환하지 않고 이 DTO로 변환함으로써
@@ -14,16 +17,20 @@ public class SignupResponse {
     private final Long userId;
     private final String email;
     private final String nickname;
-    private final UserRole role;
 
-    private SignupResponse(Long userId, String email, String nickname, UserRole role) {
+    @Schema(description = "보유 역할 목록 — 가입 직후에는 항상 CONSUMER 하나뿐이다",
+            example = "[\"CONSUMER\"]")
+    private final List<UserRole> roles;
+
+    private SignupResponse(Long userId, String email, String nickname, List<UserRole> roles) {
         this.userId = userId;
         this.email = email;
         this.nickname = nickname;
-        this.role = role;
+        this.roles = roles;
     }
 
     public static SignupResponse from(User user) {
-        return new SignupResponse(user.getId(), user.getEmail(), user.getNickname(), user.getRole());
+        return new SignupResponse(user.getId(), user.getEmail(), user.getNickname(),
+                List.copyOf(user.getRoles()));
     }
 }

@@ -39,8 +39,9 @@ public class SpaceController {
 
     private final SpaceService spaceService;
 
-    // POST /api/spaces — 공간 등록 (OWNER만)
-    @Operation(summary = "공간 등록 (OWNER 전용)")
+    // POST /api/spaces — 공간 등록 (로그인 필요, 등록하면 OWNER 역할이 부여됨)
+    @Operation(summary = "공간 등록 (로그인 필요)",
+            description = "역할 제한 없이 로그인한 회원이면 등록할 수 있고, 등록에 성공하면 OWNER 역할이 부여된다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<SpaceResponse> create(@AuthenticationPrincipal Long userId,

@@ -9,26 +9,6 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { useSignupForm } from '@/pages/auth/hooks/useSignupForm';
 import { signup } from '@/services/authService';
-import type { UserRole } from '@/types/api';
-import { cn } from '@/utils/cn';
-
-const roleOptions: Array<{ value: UserRole; label: string; description: string }> = [
-  {
-    value: 'FARMER',
-    label: '농부',
-    description: '공간을 선택해 스마트팜 재배에 참여합니다.',
-  },
-  {
-    value: 'OWNER',
-    label: '공간 대여자',
-    description: '유휴 공간을 등록하고 농부와 연결합니다.',
-  },
-  {
-    value: 'CONSUMER',
-    label: '구매자',
-    description: '가까운 농장에서 생산한 농작물을 구매합니다.',
-  },
-];
 
 export function SignupPage() {
   const navigate = useNavigate();
@@ -40,7 +20,6 @@ export function SignupPage() {
     submitError,
     handleTextChange,
     handleBlur,
-    selectRole,
     handleSubmit,
   } = useSignupForm(async (input) => {
     await signup(input);
@@ -52,7 +31,7 @@ export function SignupPage() {
       <div className="mx-auto w-full max-w-2xl">
         <PageHeader
           align="center"
-          description="이용 목적에 맞는 유형을 선택하고 도심 스마트팜 여정을 시작하세요."
+          description="도심 스마트팜 여정을 시작하세요."
           eyebrow="Join Farm Broker"
           title="봄동마켓 회원가입"
         />
@@ -127,46 +106,10 @@ export function SignupPage() {
               />
             </div>
 
-            <fieldset aria-describedby={errors.role ? 'signup-role-error' : undefined}>
-              <legend className="text-sm font-medium text-ink-700">사용자 유형</legend>
-              <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                {roleOptions.map((option) => (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      'cursor-pointer rounded-app border p-4 transition',
-                      values.role === option.value
-                        ? 'border-leaf-500 bg-leaf-50 ring-2 ring-leaf-100'
-                        : 'border-leaf-100 hover:border-leaf-300',
-                    )}
-                  >
-                    <input
-                      checked={values.role === option.value}
-                      className="sr-only"
-                      name="role"
-                      onChange={() => selectRole(option.value)}
-                      type="radio"
-                      value={option.value}
-                    />
-                    <span className="block text-sm font-black text-ink-900">
-                      {option.label}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-slate-500">
-                      {option.description}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {errors.role ? (
-                <p
-                  className="mt-1.5 text-xs font-medium text-red-600"
-                  id="signup-role-error"
-                  role="alert"
-                >
-                  {errors.role}
-                </p>
-              ) : null}
-            </fieldset>
+            <p className="rounded-app border border-leaf-100 bg-leaf-50 p-3 text-xs leading-5 text-slate-600">
+              사용자 유형을 미리 고르지 않아도 됩니다. 유휴 공간을 등록하면 공간 제공자,
+              매칭이 성사되면 도심 농부 역할이 더해지고 여러 역할을 함께 가질 수 있습니다.
+            </p>
 
             <Button
               className="mt-1 w-full"

@@ -1,19 +1,19 @@
 import type { ChangeEvent, FocusEvent, FormEvent } from 'react';
 import { useState } from 'react';
 
-import type { SignupInput, UserRole } from '@/types/api';
+import type { SignupInput } from '@/types/api';
 
+// 가입 시 사용자 유형을 고르지 않습니다. 모든 회원은 소비자로 시작하고,
+// 공간을 등록하면 공간 제공자, 매칭이 수락되면 농부 역할이 서버에서 더해집니다.
 interface SignupFormValues {
   nickname: string;
   email: string;
   password: string;
   passwordConfirm: string;
-  role: UserRole | '';
 }
 
 type SignupTextField = 'nickname' | 'email' | 'password' | 'passwordConfirm';
-type SignupField = SignupTextField | 'role';
-type SignupFormErrors = Partial<Record<SignupField, string>>;
+type SignupFormErrors = Partial<Record<SignupTextField, string>>;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -22,7 +22,6 @@ const initialValues: SignupFormValues = {
   email: '',
   password: '',
   passwordConfirm: '',
-  role: '',
 };
 
 function validateTextField(
@@ -75,8 +74,6 @@ function validateForm(values: SignupFormValues) {
     if (error) errors[field] = error;
   });
 
-  if (!values.role) errors.role = '사용자 유형을 선택해 주세요.';
-
   return errors;
 }
 
@@ -118,11 +115,6 @@ export function useSignupForm(onSubmit: (values: SignupInput) => Promise<void>) 
     setErrors((current) => ({ ...current, [field]: error }));
   }
 
-  function selectRole(role: UserRole) {
-    setValues((current) => ({ ...current, role }));
-    setErrors((current) => ({ ...current, role: undefined }));
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateForm(values);
@@ -136,7 +128,6 @@ export function useSignupForm(onSubmit: (values: SignupInput) => Promise<void>) 
         nickname: values.nickname.trim(),
         email: values.email.trim(),
         password: values.password,
-        role: values.role as UserRole,
       });
     } catch (caught) {
       setSubmitError(
@@ -155,7 +146,6 @@ export function useSignupForm(onSubmit: (values: SignupInput) => Promise<void>) 
     submitError,
     handleTextChange,
     handleBlur,
-    selectRole,
     handleSubmit,
   };
 }

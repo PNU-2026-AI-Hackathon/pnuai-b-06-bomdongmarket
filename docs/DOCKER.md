@@ -30,7 +30,7 @@ MySQL 데이터는 Docker **named volume** `farmbroker-mysql-data`에 저장됩�
 컨테이너를 지웠다 다시 띄워도 데이터가 유지됩니다. 단, **볼륨은 각자의 컴퓨터 안에 있는 것**이라
 그 자체로 다른 컴퓨터와 공유되지는 않습니다.
 
-팀원끼리 같은 데이터를 보려면 → [db/init/README.md](db/init/README.md) 참고
+팀원끼리 같은 데이터를 보려면 → [db/init/README.md](../db/init/README.md) 참고
 (덤프를 `db/init/`에 커밋하면 다른 팀원이 최초 실행 시 자동으로 주입받습니다.)
 
 ## 백엔드 개발은 기존처럼 로컬로 하고 DB만 컨테이너로 쓰고 싶다면

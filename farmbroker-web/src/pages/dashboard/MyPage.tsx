@@ -1,6 +1,7 @@
 import { ChevronRight, UserRound } from 'lucide-react';
 
 import { useAuth } from '@/auth/authContext';
+import { ROLE_LABELS, sortRoles } from '@/auth/roles';
 import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -9,12 +10,8 @@ import { profileMenuItems } from '@/pages/dashboard/constants/dashboardContent';
 // 모바일 와이어프레임의 마이페이지 항목을 단순하고 데모 가능한 목록으로 구성합니다.
 export function MyPage() {
   const { user } = useAuth();
-  const roleLabel =
-    user?.role === 'FARMER'
-      ? '도심 농부'
-      : user?.role === 'CONSUMER'
-        ? '소비자'
-        : '공간 제공자';
+  // 역할은 여러 개일 수 있으므로 보유한 만큼 뱃지를 그립니다.
+  const roles = sortRoles(user?.roles);
 
   return (
     <PageContainer narrow>
@@ -27,9 +24,15 @@ export function MyPage() {
             <h1 className="text-2xl font-black text-ink-900">
               {user?.nickname ?? '그린스페이스랩'}
             </h1>
-            <div className="mt-2">
-              <Badge tone="green">{roleLabel}</Badge>
-            </div>
+            {roles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {roles.map((role) => (
+                  <Badge key={role} tone="green">
+                    {ROLE_LABELS[role]}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="mt-5 grid grid-cols-3 gap-2">
