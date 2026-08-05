@@ -1,6 +1,7 @@
 package com.farmbroker.farmbroker.ai.dto;
 
 import com.farmbroker.farmbroker.ai.domain.AiRecommendation;
+import com.farmbroker.farmbroker.profit.dto.ProfitEstimateResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 

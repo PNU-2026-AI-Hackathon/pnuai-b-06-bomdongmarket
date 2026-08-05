@@ -23,6 +23,10 @@ public class ProfitCalculator {
         return data.hasCrop(cropName);
     }
 
+    public List<String> supportedCrops() {
+        return data.supportedCropNames();
+    }
+
     // 공간 입력 + 작물명으로 월평균 수익성을 계산한다. 참조 데이터에 없는 작물이면 예외 대신 호출 전 supports()로 걸러야 한다.
     public ProfitEstimate estimate(SpaceInputs space, String cropName) {
         CropProduction crop = data.cropProduction(cropName);
