@@ -23,6 +23,14 @@ public enum ErrorCode {
     FORBIDDEN_ROLE(HttpStatus.FORBIDDEN, "권한이 없는 역할입니다."),
     INVALID_STATUS_CHANGE(HttpStatus.BAD_REQUEST, "허용되지 않는 상태 변경입니다."),
 
+    // ── file ─────────────────────────────────────────────────────────────────
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "업로드할 파일이 없습니다."),
+    FILE_TYPE_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "jpg, png, webp, gif 이미지만 업로드할 수 있습니다."),
+    FILE_COUNT_EXCEEDED(HttpStatus.BAD_REQUEST, "이미지는 한 번에 10장까지 업로드할 수 있습니다."),
+    FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "이미지 한 장의 크기는 5MB 이하여야 합니다."),
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 파일을 찾을 수 없습니다."),
+    FILE_STORAGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 저장하지 못했습니다."),
+
     // ── 공통 ─────────────────────────────────────────────────────────────────
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),

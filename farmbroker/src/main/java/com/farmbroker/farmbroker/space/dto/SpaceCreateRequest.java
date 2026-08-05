@@ -18,6 +18,7 @@ public class SpaceCreateRequest {
     private static final String AREA_MIN_EXCLUSIVE = "0.0";
     private static final long RENT_MIN = 0;
     private static final int IMAGE_URL_MAX_LENGTH = 500;
+    private static final int IMAGE_MAX_COUNT = 10;
 
     // 검증 메시지 상수
     private static final String MSG_TITLE_REQUIRED = "제목은 필수입니다.";
@@ -33,6 +34,7 @@ public class SpaceCreateRequest {
     private static final String MSG_ELECTRICITY_REQUIRED = "전기 가능 여부는 필수입니다.";
     private static final String MSG_VENTILATION_REQUIRED = "환기 가능 여부는 필수입니다.";
     private static final String MSG_IMAGE_URL_BLANK = "이미지 URL은 비어 있을 수 없습니다.";
+    private static final String MSG_IMAGE_COUNT = "이미지는 10장까지 등록할 수 있습니다.";
 
     @NotBlank(message = MSG_TITLE_REQUIRED)
     @Size(max = TITLE_MAX_LENGTH, message = MSG_TITLE_SIZE)
@@ -65,5 +67,6 @@ public class SpaceCreateRequest {
     private String description;
 
     // 배열 순서 = 노출 순서 (0번이 대표 이미지). 미입력 시 이미지 없이 등록
+    @Size(max = IMAGE_MAX_COUNT, message = MSG_IMAGE_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> imageUrls;
 }
