@@ -74,6 +74,7 @@ export interface SpaceDetail extends SpaceSummary {
   hasVentilation: boolean;
   description: string;
   imageUrls: string[];
+  floorPlanUrls: string[];
   owner: UserSummary;
   createdAt: string;
   updatedAt: string;
@@ -99,6 +100,8 @@ export interface SpaceCreateInput {
   hasVentilation: boolean;
   description?: string;
   imageUrls?: string[];
+  // 도면은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
+  floorPlanUrls: string[];
 }
 
 export type SpaceUpdateInput = Partial<SpaceCreateInput> & {
@@ -108,6 +111,7 @@ export type SpaceUpdateInput = Partial<SpaceCreateInput> & {
 export interface SpaceMutationResult extends SpaceCreateInput {
   spaceId: number;
   imageUrls: string[];
+  floorPlanUrls: string[];
   status: SpaceStatus;
   ownerId: number;
   createdAt: string;

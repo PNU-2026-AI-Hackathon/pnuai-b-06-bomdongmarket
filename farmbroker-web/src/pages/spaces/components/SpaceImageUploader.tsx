@@ -15,18 +15,32 @@ import { formatNumber } from '@/utils/format';
 interface SpaceImageUploaderProps {
   value: string[];
   onChange: (imageUrls: string[]) => void;
+  // 사진·도면 두 섹션이 같은 화면에 있으므로 접근성 이름과 안내 문구를 구분합니다.
+  label: string;
+  // 상위 폼이 제출을 막았을 때 이 섹션에 표시할 문구입니다.
+  requiredMessage?: string | null;
+  // 첫 장이 목록 카드 썸네일이 되는 공간 사진에만 '대표' 배지를 답니다. 도면은 해당 없음.
+  showsPrimaryBadge?: boolean;
 }
 
 const MAX_IMAGE_SIZE_MB = MAX_IMAGE_SIZE_BYTES / 1024 / 1024;
 
 // 파일을 고르면 곧바로 업로드하고 서버가 돌려준 URL만 상위 폼에 넘깁니다.
-// 이렇게 해야 다음 단계(수익 예측)로 넘어갔다 돌아와도 선택한 사진이 그대로 남습니다.
-export function SpaceImageUploader({ value, onChange }: SpaceImageUploaderProps) {
+// 이렇게 해야 다음 단계(수익 예측)로 넘어갔다 돌아와도 선택한 파일이 그대로 남습니다.
+export function SpaceImageUploader({
+  value,
+  onChange,
+  label,
+  requiredMessage,
+  showsPrimaryBadge = false,
+}: SpaceImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const remaining = MAX_IMAGE_COUNT - value.length;
+  // 업로드 중 발생한 오류를 먼저 보여주고, 없으면 상위 폼의 필수 안내를 보여줍니다.
+  const message = error ?? requiredMessage ?? null;
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []);
@@ -36,7 +50,7 @@ export function SpaceImageUploader({ value, onChange }: SpaceImageUploaderProps)
 
     if (selected.length > remaining) {
       setError(
-        `사진은 ${formatNumber(MAX_IMAGE_COUNT)}장까지 등록할 수 있습니다. ${formatNumber(remaining)}장 더 선택할 수 있습니다.`,
+        `${label}은 ${formatNumber(MAX_IMAGE_COUNT)}장까지 등록할 수 있습니다. ${formatNumber(remaining)}장 더 선택할 수 있습니다.`,
       );
       return;
     }
@@ -45,7 +59,7 @@ export function SpaceImageUploader({ value, onChange }: SpaceImageUploaderProps)
       return;
     }
     if (selected.some((file) => file.size > MAX_IMAGE_SIZE_BYTES)) {
-      setError(`사진 한 장의 크기는 ${formatNumber(MAX_IMAGE_SIZE_MB)}MB 이하여야 합니다.`);
+      setError(`파일 한 장의 크기는 ${formatNumber(MAX_IMAGE_SIZE_MB)}MB 이하여야 합니다.`);
       return;
     }
 
@@ -65,7 +79,7 @@ export function SpaceImageUploader({ value, onChange }: SpaceImageUploaderProps)
     <div>
       <input
         accept={ACCEPTED_IMAGE_TYPES}
-        aria-label="공간 사진 선택"
+        aria-label={`${label} 선택`}
         className="sr-only"
         multiple
         onChange={handleFileChange}
@@ -79,16 +93,16 @@ export function SpaceImageUploader({ value, onChange }: SpaceImageUploaderProps)
         variant="outline"
       >
         <ImagePlus className="h-5 w-5" aria-hidden />
-        {isUploading ? '올리는 중...' : '사진 선택'}
+        {isUploading ? '올리는 중...' : `${label} 선택`}
       </Button>
       <p className="mt-2 text-xs font-medium text-content-subtle">
         jpg · png · webp · gif, 한 장당 {formatNumber(MAX_IMAGE_SIZE_MB)}MB 이하 ·{' '}
-        {formatNumber(value.length)}/{formatNumber(MAX_IMAGE_COUNT)}장 등록됨
+        {label} {formatNumber(value.length)}/{formatNumber(MAX_IMAGE_COUNT)}장 등록됨
       </p>
 
-      {error ? (
+      {message ? (
         <p className="mt-2 text-xs font-medium text-feedback-danger" role="alert">
-          {error}
+          {message}
         </p>
       ) : null}
 
@@ -100,17 +114,17 @@ export function SpaceImageUploader({ value, onChange }: SpaceImageUploaderProps)
               className="relative overflow-hidden rounded-app border border-line"
             >
               <RemoteImage
-                alt={`등록한 공간 사진 ${formatNumber(index + 1)}`}
+                alt={`등록한 ${label} ${formatNumber(index + 1)}`}
                 className="h-28 w-full object-cover"
                 src={imageUrl}
               />
-              {index === 0 ? (
+              {index === 0 && showsPrimaryBadge ? (
                 <span className="absolute left-2 top-2 rounded-full bg-action px-2 py-1 text-xs font-semibold text-content-inverse">
                   대표
                 </span>
               ) : null}
               <button
-                aria-label={`공간 사진 ${formatNumber(index + 1)} 삭제`}
+                aria-label={`${label} ${formatNumber(index + 1)} 삭제`}
                 className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-content-inverse transition duration-ui hover:bg-content/20"
                 onClick={() => onChange(value.filter((item) => item !== imageUrl))}
                 type="button"

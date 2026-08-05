@@ -19,6 +19,9 @@ export const mockSpaces: SpaceDetail[] = [
       'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=900&q=80',
       'https://images.unsplash.com/photo-1515150144380-bca9f1650ed9?auto=format&fit=crop&w=900&q=80',
     ],
+    floorPlanUrls: [
+      'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80',
+    ],
     status: 'AVAILABLE',
     owner: { userId: 1, nickname: '그린스페이스랩' },
     createdAt: '2026-06-29T15:00:00',
@@ -39,6 +42,9 @@ export const mockSpaces: SpaceDetail[] = [
       'https://images.unsplash.com/photo-1492496913980-501348b61469?auto=format&fit=crop&w=900&q=80',
     imageUrls: [
       'https://images.unsplash.com/photo-1492496913980-501348b61469?auto=format&fit=crop&w=900&q=80',
+    ],
+    floorPlanUrls: [
+      'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=900&q=80',
     ],
     status: 'AVAILABLE',
     owner: { userId: 3, nickname: '서면공간주' },
@@ -63,6 +69,9 @@ export const mockSpaces: SpaceDetail[] = [
       'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=900&q=80',
       'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80',
     ],
+    floorPlanUrls: [
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80',
+    ],
     status: 'MATCHED',
     owner: { userId: 4, nickname: '루프앤루츠' },
     createdAt: '2026-06-21T09:00:00',
@@ -84,6 +93,9 @@ export const mockSpaces: SpaceDetail[] = [
       'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=900&q=80',
     imageUrls: [
       'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=900&q=80',
+    ],
+    floorPlanUrls: [
+      'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80',
     ],
     status: 'AVAILABLE',
     owner: { userId: 5, nickname: '동래스페이스' },

@@ -1,4 +1,4 @@
-import { ArrowRight, Camera } from 'lucide-react';
+import { ArrowRight, Camera, Ruler } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -19,11 +19,23 @@ export function SpaceCreatePage() {
   const location = useLocation();
   // 예측 화면에서 수정하러 돌아온 경우 직전 입력값을 그대로 복원합니다.
   const previous = (location.state as SpaceCreateLocationState | null)?.input;
-  // 사진은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
+  // 사진·도면은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
   const [imageUrls, setImageUrls] = useState<string[]>(previous?.imageUrls ?? []);
+  const [floorPlanUrls, setFloorPlanUrls] = useState<string[]>(
+    previous?.floorPlanUrls ?? [],
+  );
+  const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // 도면은 파일 입력이라 브라우저 required 검증이 걸리지 않아 여기서 직접 막습니다.
+    if (floorPlanUrls.length === 0) {
+      setFloorPlanError('도면을 최소 1장 등록해야 합니다.');
+      return;
+    }
+    setFloorPlanError(null);
+
     const formData = new FormData(event.currentTarget);
 
     const state: SpaceCreateLocationState = {
@@ -38,6 +50,7 @@ export function SpaceCreatePage() {
         hasVentilation: formData.get('hasVentilation') === 'on',
         description: String(formData.get('description')),
         imageUrls,
+        floorPlanUrls,
       },
     };
 
@@ -134,7 +147,32 @@ export function SpaceCreatePage() {
         <Card padding="lg">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-ink-900">사진 업로드</h2>
+              <h2 className="text-lg font-bold text-ink-900">
+                도면 업로드 <span className="text-feedback-danger">*</span>
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                재배 모듈 배치를 검토하려면 도면이 필요합니다. 최소 1장은 등록해 주세요.
+              </p>
+            </div>
+            <Ruler className="h-8 w-8 text-leaf-700" aria-hidden />
+          </div>
+          <div className="mt-4">
+            <SpaceImageUploader
+              label="도면"
+              onChange={(next) => {
+                setFloorPlanUrls(next);
+                if (next.length > 0) setFloorPlanError(null);
+              }}
+              requiredMessage={floorPlanError}
+              value={floorPlanUrls}
+            />
+          </div>
+        </Card>
+
+        <Card padding="lg">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-ink-900">사진 업로드 (선택)</h2>
               <p className="mt-1 text-sm text-slate-600">
                 먼저 선택한 사진이 목록 카드의 대표 이미지가 됩니다.
               </p>
@@ -142,7 +180,12 @@ export function SpaceCreatePage() {
             <Camera className="h-8 w-8 text-leaf-700" aria-hidden />
           </div>
           <div className="mt-4">
-            <SpaceImageUploader onChange={setImageUrls} value={imageUrls} />
+            <SpaceImageUploader
+              label="공간 사진"
+              onChange={setImageUrls}
+              showsPrimaryBadge
+              value={imageUrls}
+            />
           </div>
         </Card>
 

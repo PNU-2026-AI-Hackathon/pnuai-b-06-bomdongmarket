@@ -9,6 +9,14 @@ function imageFile(name: string, sizeBytes = 1024) {
   return new File([new Uint8Array(sizeBytes)], name, { type: 'image/jpeg' });
 }
 
+async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
+  await user.type(screen.getByLabelText('공간 위치'), '부산광역시 금정구 장전동');
+  await user.type(screen.getByLabelText('전체 면적'), '66');
+  await user.type(screen.getByLabelText('층수'), '2');
+  await user.type(screen.getByLabelText('희망 월세'), '500000');
+}
+
 describe('SpaceCreatePage', () => {
   it('공간 예시를 입력값이 아닌 placeholder로 보여준다', () => {
     renderWithProviders(<SpaceCreatePage />);
@@ -30,7 +38,7 @@ describe('SpaceCreatePage', () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
 
-    expect(screen.getByText(/0\/10장 등록됨/)).toBeInTheDocument();
+    expect(screen.getByText(/공간 사진 0\/10장 등록됨/)).toBeInTheDocument();
 
     await user.upload(screen.getByLabelText('공간 사진 선택'), [
       imageFile('정면.jpg'),
@@ -38,7 +46,7 @@ describe('SpaceCreatePage', () => {
     ]);
 
     await waitFor(() => {
-      expect(screen.getByText(/2\/10장 등록됨/)).toBeInTheDocument();
+      expect(screen.getByText(/공간 사진 2\/10장 등록됨/)).toBeInTheDocument();
     });
     expect(screen.getByAltText('등록한 공간 사진 1')).toBeInTheDocument();
     // 첫 사진이 목록 카드의 대표 이미지가 됩니다.
@@ -51,12 +59,12 @@ describe('SpaceCreatePage', () => {
 
     await user.upload(screen.getByLabelText('공간 사진 선택'), [imageFile('정면.jpg')]);
     await waitFor(() => {
-      expect(screen.getByText(/1\/10장 등록됨/)).toBeInTheDocument();
+      expect(screen.getByText(/공간 사진 1\/10장 등록됨/)).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: '공간 사진 1 삭제' }));
 
-    expect(screen.getByText(/0\/10장 등록됨/)).toBeInTheDocument();
+    expect(screen.getByText(/공간 사진 0\/10장 등록됨/)).toBeInTheDocument();
   });
 
   it('10장을 넘겨 선택하면 업로드를 막는다', async () => {
@@ -67,8 +75,36 @@ describe('SpaceCreatePage', () => {
     await user.upload(screen.getByLabelText('공간 사진 선택'), eleven);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '사진은 10장까지 등록할 수 있습니다.',
+      '공간 사진은 10장까지 등록할 수 있습니다.',
     );
-    expect(screen.getByText(/0\/10장 등록됨/)).toBeInTheDocument();
+    expect(screen.getByText(/공간 사진 0\/10장 등록됨/)).toBeInTheDocument();
+  });
+
+  it('도면 없이 제출하면 막고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '도면을 최소 1장 등록해야 합니다.',
+    );
+  });
+
+  it('도면을 등록하면 안내가 사라진다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

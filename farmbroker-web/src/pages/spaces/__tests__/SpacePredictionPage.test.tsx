@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -6,12 +6,22 @@ import { AppRouter } from '@/app/router';
 import { clearAuthSession } from '@/auth/session';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
+// 도면은 등록 필수라 예측 단계로 넘어가려면 반드시 한 장 올려야 합니다.
+async function uploadFloorPlan(user: ReturnType<typeof userEvent.setup>) {
+  const file = new File([new Uint8Array(64)], '도면.png', { type: 'image/png' });
+  await user.upload(screen.getByLabelText('도면 선택'), [file]);
+  await waitFor(() => {
+    expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+  });
+}
+
 async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
   await user.type(screen.getByLabelText('공간 위치'), '부산광역시 금정구 장전동');
   await user.type(screen.getByLabelText('전체 면적'), '66');
   await user.type(screen.getByLabelText('층수'), '2');
   await user.type(screen.getByLabelText('희망 월세'), '500000');
+  await uploadFloorPlan(user);
 }
 
 describe('공간 등록 전 수익 예측 확인', () => {
@@ -49,6 +59,7 @@ describe('공간 등록 전 수익 예측 확인', () => {
     await user.type(screen.getByLabelText('전체 면적'), '132');
     await user.type(screen.getByLabelText('층수'), '1');
     await user.type(screen.getByLabelText('희망 월세'), '500000');
+    await uploadFloorPlan(user);
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
     // 66㎡의 두 배 면적이므로 매출도 두 배가 됩니다.
@@ -93,5 +104,7 @@ describe('공간 등록 전 수익 예측 확인', () => {
 
     expect(await screen.findByLabelText('공간 이름')).toHaveValue('테스트 상가 공실');
     expect(screen.getByLabelText('희망 월세')).toHaveValue(500000);
+    // 이미 올린 도면은 URL로 남아 있으므로 다시 업로드할 필요가 없습니다.
+    expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
   });
 });

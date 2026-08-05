@@ -14,6 +14,33 @@ const facilityLabels: [keyof SpaceCreateInput, string][] = [
   ['hasVentilation', '환기 가능'],
 ];
 
+interface ImagePreviewRowProps {
+  heading: string;
+  label: string;
+  imageUrls: string[];
+}
+
+function ImagePreviewRow({ heading, label, imageUrls }: ImagePreviewRowProps) {
+  if (imageUrls.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <h3 className="text-sm font-bold text-content">{heading}</h3>
+      <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {imageUrls.map((imageUrl, index) => (
+          <li key={imageUrl} className="overflow-hidden rounded-app border border-line">
+            <RemoteImage
+              alt={`등록할 ${label} ${formatNumber(index + 1)}`}
+              className="h-20 w-full object-cover"
+              src={imageUrl}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // 등록 직전에 입력한 공간 정보를 그대로 되짚어 볼 수 있게 요약합니다.
 export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
   const facilities = facilityLabels.filter(([key]) => input[key]);
@@ -55,22 +82,16 @@ export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
         )}
       </div>
 
-      {imageCount > 0 ? (
-        <div className="mt-4">
-          <h3 className="text-sm font-bold text-content">등록할 사진</h3>
-          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {input.imageUrls?.map((imageUrl, index) => (
-              <li key={imageUrl} className="overflow-hidden rounded-app border border-line">
-                <RemoteImage
-                  alt={`등록할 공간 사진 ${formatNumber(index + 1)}`}
-                  className="h-20 w-full object-cover"
-                  src={imageUrl}
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <ImagePreviewRow
+        heading="등록할 도면"
+        imageUrls={input.floorPlanUrls}
+        label="도면"
+      />
+      <ImagePreviewRow
+        heading="등록할 사진"
+        imageUrls={input.imageUrls ?? []}
+        label="공간 사진"
+      />
 
       {input.description ? (
         <div className="mt-4">
