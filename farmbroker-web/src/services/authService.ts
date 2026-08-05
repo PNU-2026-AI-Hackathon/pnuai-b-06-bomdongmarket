@@ -27,6 +27,16 @@ export async function login(input: LoginInput): Promise<LoginResult> {
   return response.data;
 }
 
+// Stateless JWT 로그아웃은 서버에 현재 토큰을 확인시킨 뒤 클라이언트 세션을 지우는 흐름입니다.
+export async function logout(): Promise<void> {
+  if (USE_MOCKS) {
+    await mockDelay();
+    return;
+  }
+
+  await apiRequest<void>(ENDPOINTS.auth.logout, { method: 'POST' });
+}
+
 export async function signup(input: SignupInput): Promise<User> {
   if (USE_MOCKS) {
     await mockDelay();
