@@ -81,13 +81,10 @@ describe('인증 후 원래 위치 복귀', () => {
     { route: '/signup', authHeading: '봄동마켓 회원가입' },
   ])('저장된 로그인 상태에서 $route 접근 시 홈으로 이동한다', async ({ route, authHeading }) => {
     saveAuthSession({
-      accessToken: 'test-access-token',
-      user: {
-        userId: 2,
-        email: 'farmer@example.com',
-        nickname: '도시농부',
-        roles: ['FARMER'],
-      },
+      userId: 2,
+      email: 'farmer@example.com',
+      nickname: '도시농부',
+      roles: ['FARMER'],
     });
 
     // AuthProvider의 테스트용 강제 상태가 아니라 실제 저장 세션을 복원합니다.

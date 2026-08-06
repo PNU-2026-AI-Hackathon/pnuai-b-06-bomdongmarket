@@ -11,13 +11,10 @@ import type { UserRole } from '@/types/api';
 vi.mock('@/services/dashboardService', () => ({ getDashboardData: vi.fn() }));
 
 const farmerSession = {
-  accessToken: 'farmer-token',
-  user: {
-    userId: 2,
-    email: 'farmer@example.com',
-    nickname: '도시농부',
-    roles: ['FARMER'] as UserRole[],
-  },
+  userId: 2,
+  email: 'farmer@example.com',
+  nickname: '도시농부',
+  roles: ['FARMER'] as UserRole[],
 };
 
 const emptyDashboard: DashboardData = {

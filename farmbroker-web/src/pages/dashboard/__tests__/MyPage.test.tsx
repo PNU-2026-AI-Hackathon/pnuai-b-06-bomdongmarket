@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearAuthSession, getAccessToken, saveAuthSession } from '@/auth/session';
+import { clearAuthSession, getStoredUser, saveAuthSession } from '@/auth/session';
 import { MyPage } from '@/pages/dashboard/MyPage';
 import { logout } from '@/services/authService';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -15,13 +15,10 @@ vi.mock('@/services/authService', async (importOriginal) => ({
 
 function signInWithRoles(roles: UserRole[]) {
   saveAuthSession({
-    accessToken: 'test-access-token',
-    user: {
-      userId: 2,
-      email: 'farmer@example.com',
-      nickname: '도시농부',
-      roles,
-    },
+    userId: 2,
+    email: 'farmer@example.com',
+    nickname: '도시농부',
+    roles,
   });
 }
 
@@ -71,6 +68,6 @@ describe('MyPage 역할 표시', () => {
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
-    expect(getAccessToken()).toBeNull();
+    expect(getStoredUser()).toBeNull();
   });
 });

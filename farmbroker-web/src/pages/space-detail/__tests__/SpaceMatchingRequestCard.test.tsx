@@ -11,13 +11,10 @@ import type { UserRole } from '@/types/api';
 vi.mock('@/services/matchingService', () => ({ applyMatching: vi.fn() }));
 
 const consumerSession = {
-  accessToken: 'farmer-token',
-  user: {
-    userId: 2,
-    email: 'farmer@example.com',
-    nickname: '도시농부',
-    roles: ['CONSUMER'] as UserRole[],
-  },
+  userId: 2,
+  email: 'farmer@example.com',
+  nickname: '도시농부',
+  roles: ['CONSUMER'] as UserRole[],
 };
 
 afterEach(() => {
