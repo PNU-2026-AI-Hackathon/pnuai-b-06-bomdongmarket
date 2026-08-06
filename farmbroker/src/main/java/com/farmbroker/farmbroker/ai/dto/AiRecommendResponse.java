@@ -9,8 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 // AI 추천 응답의 data 필드 DTO.
-// 작물 항목의 cropId/expectedYieldKg/avgPricePerKg는 백과사전 매칭 시에만 값이 있고 아니면 null —
-// 프론트가 이 값을 수익 예측(POST /predictions) 입력 기본값으로 넘겨 원클릭 흐름을 만들 수 있다.
+// 작물 항목의 cropId/expectedYieldKg/avgPricePerKg는 백과사전 매칭 시에만 값이 있고 아니면 null.
+// profitEstimate는 이 응답에 이미 서버 계산 결과가 들어 있으므로 프론트가 따로 호출할 필요가 없다.
+// (저장 전 공간의 예측이 필요하면 spaceId를 요구하지 않는 POST /profit/estimate를 쓴다)
 @Getter
 @Schema(description = "검증·저장된 AI 작물 추천 결과")
 public class AiRecommendResponse {

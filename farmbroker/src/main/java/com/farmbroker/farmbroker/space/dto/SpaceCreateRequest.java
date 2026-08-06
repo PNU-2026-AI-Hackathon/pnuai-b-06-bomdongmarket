@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.space.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -70,10 +71,20 @@ public class SpaceCreateRequest {
     private String description;
 
     // 배열 순서 = 노출 순서 (0번이 대표 이미지). 미입력 시 이미지 없이 등록
+    @Schema(description = """
+            공간 사진 URL 배열. 선택 항목이며 최대 10장.
+            배열 순서가 노출 순서이고 0번이 목록 카드의 대표 이미지가 된다.
+            POST /files로 업로드한 뒤 응답의 url을 그대로 넣는다.""",
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @Size(max = IMAGE_MAX_COUNT, message = MSG_IMAGE_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> imageUrls;
 
     // 공간 사진과 달리 도면은 필수다 — 재배 모듈 배치를 검토하려면 반드시 있어야 한다.
+    @Schema(description = """
+            도면 URL 배열. 재배 모듈 배치 검토에 필요하므로 최소 1장이 필수이며 최대 10장.
+            공간 사진과 별도로 저장되고(space_floor_plans) 목록 카드 썸네일에는 쓰이지 않는다.
+            POST /files로 업로드한 뒤 응답의 url을 그대로 넣는다.""",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotEmpty(message = MSG_FLOOR_PLAN_REQUIRED)
     @Size(min = FLOOR_PLAN_MIN_COUNT, max = IMAGE_MAX_COUNT, message = MSG_FLOOR_PLAN_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> floorPlanUrls;

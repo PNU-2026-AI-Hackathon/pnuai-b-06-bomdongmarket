@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.space.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -68,6 +69,10 @@ public class SpaceUpdateRequest {
 
     // null = 도면 변경 없음, 배열 = 전체 교체.
     // 도면은 필수 항목이므로 사진과 달리 빈 배열로 전부 지우는 것은 허용하지 않는다.
+    @Schema(description = """
+            도면 URL 배열. 생략하면 기존 도면을 유지하고, 배열을 보내면 전체 교체한다.
+            도면은 필수 항목이라 imageUrls와 달리 빈 배열로 전부 삭제할 수 없다(1~10장).""",
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @Size(min = FLOOR_PLAN_MIN_COUNT, max = IMAGE_MAX_COUNT, message = MSG_FLOOR_PLAN_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> floorPlanUrls;
 }
