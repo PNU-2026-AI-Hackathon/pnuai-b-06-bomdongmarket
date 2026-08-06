@@ -49,7 +49,10 @@ public class AuthService {
         return SignupResponse.from(savedUser);
     }
 
-    public LoginResponse login(LoginRequest request) {
+    // 로그인 결과 — 컨트롤러가 accessToken은 httpOnly 쿠키로 내리고, body는 응답 본문(data)으로 반환한다.
+    public record LoginResult(String accessToken, LoginResponse body) {}
+
+    public LoginResult login(LoginRequest request) {
         // 이메일로 유저 조회 — 없거나 비밀번호 불일치 시 동일하게 401 반환 (사용자 존재 여부 노출 방지)
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
@@ -60,7 +63,7 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.generateToken(user.getId());
 
-        return LoginResponse.of(accessToken, user);
+        return new LoginResult(accessToken, LoginResponse.of(user));
     }
 
     // 로그아웃 — 현재는 Access Token만 쓰는 stateless 구조라 서버가 보관하는 세션/토큰이 없다.
