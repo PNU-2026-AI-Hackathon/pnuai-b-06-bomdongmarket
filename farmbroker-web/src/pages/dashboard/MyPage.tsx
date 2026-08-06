@@ -1,17 +1,31 @@
 import { ChevronRight, UserRound } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
 import { ROLE_LABELS, sortRoles } from '@/auth/roles';
 import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { ROUTES } from '@/constants/routes';
 import { profileMenuItems } from '@/pages/dashboard/constants/dashboardContent';
 
 // 모바일 와이어프레임의 마이페이지 항목을 단순하고 데모 가능한 목록으로 구성합니다.
 export function MyPage() {
-  const { user } = useAuth();
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   // 역할은 여러 개일 수 있으므로 보유한 만큼 뱃지를 그립니다.
   const roles = sortRoles(user?.roles);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      navigate(ROUTES.home, { replace: true });
+    }
+  }
 
   return (
     <PageContainer narrow>
@@ -54,9 +68,11 @@ export function MyPage() {
           <button
             key={item}
             className="flex min-h-12 items-center justify-between rounded-app border border-leaf-100 bg-white px-4 text-left text-sm font-bold text-ink-900 shadow-card"
+            disabled={item === '로그아웃' && isLoggingOut}
+            onClick={item === '로그아웃' ? () => void handleLogout() : undefined}
             type="button"
           >
-            {item}
+            {item === '로그아웃' && isLoggingOut ? '로그아웃 중...' : item}
             <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden />
           </button>
         ))}

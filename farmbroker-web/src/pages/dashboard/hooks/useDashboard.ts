@@ -2,13 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getDashboardData } from '@/services/dashboardService';
 import { acceptMatching, rejectMatching } from '@/services/matchingService';
-import type { ContractSummary, DashboardMetric, MatchingRequest } from '@/types/api';
+import type {
+  ContractSummary,
+  DashboardMetric,
+  MatchingRequest,
+  MyMatching,
+} from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
 // 대시보드에 필요한 세 데이터 묶음을 병렬로 로드해 페이지 렌더링을 단순화합니다.
 export function useDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
   const [matchings, setMatchings] = useState<MatchingRequest[]>([]);
+  const [sentMatchings, setSentMatchings] = useState<MyMatching[]>([]);
   const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +29,7 @@ export function useDashboard() {
       const result = await getDashboardData();
       setMetrics(result.metrics);
       setMatchings(result.matchings);
+      setSentMatchings(result.sentMatchings);
       setContracts(result.contracts);
       setStatus('success');
     } catch (caught) {
@@ -82,6 +89,7 @@ export function useDashboard() {
   return {
     metrics,
     matchings,
+    sentMatchings,
     contracts,
     status,
     error,

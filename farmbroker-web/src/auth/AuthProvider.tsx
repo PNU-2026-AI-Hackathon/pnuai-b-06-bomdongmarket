@@ -10,7 +10,11 @@ import {
   saveAuthSession,
   updateStoredUser,
 } from '@/auth/session';
-import { getCurrentUser, login as requestLogin } from '@/services/authService';
+import {
+  getCurrentUser,
+  login as requestLogin,
+  logout as requestLogout,
+} from '@/services/authService';
 import type { LoginInput, User } from '@/types/api';
 
 interface AuthProviderProps {
@@ -62,10 +66,15 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
         setIsAuthenticated(true);
         return result.user;
       },
-      logout: () => {
-        clearAuthSession();
-        setUser(null);
-        setIsAuthenticated(false);
+      logout: async () => {
+        try {
+          await requestLogout();
+        } finally {
+          // 서버 로그아웃은 JWT를 보관하지 않으므로 응답 실패와 무관하게 이 기기의 세션을 끝냅니다.
+          clearAuthSession();
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       },
     }),
     [isAuthenticated, user],

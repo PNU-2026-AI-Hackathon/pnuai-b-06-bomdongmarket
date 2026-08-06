@@ -6,7 +6,6 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
 import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
-import { FarmerPage } from '@/pages/farmer';
 import { HomePage } from '@/pages/home';
 import { MarketPage, ProductDetailPage } from '@/pages/market';
 import { SpaceDetailPage } from '@/pages/space-detail';
@@ -24,7 +23,7 @@ export function AppRouter() {
         </Route>
         <Route element={<SpacesPage />} path={ROUTES.spaces} />
         <Route element={<SpaceDetailPage />} path="/spaces/:spaceId" />
-        <Route element={<FarmerPage />} path={ROUTES.farmer} />
+        <Route element={<Navigate replace to={ROUTES.spaces} />} path="/farmer" />
         <Route element={<MarketPage />} path={ROUTES.market} />
         <Route element={<ProductDetailPage />} path="/market/:productId" />
         <Route element={<ProtectedRoute />}>
