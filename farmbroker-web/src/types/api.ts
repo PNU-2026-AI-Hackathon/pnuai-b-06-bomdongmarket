@@ -36,7 +36,7 @@ export interface LoginInput {
 }
 
 export interface LoginResult {
-  accessToken: string;
+  // Access Token은 httpOnly 쿠키로 내려가므로 응답 본문에는 사용자 정보만 담긴다.
   user: User;
 }
 
