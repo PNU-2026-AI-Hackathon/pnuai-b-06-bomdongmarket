@@ -2,7 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearAuthSession, getAccessToken, saveAuthSession } from '@/auth/session';
+import { ApiError } from '@/api/client';
+import { clearAuthSession, getStoredUser, saveAuthSession } from '@/auth/session';
 import { MyPage } from '@/pages/dashboard/MyPage';
 import { logout } from '@/services/authService';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -15,13 +16,10 @@ vi.mock('@/services/authService', async (importOriginal) => ({
 
 function signInWithRoles(roles: UserRole[]) {
   saveAuthSession({
-    accessToken: 'test-access-token',
-    user: {
-      userId: 2,
-      email: 'farmer@example.com',
-      nickname: '도시농부',
-      roles,
-    },
+    userId: 2,
+    email: 'farmer@example.com',
+    nickname: '도시농부',
+    roles,
   });
 }
 
@@ -71,6 +69,34 @@ describe('MyPage 역할 표시', () => {
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
-    expect(getAccessToken()).toBeNull();
+    expect(getStoredUser()).toBeNull();
+  });
+
+  // 쿠키는 서버만 만료시킬 수 있으므로, 서버 로그아웃이 실패하면 로컬 세션을 지우면 안 된다
+  // (지우면 새로고침 시 살아있는 쿠키로 다시 로그인됨).
+  it('서버 로그아웃이 네트워크 오류로 실패하면 세션을 유지하고 오류를 안내한다', async () => {
+    const user = userEvent.setup();
+    signInWithRoles(['CONSUMER']);
+    vi.mocked(logout).mockRejectedValue(new Error('네트워크 오류'));
+
+    renderWithProviders(<MyPage />);
+
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+
+    await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+    expect(getStoredUser()).not.toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('로그아웃에 실패');
+  });
+
+  it('로그아웃 요청이 401이면 쿠키가 무효이므로 세션을 정리한다', async () => {
+    const user = userEvent.setup();
+    signInWithRoles(['CONSUMER']);
+    vi.mocked(logout).mockRejectedValue(new ApiError('인증이 필요합니다.', 401, 'UNAUTHORIZED'));
+
+    renderWithProviders(<MyPage />);
+
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+
+    await waitFor(() => expect(getStoredUser()).toBeNull());
   });
 });

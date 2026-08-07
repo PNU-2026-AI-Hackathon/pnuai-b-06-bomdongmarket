@@ -35,13 +35,10 @@ describe('Header', () => {
 
   it('로그인 상태에서는 로그인 대신 사용자 닉네임을 표시한다', () => {
     saveAuthSession({
-      accessToken: 'test-access-token',
-      user: {
-        userId: 2,
-        email: 'farmer@example.com',
-        nickname: '도시농부',
-        roles: ['FARMER'],
-      },
+      userId: 2,
+      email: 'farmer@example.com',
+      nickname: '도시농부',
+      roles: ['FARMER'],
     });
 
     const { getByRole, queryByRole } = renderWithProviders(<Header />, {

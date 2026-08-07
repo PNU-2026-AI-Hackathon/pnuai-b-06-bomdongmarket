@@ -23,6 +23,11 @@ server:
 jwt:
   secret: "${JWT_SECRET}"
   expiration: "${JWT_EXPIRATION:86400000}"
+  cookie:
+    # Access Token을 담는 httpOnly 쿠키 속성. dev(http)는 secure=false, prod(https)는 secure=true로 토글.
+    name: "${JWT_COOKIE_NAME:accessToken}"
+    secure: "${JWT_COOKIE_SECURE:false}"
+    same-site: "${JWT_COOKIE_SAMESITE:Lax}"
 
 gemini:
   api-key: "${GEMINI_API_KEY:}"

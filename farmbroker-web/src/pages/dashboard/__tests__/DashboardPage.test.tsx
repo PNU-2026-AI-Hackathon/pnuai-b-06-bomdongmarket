@@ -11,13 +11,10 @@ import { MyPage } from '@/pages/dashboard/MyPage';
 describe('Dashboard pages', () => {
   function signIn(roles: Array<'OWNER' | 'FARMER' | 'CONSUMER'>) {
     saveAuthSession({
-      accessToken: 'test-access-token',
-      user: {
-        userId: 1,
-        email: 'user@example.com',
-        nickname: '그린스페이스랩',
-        roles,
-      },
+      userId: 1,
+      email: 'user@example.com',
+      nickname: '그린스페이스랩',
+      roles,
     });
   }
 

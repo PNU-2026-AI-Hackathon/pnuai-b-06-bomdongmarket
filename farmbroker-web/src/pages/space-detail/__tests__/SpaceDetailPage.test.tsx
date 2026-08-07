@@ -50,13 +50,10 @@ describe('SpaceDetailPage', () => {
   it('로그인한 사용자는 AI 추천 API를 실행할 수 있다', async () => {
     const user = userEvent.setup();
     saveAuthSession({
-      accessToken: 'consumer-token',
-      user: {
-        userId: 3,
-        email: 'consumer@example.com',
-        nickname: '지역소비자',
-        roles: ['CONSUMER'],
-      },
+      userId: 3,
+      email: 'consumer@example.com',
+      nickname: '지역소비자',
+      roles: ['CONSUMER'],
     });
     vi.mocked(getRecommendation).mockResolvedValue({
       recommendationId: 1,
@@ -85,13 +82,10 @@ describe('SpaceDetailPage', () => {
   it('농부가 상세 화면에서 매칭을 신청한다', async () => {
     const user = userEvent.setup();
     saveAuthSession({
-      accessToken: 'farmer-token',
-      user: {
-        userId: 2,
-        email: 'farmer@example.com',
-        nickname: '도시농부',
-        roles: ['FARMER'],
-      },
+      userId: 2,
+      email: 'farmer@example.com',
+      nickname: '도시농부',
+      roles: ['FARMER'],
     });
     vi.mocked(applyMatching).mockResolvedValue({
       matchingId: 12,

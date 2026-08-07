@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { ApiError } from '@/api/client';
 import { AuthContext } from '@/auth/authContext';
 import {
   AUTH_SESSION_CHANGED_EVENT,
   clearAuthSession,
-  getAccessToken,
   getStoredUser,
   saveAuthSession,
   updateStoredUser,
@@ -25,13 +25,14 @@ interface AuthProviderProps {
 export function AuthProvider({ children, initialAuthenticated }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
-    initialAuthenticated === undefined ? Boolean(getAccessToken()) : initialAuthenticated,
+    initialAuthenticated === undefined ? Boolean(getStoredUser()) : initialAuthenticated,
   );
 
   useEffect(() => {
     function syncSession() {
-      setIsAuthenticated(Boolean(getAccessToken()));
-      setUser(getStoredUser());
+      const stored = getStoredUser();
+      setUser(stored);
+      setIsAuthenticated(Boolean(stored));
     }
 
     window.addEventListener(AUTH_SESSION_CHANGED_EVENT, syncSession);
@@ -39,21 +40,34 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
   }, []);
 
   useEffect(() => {
-    // 로그인 응답에서 토큰과 사용자를 함께 저장하므로 일반적인 새로고침에서는
-    // 저장된 사용자로 즉시 복원합니다. 직접 URL(/signup 등) 접근 때마다 /users/me를
-    // 다시 호출하면 해당 요청의 실패가 정상 세션을 지우는 원인이 될 수 있습니다.
-    if (!getAccessToken() || getStoredUser()) return;
+    // Access Token은 httpOnly 쿠키에 있어 JS로 읽을 수 없으므로, 부팅 시 /users/me를 호출해
+    // 로그인 상태를 재검증한다. 캐시된 사용자는 첫 페인트 즉시 표시용이고, 이 요청이 최종 확인이다.
+    // 테스트 등에서 initialAuthenticated로 상태를 주입한 경우에는 건너뛴다.
+    if (initialAuthenticated !== undefined) return;
 
+    let cancelled = false;
     void getCurrentUser()
       .then((currentUser) => {
+        if (cancelled) return;
         updateStoredUser(currentUser);
         setUser(currentUser);
+        setIsAuthenticated(true);
       })
-      // 401 응답은 apiRequest가 세션을 정리합니다. 네트워크 오류나 일시적인
-      // 서버 장애까지 로그아웃으로 취급하면 새로고침·직접 URL 접근 직후
-      // 헤더가 비로그인 상태로 바뀌므로 저장된 세션은 그대로 유지합니다.
-      .catch(() => undefined);
-  }, []);
+      .catch((error) => {
+        if (cancelled) return;
+        // 401은 쿠키 없음/만료 = 비로그인 확정 → 세션 정리. 네트워크·일시 장애는 캐시를 유지해
+        // 새로고침 직후 헤더가 비로그인으로 깜빡이는 현상을 막는다.
+        if (error instanceof ApiError && error.status === 401) {
+          clearAuthSession();
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialAuthenticated]);
 
   const value = useMemo(
     () => ({
@@ -61,20 +75,27 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
       user,
       login: async (input: LoginInput) => {
         const result = await requestLogin(input);
-        saveAuthSession(result);
+        saveAuthSession(result.user);
         setUser(result.user);
         setIsAuthenticated(true);
         return result.user;
       },
       logout: async () => {
+        // httpOnly 쿠키는 서버만 만료시킬 수 있다(JS로 삭제 불가). 따라서 로컬 세션은
+        // 쿠키가 확실히 사라졌을 때 — 로그아웃 성공 또는 401(쿠키 무효) — 에만 정리한다.
         try {
           await requestLogout();
-        } finally {
-          // 서버 로그아웃은 JWT를 보관하지 않으므로 응답 실패와 무관하게 이 기기의 세션을 끝냅니다.
-          clearAuthSession();
-          setUser(null);
-          setIsAuthenticated(false);
+        } catch (error) {
+          // 401은 apiRequest가 이미 세션을 정리했고 쿠키도 무효라 로그아웃이 성립한다.
+          // 네트워크·5xx로 실패한 경우엔 쿠키가 그대로 살아 있어 실제로는 로그아웃되지 않았으므로
+          // (로컬만 지우면 새로고침 시 /users/me로 다시 로그인됨) 세션을 지우지 않고 오류를 전파한다.
+          if (!(error instanceof ApiError && error.status === 401)) {
+            throw error;
+          }
         }
+        clearAuthSession();
+        setUser(null);
+        setIsAuthenticated(false);
       },
     }),
     [isAuthenticated, user],

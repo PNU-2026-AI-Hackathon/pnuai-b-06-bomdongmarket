@@ -1,6 +1,7 @@
 package com.farmbroker.farmbroker.auth.controller;
 
 import com.farmbroker.farmbroker.auth.service.AuthService;
+import com.farmbroker.farmbroker.security.AuthCookieProvider;
 import com.farmbroker.farmbroker.security.JwtAuthenticationFilter;
 import com.farmbroker.farmbroker.security.JwtTokenProvider;
 import com.farmbroker.farmbroker.security.SecurityConfig;
@@ -27,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // JwtAuthenticationFilter · JwtTokenProvider · SecurityConfig 는 실제 빈을 그대로 로드해
 // 실제 토큰 검증 → 접근 제어 흐름을 그대로 태운다. (DB/JPA 는 로드하지 않아 MySQL 없이 동작한다.)
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookieProvider.class})
 @TestPropertySource(properties = {
         "jwt.secret=test-secret-key-for-logout-contract-0123456789",
         "jwt.expiration=86400000"

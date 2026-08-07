@@ -1,16 +1,13 @@
-import type { LoginResult, User } from '@/types/api';
+import type { User } from '@/types/api';
 
-const AUTH_TOKEN_KEY = 'farmbroker.accessToken';
+// Access Token은 httpOnly 쿠키(백엔드 발급)에만 존재하며 JS에서 접근하지 않는다.
+// 여기서는 첫 페인트를 위한 사용자 프로필 캐시만 관리한다. 로그인 상태의 최종 진실은 쿠키다.
 const AUTH_USER_KEY = 'farmbroker.user';
 
 export const AUTH_SESSION_CHANGED_EVENT = 'farmbroker:auth-session-changed';
 
 function notifySessionChanged() {
   window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
-}
-
-export function getAccessToken() {
-  return window.sessionStorage.getItem(AUTH_TOKEN_KEY);
 }
 
 export function getStoredUser(): User | null {
@@ -25,8 +22,7 @@ export function getStoredUser(): User | null {
   }
 }
 
-export function saveAuthSession({ accessToken, user }: LoginResult) {
-  window.sessionStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+export function saveAuthSession(user: User) {
   window.sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   notifySessionChanged();
 }
@@ -36,7 +32,6 @@ export function updateStoredUser(user: User) {
 }
 
 export function clearAuthSession() {
-  window.sessionStorage.removeItem(AUTH_TOKEN_KEY);
   window.sessionStorage.removeItem(AUTH_USER_KEY);
   notifySessionChanged();
 }
