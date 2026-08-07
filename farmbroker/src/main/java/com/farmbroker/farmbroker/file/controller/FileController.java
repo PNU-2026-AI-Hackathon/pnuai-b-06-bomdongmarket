@@ -15,6 +15,8 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -76,7 +78,8 @@ public class FileController {
             )
     })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<List<UploadedFileResponse>> upload(@RequestParam("files") MultipartFile[] files) {
+    public ApiResponse<List<UploadedFileResponse>> upload(@RequestParam("files") MultipartFile[] files,
+                                                          @AuthenticationPrincipal Long userId) {
         if (files == null || files.length == 0) {
             throw new BusinessException(ErrorCode.FILE_EMPTY);
         }
@@ -86,7 +89,7 @@ public class FileController {
 
         List<UploadedFileResponse> uploaded = Arrays.stream(files)
                 .map(file -> new UploadedFileResponse(
-                        publicUrl(fileStorageService.store(file)),
+                        publicUrl(fileStorageService.store(file, userId)),
                         file.getOriginalFilename(),
                         file.getSize()))
                 .toList();
@@ -102,6 +105,47 @@ public class FileController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(fileStorageService.contentTypeOf(fileName)))
                 .body(new FileSystemResource(file));
+    }
+
+    // DELETE /api/files/{fileName} — 업로드한 이미지 삭제 (업로더 본인만)
+    @Operation(
+            summary = "업로드한 이미지 삭제",
+            description = """
+                    업로드는 했지만 등록에 사용하지 않기로 한 이미지를 지웁니다.
+                    파일명이 UUID여도 공개 URL로 노출되므로, 업로드한 본인만 삭제할 수 있습니다.
+
+                    디스크 파일이 이미 없더라도 업로드 기록이 남아 있으면 정상 삭제로 처리합니다.
+                    """
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "삭제 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "JWT 인증 필요"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "다른 사용자가 업로드한 파일",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"message":"본인이 업로드한 파일이 아닙니다.","errorCode":"FILE_FORBIDDEN"}
+                            """))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "업로드 기록이 없는 파일명",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"message":"요청한 파일을 찾을 수 없습니다.","errorCode":"FILE_NOT_FOUND"}
+                            """))
+            )
+    })
+    @DeleteMapping("/{fileName}")
+    public ApiResponse<Void> delete(@PathVariable String fileName,
+                                    @AuthenticationPrincipal Long userId) {
+        fileStorageService.delete(fileName, userId);
+        return ApiResponse.success("이미지가 삭제되었습니다.", null);
     }
 
     // context-path(/api)까지 포함한 절대 URL을 만든다. 프론트가 <img src>에 그대로 쓸 수 있어야 한다.

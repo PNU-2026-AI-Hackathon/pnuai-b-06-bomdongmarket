@@ -29,6 +29,7 @@ public enum ErrorCode {
     FILE_COUNT_EXCEEDED(HttpStatus.BAD_REQUEST, "이미지는 한 번에 10장까지 업로드할 수 있습니다."),
     FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "이미지 한 장의 크기는 5MB 이하여야 합니다."),
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 파일을 찾을 수 없습니다."),
+    FILE_FORBIDDEN(HttpStatus.FORBIDDEN, "본인이 업로드한 파일이 아닙니다."),
     FILE_STORAGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 저장하지 못했습니다."),
 
     // ── 공통 ─────────────────────────────────────────────────────────────────

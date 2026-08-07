@@ -2,8 +2,11 @@ package com.farmbroker.farmbroker.file.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.file.domain.UploadedFile;
+import com.farmbroker.farmbroker.file.repository.UploadedFileRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,6 +30,9 @@ public class FileStorageService {
     public static final int MAX_UPLOAD_COUNT = 10;
     public static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
+    // UploadedFile.originalName 컬럼 길이와 맞춘다.
+    private static final int ORIGINAL_NAME_MAX_LENGTH = 255;
+
     // 확장자 → Content-Type. 이 목록에 없는 확장자는 저장 자체를 거부한다.
     private static final Map<String, String> ALLOWED_TYPES = Map.of(
             "jpg", "image/jpeg",
@@ -39,9 +45,12 @@ public class FileStorageService {
     private static final Pattern STORED_FILE_NAME = Pattern.compile("[0-9a-f]{32}\\.[a-z]{3,4}");
 
     private final Path uploadDir;
+    private final UploadedFileRepository uploadedFileRepository;
 
-    public FileStorageService(@Value("${file.upload-dir}") String uploadDir) {
+    public FileStorageService(@Value("${file.upload-dir}") String uploadDir,
+                              UploadedFileRepository uploadedFileRepository) {
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.uploadedFileRepository = uploadedFileRepository;
     }
 
     @PostConstruct
@@ -54,7 +63,9 @@ public class FileStorageService {
     }
 
     // 저장 후 조회에 사용할 파일명을 돌려준다. 공개 URL 조립은 컨트롤러가 담당한다.
-    public String store(MultipartFile file) {
+    // 업로더를 함께 기록해 두어야 나중에 삭제 권한을 판단할 수 있다.
+    @Transactional
+    public String store(MultipartFile file, Long uploaderId) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.FILE_EMPTY);
         }
@@ -71,7 +82,46 @@ public class FileStorageService {
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.FILE_STORAGE_FAILED);
         }
+
+        uploadedFileRepository.save(UploadedFile.builder()
+                .storedName(storedName)
+                .originalName(originalNameOf(file))
+                .uploaderId(uploaderId)
+                .build());
         return storedName;
+    }
+
+    // 업로더 본인만 삭제할 수 있다. 이름이 UUID라도 공개 URL로 노출되므로 소유자 확인이 필요하다.
+    // 디스크 파일이 이미 없더라도 기록만 남은 상태를 정리할 수 있게 삭제를 계속 진행한다.
+    @Transactional
+    public void delete(String fileName, Long userId) {
+        UploadedFile uploaded = uploadedFileRepository.findByStoredName(fileName)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        if (!uploaded.isUploadedBy(userId)) {
+            throw new BusinessException(ErrorCode.FILE_FORBIDDEN);
+        }
+
+        Path file = uploadDir.resolve(fileName).normalize();
+        if (!file.startsWith(uploadDir)) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.FILE_STORAGE_FAILED);
+        }
+        uploadedFileRepository.delete(uploaded);
+    }
+
+    // 원본 파일명은 표시용이며 컬럼 길이를 넘지 않도록 자른다.
+    private String originalNameOf(MultipartFile file) {
+        String name = file.getOriginalFilename();
+        if (name == null || name.isBlank()) {
+            return "unknown";
+        }
+        return name.length() > ORIGINAL_NAME_MAX_LENGTH
+                ? name.substring(0, ORIGINAL_NAME_MAX_LENGTH)
+                : name;
     }
 
     public Path resolveStoredFile(String fileName) {
