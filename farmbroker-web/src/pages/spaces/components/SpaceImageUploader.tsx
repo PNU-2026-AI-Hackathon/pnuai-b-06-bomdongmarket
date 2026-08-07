@@ -7,6 +7,7 @@ import {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_COUNT,
   MAX_IMAGE_SIZE_BYTES,
+  deleteImage,
   isAcceptedImage,
   uploadImages,
 } from '@/services/fileService';
@@ -36,6 +37,7 @@ export function SpaceImageUploader({
 }: SpaceImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [removingUrl, setRemovingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const remaining = MAX_IMAGE_COUNT - value.length;
@@ -72,6 +74,20 @@ export function SpaceImageUploader({
       setError(caught instanceof Error ? caught.message : '사진을 올리지 못했습니다.');
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  // 화면 배열에서 빼는 것만으로는 서버에 파일이 남으므로 삭제 요청까지 보낸 뒤 목록을 갱신합니다.
+  async function handleRemove(imageUrl: string) {
+    setRemovingUrl(imageUrl);
+    setError(null);
+    try {
+      await deleteImage(imageUrl);
+      onChange(value.filter((item) => item !== imageUrl));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '사진을 삭제하지 못했습니다.');
+    } finally {
+      setRemovingUrl(null);
     }
   }
 
@@ -125,8 +141,9 @@ export function SpaceImageUploader({
               ) : null}
               <button
                 aria-label={`${label} ${formatNumber(index + 1)} 삭제`}
-                className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-content-inverse transition duration-ui hover:bg-content/20"
-                onClick={() => onChange(value.filter((item) => item !== imageUrl))}
+                className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-content-inverse transition duration-ui hover:bg-content/20 disabled:opacity-50"
+                disabled={removingUrl === imageUrl}
+                onClick={() => void handleRemove(imageUrl)}
                 type="button"
               >
                 <X className="h-5 w-5 drop-shadow" aria-hidden />

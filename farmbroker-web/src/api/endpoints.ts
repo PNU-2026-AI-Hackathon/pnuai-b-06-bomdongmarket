@@ -21,6 +21,7 @@ export const ENDPOINTS = {
   },
   files: {
     upload: '/files',
+    detail: (fileName: string) => `/files/${fileName}`,
   },
   matchings: {
     create: '/matchings',

@@ -106,11 +106,19 @@ function PredictionStep({ input }: PredictionStepProps) {
         <div className="sticky bottom-20 z-10 rounded-app border border-line bg-surface p-3 shadow-lift lg:static lg:p-0 lg:shadow-none">
           <Button
             className="w-full"
-            disabled={saveStatus === 'loading'}
+            disabled={saveStatus === 'loading' || predictionStatus !== 'success'}
             onClick={() => void submit()}
           >
             {saveStatus === 'loading' ? '등록 중...' : '공간 등록'}
           </Button>
+          {/* 이 화면의 목적이 등록 전 수익 확인이므로, 예측을 보기 전에는 등록을 막고 이유를 밝힙니다. */}
+          {predictionStatus !== 'success' ? (
+            <p className="mt-2 text-center text-xs font-medium text-content-subtle">
+              {predictionStatus === 'error'
+                ? '예측을 불러오지 못해 등록할 수 없습니다. 다시 시도해 주세요.'
+                : '예측 결과를 확인한 뒤 등록할 수 있습니다.'}
+            </p>
+          ) : null}
         </div>
       </div>
     </PageContainer>

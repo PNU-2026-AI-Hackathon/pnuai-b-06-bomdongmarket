@@ -39,3 +39,19 @@ export async function uploadImages(files: File[]): Promise<UploadedFile[]> {
   });
   return response.data;
 }
+
+// 업로드된 파일 URL에서 서버가 발급한 저장 파일명을 뽑아냅니다.
+// 우리가 올린 파일이 아니면(외부 CDN URL 등) null을 돌려주고 삭제 요청을 보내지 않습니다.
+function toStoredFileName(url: string) {
+  const match = /\/files\/([0-9a-f]{32}\.[a-z]{3,4})$/.exec(url);
+  return match?.[1] ?? null;
+}
+
+// 선택을 취소한 이미지를 서버에서도 지웁니다.
+// 화면 배열에서만 빼면 디스크에 고아 파일이 남고, URL을 아는 사람은 계속 열람할 수 있습니다.
+export async function deleteImage(url: string): Promise<void> {
+  const fileName = toStoredFileName(url);
+  if (USE_MOCKS || fileName === null) return;
+
+  await apiRequest<void>(ENDPOINTS.files.detail(fileName), { method: 'DELETE' });
+}

@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { MAX_IMAGE_COUNT, isAcceptedImage } from '@/services/fileService';
+import { MAX_IMAGE_COUNT, deleteImage, isAcceptedImage } from '@/services/fileService';
 
 function file(name: string, type: string) {
   return new File([new Uint8Array(8)], name, { type });
@@ -23,5 +23,18 @@ describe('isAcceptedImage', () => {
 
   it('백엔드와 같은 최대 장수를 사용한다', () => {
     expect(MAX_IMAGE_COUNT).toBe(10);
+  });
+});
+
+// 우리가 올린 파일만 삭제 요청을 보낸다. 외부 URL에 DELETE를 쏘면 안 된다.
+describe('deleteImage', () => {
+  it('우리가 발급하지 않은 URL에는 요청을 보내지 않는다', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    await deleteImage('https://images.unsplash.com/photo-1530836369250.jpg');
+    await deleteImage('http://localhost:8080/api/files/not-a-uuid.jpg');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

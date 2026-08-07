@@ -67,13 +67,40 @@ describe('공간 등록 전 수익 예측 확인', () => {
     expect(screen.getByText('316.8㎡')).toBeInTheDocument();
   });
 
+  // 이 화면의 목적이 '등록 전 수익 확인'이므로 예측이 끝나기 전에는 등록을 막아야 한다.
+  it('수익 예측이 끝나기 전에는 등록 버튼을 막는다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AppRouter />, { authenticated: true, route: '/spaces/new' });
+
+    await fillCreateForm(user);
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    // 예측 로딩 중에는 비활성 + 이유 안내
+    const registerButton = await screen.findByRole('button', { name: '공간 등록' });
+    expect(registerButton).toBeDisabled();
+    expect(screen.getByText('예측 결과를 확인한 뒤 등록할 수 있습니다.')).toBeInTheDocument();
+
+    // 예측이 도착하면 활성화되고 안내는 사라진다
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '공간 등록' })).toBeEnabled();
+    });
+    expect(
+      screen.queryByText('예측 결과를 확인한 뒤 등록할 수 있습니다.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('예측 화면에서 등록하면 완료 상태를 안내한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<AppRouter />, { authenticated: true, route: '/spaces/new' });
 
     await fillCreateForm(user);
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
-    await user.click(await screen.findByRole('button', { name: '공간 등록' }));
+
+    // 예측이 도착해야 등록 버튼이 열린다.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '공간 등록' })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: '공간 등록' }));
 
     expect(
       await screen.findByRole('heading', { name: '공간 등록이 완료되었습니다' }),
