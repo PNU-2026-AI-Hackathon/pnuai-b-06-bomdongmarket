@@ -62,6 +62,33 @@ public class GeminiClient {
         return extractText(parts);
     }
 
+    // 자연어 조회 챗봇용 — 툴 목록을 주고 "어떤 툴을 어떤 파라미터로 부를지"만 한 번 물어본다.
+    // 툴 실행 결과를 모델에 되돌려 요약시키지 않는다: 왕복이 늘어 느려지고, 모델이 수치를 지어낼 수 있다.
+    // 조회할 게 없다고 판단하면 모델이 그냥 텍스트로 답한다.
+    public GeminiToolCall selectTool(String systemInstruction, String userMessage,
+                                     List<Map<String, Object>> functionDeclarations) {
+        JsonNode parts = callGenerateContent(Map.of(
+                        "systemInstruction", Map.of("parts", List.of(Map.of("text", systemInstruction))),
+                        "contents", List.of(Map.of(
+                                "role", "user",
+                                "parts", List.of(Map.of("text", userMessage)))),
+                        "tools", List.of(Map.of("functionDeclarations", functionDeclarations)),
+                        // 툴 사용 시에는 responseMimeType/responseSchema를 함께 쓸 수 없다
+                        "generationConfig", Map.of(
+                                "temperature", 0.0,
+                                "maxOutputTokens", 1024,
+                                "thinkingConfig", Map.of("thinkingBudget", 0))))
+                .path("candidates").path(0).path("content").path("parts");
+
+        for (JsonNode part : parts) {
+            JsonNode call = part.path("functionCall");
+            if (!call.isMissingNode() && call.hasNonNull("name")) {
+                return GeminiToolCall.ofFunction(call.path("name").asString(), call.path("args"));
+            }
+        }
+        return GeminiToolCall.ofText(extractText(parts));
+    }
+
     private Map<String, Object> buildGenerationConfig() {
         Map<String, Object> cropItemSchema = Map.of(
                 "type", "object",
