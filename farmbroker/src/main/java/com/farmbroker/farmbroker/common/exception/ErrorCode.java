@@ -40,7 +40,11 @@ public enum ErrorCode {
     AI_QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "AI 요청 한도를 초과했습니다."),
 
     // ── crop (소유: 백엔드 3) ────────────────────────────────────────────────
-    CROP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 작물입니다.");
+    CROP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 작물입니다."),
+
+    // ── product (로컬마켓) ───────────────────────────────────────────────────
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
+    NOT_PRODUCT_OWNER(HttpStatus.FORBIDDEN, "본인이 등록한 상품이 아닙니다.");
 
     private final HttpStatus status;
     private final String defaultMessage;
