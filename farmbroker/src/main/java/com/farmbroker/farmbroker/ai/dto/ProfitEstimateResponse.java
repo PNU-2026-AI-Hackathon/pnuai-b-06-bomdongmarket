@@ -3,6 +3,8 @@ package com.farmbroker.farmbroker.ai.dto;
 import com.farmbroker.farmbroker.profit.ProfitEstimate;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.LocalDate;
+
 // 예상 수익 계산 결과 응답 DTO (월평균 기준).
 // 값은 Gemini가 아니라 서버의 결정론적 수익 계산기(ProfitCalculator)가 산출한다.
 // basis 필드(면적 활용률·다단 단수·전력 등)를 함께 담아 화면이 계산 근거를 방어적으로 노출할 수 있게 한다.
@@ -26,6 +28,9 @@ public record ProfitEstimateResponse(
         @Schema(description = "월 총생산량(kg)", example = "475") long monthlyTotalProductionKg,
         @Schema(description = "월 판매량(kg)", example = "427") long monthlySalesKg,
         @Schema(description = "kg당 판매단가(KRW)", example = "8000") long pricePerKgKrw,
+        @Schema(description = "단가 출처. SEED=서버 작물 백과사전 기준값, KAMIS=농산물유통정보 시세", example = "SEED") String priceSource,
+        @Schema(description = "단가 기준일", example = "2026-07-04") LocalDate priceBasisDate,
+        @Schema(description = "단가 갱신이 지연된 값인지 여부", example = "false") boolean priceStale,
         @Schema(description = "예상 월 매출(KRW)", example = "3420000") long monthlyRevenueKrw,
 
         // ── 비용 ──
@@ -61,7 +66,10 @@ public record ProfitEstimateResponse(
                 Math.round(e.averageMonthlyEnergyKwh()),
                 Math.round(e.monthlyTotalProductionKg()),
                 Math.round(e.monthlySalesKg()),
-                Math.round(e.pricePerKgKrw()),
+                Math.round(e.price().pricePerKgKrw()),
+                e.price().source().name(),
+                e.price().basisDate(),
+                e.price().stale(),
                 Math.round(e.monthlyRevenueKrw()),
                 Math.round(e.electricityCostKrw()),
                 Math.round(e.waterCostKrw()),

@@ -9,6 +9,8 @@ import com.farmbroker.farmbroker.ai.dto.AiRecommendResponse;
 import com.farmbroker.farmbroker.ai.dto.GeminiRecommendOutput;
 import com.farmbroker.farmbroker.ai.dto.ProfitEstimateResponse;
 import com.farmbroker.farmbroker.ai.prompt.RecommendPromptBuilder;
+import com.farmbroker.farmbroker.profit.MarketPrice;
+import com.farmbroker.farmbroker.profit.MarketPriceProvider;
 import com.farmbroker.farmbroker.profit.ProfitCalculator;
 import com.farmbroker.farmbroker.profit.SpaceInputs;
 import com.farmbroker.farmbroker.ai.repository.AiRecommendationRepository;
@@ -60,6 +62,7 @@ public class AiRecommendService {
     private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
     private final ProfitCalculator profitCalculator; // structured 추천 후 서버가 직접 호출하는 결정론적 수익 계산기
+    private final MarketPriceProvider marketPriceProvider; // 판매 단가 단일 소스(현재 작물 백과사전, 이후 KAMIS 배치)
 
     @Transactional
     public AiRecommendOutcome recommend(Long userId, AiRecommendRequest request) {
@@ -207,7 +210,7 @@ public class AiRecommendService {
 
     // 대표 작물(추천 순서상 계산기가 지원하는 첫 작물)로 서버가 수익을 계산한다.
     // 공간 면적·월세는 DB 값을 쓰고, 재배 파라미터가 없는 항목은 SpaceInputs의 표준 가정값을 사용한다(응답에 노출).
-    // 지원 작물(수익 계산기 데이터에 존재)이 없으면 null — 프론트는 이 경우 계산 근거 카드를 숨긴다.
+    // 재배 파라미터와 단가가 모두 있는 작물이 없으면 null — 프론트는 이 경우 계산 근거 카드를 숨긴다.
     private ProfitEstimateResponse buildProfitEstimate(AiRecommendation recommendation, SpaceSummary space) {
         if (space.getArea() == null || space.getArea().doubleValue() <= 0) {
             return null;
@@ -218,8 +221,10 @@ public class AiRecommendService {
         return recommendation.getRecommendedCrops().stream()
                 .map(RecommendedCrop::getCropName)
                 .filter(profitCalculator::supports)
+                .flatMap(cropName -> marketPriceProvider.findByCropName(cropName).stream()
+                        .map(price -> profitCalculator.estimate(inputs, cropName, price)))
                 .findFirst()
-                .map(cropName -> ProfitEstimateResponse.from(profitCalculator.estimate(inputs, cropName)))
+                .map(ProfitEstimateResponse::from)
                 .orElse(null);
     }
 
