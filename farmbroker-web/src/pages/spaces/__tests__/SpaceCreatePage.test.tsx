@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
@@ -90,6 +90,59 @@ describe('SpaceCreatePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '도면을 최소 1장 등록해야 합니다.',
     );
+  });
+
+  // 음수가 들어가면 브라우저 제약 검증(min)이 제출 자체를 막아 다음 단계로 넘어가지 않는다.
+  it('면적에 음수가 들어가면 제출되지 않는다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await user.type(screen.getByLabelText('공간 이름'), '테스트 공실');
+    await user.type(screen.getByLabelText('공간 위치'), '부산광역시 금정구');
+    await user.type(screen.getByLabelText('층수'), '2');
+    await user.type(screen.getByLabelText('희망 월세'), '500000');
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+
+    // '-' 키는 막혀 있으므로 붙여넣기 경로를 흉내 내 값을 직접 주입한다.
+    const area = screen.getByLabelText('전체 면적');
+    fireEvent.change(area, { target: { value: '-5' } });
+    expect(area).toBeInvalid();
+
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    // 등록 폼에 그대로 머문다 (예측 단계로 넘어가지 않음)
+    expect(screen.getByLabelText('전체 면적')).toBeInTheDocument();
+  });
+
+  it('숫자 칸에 음수 방지 제약이 걸려 있다', () => {
+    renderWithProviders(<SpaceCreatePage />);
+
+    expect(screen.getByLabelText('전체 면적')).toHaveAttribute('min', '0');
+    expect(screen.getByLabelText('희망 월세')).toHaveAttribute('min', '0');
+    // 층수만 지하를 위해 음수를 허용한다.
+    expect(screen.getByLabelText('층수')).toHaveAttribute('min', '-10');
+  });
+
+  it('면적 칸에서 음수 부호 키 입력을 막는다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await user.type(screen.getByLabelText('전체 면적'), '-66');
+
+    expect(screen.getByLabelText('전체 면적')).toHaveValue(66);
+  });
+
+  // 지하 공간은 층수가 음수다. 음수 방지를 층수까지 적용하면 안 된다.
+  it('층수에는 지하를 뜻하는 음수를 허용한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await user.type(screen.getByLabelText('층수'), '-1');
+
+    expect(screen.getByLabelText('층수')).toHaveValue(-1);
   });
 
   it('도면을 등록하면 안내가 사라진다', async () => {

@@ -17,7 +17,12 @@ public class SpaceCreateRequest {
     private static final int TITLE_MAX_LENGTH = 100;
     private static final int ADDRESS_MAX_LENGTH = 255;
     private static final String AREA_MIN_EXCLUSIVE = "0.0";
+    // spaces.area는 precision 7 / scale 2라 이 값을 넘으면 DB 저장 단계에서 터진다. 검증으로 먼저 막는다.
+    private static final String AREA_MAX = "99999.99";
     private static final long RENT_MIN = 0;
+    // 층수는 지하가 음수(-1, -2 …)로 들어오므로 음수를 막지 않고 상식적인 범위만 제한한다.
+    private static final int FLOOR_MIN = -10;
+    private static final int FLOOR_MAX = 200;
     private static final int IMAGE_URL_MAX_LENGTH = 500;
     private static final int IMAGE_MAX_COUNT = 10;
     private static final int FLOOR_PLAN_MIN_COUNT = 1;
@@ -29,6 +34,8 @@ public class SpaceCreateRequest {
     private static final String MSG_ADDRESS_SIZE = "주소는 255자 이하여야 합니다.";
     private static final String MSG_AREA_REQUIRED = "면적은 필수입니다.";
     private static final String MSG_AREA_POSITIVE = "면적은 0보다 커야 합니다.";
+    private static final String MSG_AREA_MAX = "면적은 99,999.99㎡ 이하여야 합니다.";
+    private static final String MSG_FLOOR_RANGE = "층수는 -10층(지하) ~ 200층 사이여야 합니다.";
     private static final String MSG_RENT_REQUIRED = "월세는 필수입니다.";
     private static final String MSG_RENT_MIN = "월세는 0 이상이어야 합니다.";
     private static final String MSG_FLOOR_REQUIRED = "층수는 필수입니다.";
@@ -50,6 +57,7 @@ public class SpaceCreateRequest {
 
     @NotNull(message = MSG_AREA_REQUIRED)
     @DecimalMin(value = AREA_MIN_EXCLUSIVE, inclusive = false, message = MSG_AREA_POSITIVE)
+    @DecimalMax(value = AREA_MAX, message = MSG_AREA_MAX)
     private BigDecimal area;
 
     @NotNull(message = MSG_RENT_REQUIRED)
@@ -57,6 +65,8 @@ public class SpaceCreateRequest {
     private Integer monthlyRent;
 
     @NotNull(message = MSG_FLOOR_REQUIRED)
+    @Min(value = FLOOR_MIN, message = MSG_FLOOR_RANGE)
+    @Max(value = FLOOR_MAX, message = MSG_FLOOR_RANGE)
     private Integer floor;
 
     @NotNull(message = MSG_WATER_REQUIRED)

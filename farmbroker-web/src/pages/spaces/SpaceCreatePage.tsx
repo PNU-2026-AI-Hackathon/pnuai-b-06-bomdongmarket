@@ -1,5 +1,5 @@
 import { ArrowRight, Camera, Ruler } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, KeyboardEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/common/Button';
@@ -10,7 +10,23 @@ import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { SpaceImageUploader } from '@/pages/spaces/components/SpaceImageUploader';
+import {
+  AREA_MAX,
+  FLOOR_MAX,
+  FLOOR_MIN,
+  RENT_MIN,
+  validateSpaceNumbers,
+  type SpaceNumberErrors,
+} from '@/pages/spaces/constants/spaceNumberLimits';
 import type { SpaceCreateLocationState } from '@/pages/spaces/types';
+
+// 면적·월세 칸에서 음수 입력 자체를 막습니다. type="number"는 '-'와 지수 표기('e')를 허용하기 때문입니다.
+// 층수는 지하가 음수로 표현되므로 이 핸들러를 달지 않습니다.
+function blockNegativeKeys(event: KeyboardEvent<HTMLInputElement>) {
+  if (['-', '+', 'e', 'E'].includes(event.key)) {
+    event.preventDefault();
+  }
+}
 
 // 공실 제공자가 API 명세의 필수 공간 필드를 입력하는 모바일 우선 등록 폼입니다.
 // 실제 등록은 다음 단계인 수익 예측 확인 화면에서 확정합니다.
@@ -25,6 +41,7 @@ export function SpaceCreatePage() {
     previous?.floorPlanUrls ?? [],
   );
   const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
+  const [numberErrors, setNumberErrors] = useState<SpaceNumberErrors>({});
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,14 +54,24 @@ export function SpaceCreatePage() {
     setFloorPlanError(null);
 
     const formData = new FormData(event.currentTarget);
+    const numbers = {
+      area: Number(formData.get('area')),
+      monthlyRent: Number(formData.get('monthlyRent')),
+      floor: Number(formData.get('floor')),
+    };
+
+    // 키 입력 차단으로는 붙여넣기와 모바일 키패드를 막을 수 없어 제출 시점에 다시 검사합니다.
+    const errors = validateSpaceNumbers(numbers);
+    setNumberErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
 
     const state: SpaceCreateLocationState = {
       input: {
         title: String(formData.get('title')),
         address: String(formData.get('address')),
-        area: Number(formData.get('area')),
-        monthlyRent: Number(formData.get('monthlyRent')),
-        floor: Number(formData.get('floor')),
+        ...numbers,
         hasWater: formData.get('hasWater') === 'on',
         hasElectricity: formData.get('hasElectricity') === 'on',
         hasVentilation: formData.get('hasVentilation') === 'on',
@@ -82,16 +109,25 @@ export function SpaceCreatePage() {
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
               defaultValue={previous?.area}
+              errorMessage={numberErrors.area}
+              helperText="㎡ 단위, 0보다 커야 합니다"
               label="전체 면적"
-              min={1}
+              max={AREA_MAX}
+              min={0}
               name="area"
+              onKeyDown={blockNegativeKeys}
               placeholder="예: 66"
               required
+              step="any"
               type="number"
             />
             <Input
               defaultValue={previous?.floor}
+              errorMessage={numberErrors.floor}
+              helperText="지하는 -1, -2처럼 음수로 입력합니다"
               label="층수"
+              max={FLOOR_MAX}
+              min={FLOOR_MIN}
               name="floor"
               placeholder="예: 2"
               required
@@ -99,9 +135,12 @@ export function SpaceCreatePage() {
             />
             <Input
               defaultValue={previous?.monthlyRent}
+              errorMessage={numberErrors.monthlyRent}
+              helperText="원 단위, 0 이상"
               label="희망 월세"
-              min={0}
+              min={RENT_MIN}
               name="monthlyRent"
+              onKeyDown={blockNegativeKeys}
               placeholder="예: 500000"
               required
               type="number"
