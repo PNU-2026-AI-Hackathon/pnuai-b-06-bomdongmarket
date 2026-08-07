@@ -121,16 +121,19 @@ export function ProductDetailPage() {
             </Button>
           </Card>
 
-          <Card padding="lg">
-            <h2 className="flex items-center gap-2 text-xl font-black text-ink-900">
-              <Route className="h-5 w-5 text-leaf-700" aria-hidden />
-              푸드 마일리지 절감
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              이 상품은 농장에서 픽업 지점까지 {item.foodMileageKm}km만 이동했습니다. 일반
-              유통 대비 장거리 운송 부담을 줄입니다.
-            </p>
-          </Card>
+          {/* 마일리지는 지도(Task 3) 전까지 null일 수 있어 있을 때만 카드를 노출한다 */}
+          {item.foodMileageKm != null ? (
+            <Card padding="lg">
+              <h2 className="flex items-center gap-2 text-xl font-black text-ink-900">
+                <Route className="h-5 w-5 text-leaf-700" aria-hidden />
+                푸드 마일리지 절감
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                이 상품은 농장에서 픽업 지점까지 {item.foodMileageKm}km만 이동했습니다. 일반
+                유통 대비 장거리 운송 부담을 줄입니다.
+              </p>
+            </Card>
+          ) : null}
 
           <Card padding="lg">
             <h2 className="text-xl font-black text-ink-900">생산 이력</h2>

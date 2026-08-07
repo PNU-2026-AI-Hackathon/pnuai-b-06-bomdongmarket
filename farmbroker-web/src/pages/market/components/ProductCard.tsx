@@ -36,7 +36,9 @@ export function ProductCard({ item }: ProductCardProps) {
         <p className="mt-1 text-sm text-slate-600">{item.productionLocation}</p>
         <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
           <Route className="h-3.5 w-3.5 text-leaf-700" aria-hidden />
-          푸드 마일리지 {item.foodMileageKm}km · 수확일 {formatDate(item.harvestDate)}
+          {/* 마일리지는 지도(Task 3) 전까지 null일 수 있어 있을 때만 노출한다 */}
+          {item.foodMileageKm != null ? `푸드 마일리지 ${item.foodMileageKm}km · ` : ''}수확일{' '}
+          {formatDate(item.harvestDate)}
         </p>
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="text-lg font-black text-ink-900">
