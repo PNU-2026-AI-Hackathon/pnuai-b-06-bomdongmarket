@@ -3,6 +3,7 @@
 ## Directory-specific instructions
 
 - 프론트엔드 작업(`farmbroker-web/**`)은 [`farmbroker-web/AGENTS.md`](farmbroker-web/AGENTS.md)의 지침을 따른다.
+- 백엔드 작업(`farmbroker/**`)은 [`farmbroker/AGENT.md`](farmbroker/AGENT.md)의 지침을 따른다.
 - 커밋 메시지는 [`docs/commit-strategy.md`](docs/commit-strategy.md) 형식을 따른다.
 
 ## Coding guidelines
