@@ -81,14 +81,21 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
         return result.user;
       },
       logout: async () => {
+        // httpOnly 쿠키는 서버만 만료시킬 수 있다(JS로 삭제 불가). 따라서 로컬 세션은
+        // 쿠키가 확실히 사라졌을 때 — 로그아웃 성공 또는 401(쿠키 무효) — 에만 정리한다.
         try {
           await requestLogout();
-        } finally {
-          // 서버가 쿠키를 만료시키며, 응답 실패와 무관하게 이 기기의 캐시 세션을 끝낸다.
-          clearAuthSession();
-          setUser(null);
-          setIsAuthenticated(false);
+        } catch (error) {
+          // 401은 apiRequest가 이미 세션을 정리했고 쿠키도 무효라 로그아웃이 성립한다.
+          // 네트워크·5xx로 실패한 경우엔 쿠키가 그대로 살아 있어 실제로는 로그아웃되지 않았으므로
+          // (로컬만 지우면 새로고침 시 /users/me로 다시 로그인됨) 세션을 지우지 않고 오류를 전파한다.
+          if (!(error instanceof ApiError && error.status === 401)) {
+            throw error;
+          }
         }
+        clearAuthSession();
+        setUser(null);
+        setIsAuthenticated(false);
       },
     }),
     [isAuthenticated, user],
