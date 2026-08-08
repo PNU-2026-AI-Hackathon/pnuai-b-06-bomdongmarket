@@ -5,8 +5,8 @@ export const ROUTES = {
   dashboard: '/dashboard',
   spaces: '/spaces',
   newSpace: '/spaces/new',
+  newSpacePrediction: '/spaces/new/prediction',
   spaceDetail: (spaceId: number | string) => `/spaces/${spaceId}`,
-  prediction: '/prediction',
   contracts: '/contracts',
   market: '/market',
   // 정적 경로(/market/my·/market/new)가 /market/:productId 보다 우선 매칭됩니다.

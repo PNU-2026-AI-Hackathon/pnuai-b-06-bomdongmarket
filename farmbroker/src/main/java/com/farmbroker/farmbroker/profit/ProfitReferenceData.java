@@ -74,6 +74,13 @@ public class ProfitReferenceData {
                 && cropSalePrice.containsKey(cropName);
     }
 
+    // 재배 파라미터와 판매가격이 모두 있는 작물만 계산 가능하다. CSV 등재 순서를 유지한다.
+    public List<String> supportedCropNames() {
+        return cropProduction.keySet().stream()
+                .filter(cropSalePrice::containsKey)
+                .toList();
+    }
+
     public CropProduction cropProduction(String cropName) {
         CropProduction crop = cropProduction.get(cropName);
         if (crop == null) {

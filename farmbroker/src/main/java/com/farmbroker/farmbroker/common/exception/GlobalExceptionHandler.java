@@ -6,6 +6,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.stream.Collectors;
 
@@ -33,6 +34,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorCode.VALIDATION_ERROR.getStatus())
                 .body(ApiResponse.error(message, ErrorCode.VALIDATION_ERROR.name()));
+    }
+
+    // 업로드 용량 초과 — Spring이 컨트롤러 진입 전에 던지므로 여기서 파일 에러로 변환한다.
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return ResponseEntity
+                .status(ErrorCode.FILE_TOO_LARGE.getStatus())
+                .body(ApiResponse.error(ErrorCode.FILE_TOO_LARGE.getDefaultMessage(),
+                        ErrorCode.FILE_TOO_LARGE.name()));
     }
 
     // 예상치 못한 서버 오류

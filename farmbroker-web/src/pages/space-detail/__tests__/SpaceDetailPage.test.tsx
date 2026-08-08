@@ -70,6 +70,8 @@ describe('SpaceDetailPage', () => {
       layoutSuggestion: '창가 쪽에 재배 선반을 배치하세요.',
       cautions: [],
       createdAt: '2026-08-05T00:00:00',
+      // 이 화면은 서버 계산 수익(profitEstimate)을 아직 쓰지 않지만 응답 타입에는 포함된다.
+      profitEstimate: null,
     });
     renderWithProviders(<SpaceDetailPage />, { route: '/spaces/1' });
 

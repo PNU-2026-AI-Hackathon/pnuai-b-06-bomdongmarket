@@ -15,15 +15,21 @@ export function MyPage() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   // 역할은 여러 개일 수 있으므로 보유한 만큼 뱃지를 그립니다.
   const roles = sortRoles(user?.roles);
 
   async function handleLogout() {
     setIsLoggingOut(true);
+    setLogoutError(null);
     try {
       await logout();
-    } finally {
       navigate(ROUTES.home, { replace: true });
+    } catch {
+      // 서버 로그아웃 실패(네트워크·5xx) — 쿠키가 살아 있어 실제로는 로그아웃되지 않았다.
+      // 로그인 상태를 유지하고 재시도를 안내한다.
+      setLogoutError('로그아웃에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      setIsLoggingOut(false);
     }
   }
 
@@ -77,6 +83,12 @@ export function MyPage() {
           </button>
         ))}
       </div>
+
+      {logoutError ? (
+        <p className="mt-3 text-sm font-semibold text-red-600" role="alert">
+          {logoutError}
+        </p>
+      ) : null}
     </PageContainer>
   );
 }
