@@ -26,9 +26,11 @@
 
 ## 2. 결정사항 (브레인스토밍 확정)
 
+> 개정(2026-08-08, PR 리뷰 반영): 판매자 자격을 **FARMER 역할 보유자로 한정**하고, 공개 목록은 **판매중(ON_SALE)·재고>0만** 노출하며, **생산자명은 입력받지 않고 판매자 닉네임으로 고정**한다. 아래 표·본문에 반영됨.
+
 | 항목 | 결정 |
 |---|---|
-| 판매자 자격 | 인증된 사용자 누구나 (producerName 미입력 시 닉네임 기본) |
+| 판매자 자격 | **FARMER 역할 보유자만** (매칭 수락으로 도심 농부가 된 사용자). 생산자명은 **입력받지 않고 판매자 닉네임으로 고정**(요청 필드 제거) |
 | 상품↔공간 | 하이브리드 — Space에서 가져오면 `spaceId` 스냅샷 저장(느슨한 참조), 아니면 직접 입력 |
 | 생산 이력 | 이벤트 타임라인 포함(stage/description/occurredAt) |
 | 삭제 | 소프트 삭제(deleted 플래그) |
@@ -57,7 +59,7 @@
 | imageUrl | String(500) | nullable, 단일 이미지(MVP) |
 | description | TEXT | nullable |
 | harvestDate | LocalDate | not null |
-| producerName | String(60) | not null (미입력 시 seller.nickname) |
+| producerName | String(60) | not null. **요청으로 받지 않고 등록 시 seller.nickname으로 고정**(수정 불가) |
 | productionLocation | String(255) | not null (표시용 위치명) |
 | address | String(255) | nullable (지도/지오코딩용) |
 | latitude | Double | nullable (Task 3) |
@@ -106,12 +108,15 @@
 | PATCH | /products/{id} | 인증+소유자 | 부분 수정(null 아닌 필드만), 이벤트는 전량 교체 |
 | DELETE | /products/{id} | 인증+소유자 | 소프트 삭제 |
 
-- 목록은 삭제되지 않은(deleted=false) 상품만. 배열 반환(페이지네이션 후속).
+- 공개 목록은 `deleted=false` **&& status=ON_SALE && stock>0** 만. 마감/품절은 목록에서 제외한다(SpaceRepository와 동일하게 상태 필터를 건다). 배열 반환(페이지네이션 후속).
+- `/products/my`(내 판매 상품)는 이 필터를 타지 않으므로 마감/품절 상품도 그대로 보인다.
+- 상세(GET /products/{id})는 마감 상품도 조회 가능하되, 프론트가 `status`로 마감 뱃지를 붙이고 구매 CTA를 비활성화한다.
 - 정렬: 최신순(createdAt desc).
 
 ### 5.1 요청/응답 DTO
 - **ProductCreateRequest**: name, category(한글), price, unit, stock, imageUrl?, description?, harvestDate,
-  producerName?, productionLocation, address?, latitude?, longitude?, spaceId?, foodMileageKm?, events?[]
+  productionLocation, address?, latitude?, longitude?, spaceId?, foodMileageKm?, events?[]
+  (producerName은 요청 필드에 없음 — 닉네임 고정)
   - 검증: name/category/price/unit/stock/harvestDate/productionLocation 필수(@NotNull/@NotBlank/@Positive 등)
   - events[]: { stage(@NotBlank), description?, occurredAt(@NotNull), sortOrder? }
 - **ProductUpdateRequest**: 위 필드 전부 optional(부분 수정). events가 오면 전량 교체.
@@ -132,7 +137,8 @@
 
 - `services/marketService.ts`: `getMarketItems`/`getMarketItem`를 `USE_MOCKS` 분기로 실제 API 호출 추가(다른 서비스 패턴과 동일). 목 폴백 유지.
 - `types/api.ts` `MarketItem`에 optional 필드 추가(spaceId?, latitude?, longitude?, status?, description?, sellerNickname?), 상세용 traceabilityEvents? 타입 추가. foodMileageKm를 nullable 허용.
-- 상세 페이지: foodMileageKm null이면 마일리지 카드 숨김(guard). 이력 타임라인은 추후 실제 이벤트로 교체(이번엔 정적 유지 가능).
+- 상세 페이지: foodMileageKm null이면 마일리지 카드 숨김(guard). **이력 타임라인은 실제 `traceabilityEvents`로 렌더**하고, 이벤트가 없으면 빈 상태를 보여준다(하드코딩 단계·"N일차" 문구 제거 — 허위 이력 방지). imageUrl이 null이면 placeholder 표시(깨진 이미지 방지).
+- `MarketItem.imageUrl`은 `string | null`(백엔드 nullable과 일치). 목록/상세 모두 `ProductImage` 컴포넌트로 placeholder guard.
 - **등록/수정/삭제 UI는 이 계약 기준으로 타 인원이 추후 구현** — 서비스/타입에 주석으로 명시.
 
 ## 8. 프론트·Space 팀 참고(주석/이슈로 공유)
