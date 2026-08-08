@@ -38,8 +38,7 @@ public class ProductUpdateRequest {
 
     private LocalDate harvestDate;
 
-    @Size(max = 60, message = "생산자명은 60자 이하여야 합니다.")
-    private String producerName;
+    // 생산자명은 수정 대상이 아니다 — 등록 시점 판매자 닉네임으로 고정된다.
 
     @Size(max = 255, message = "생산 위치는 255자 이하여야 합니다.")
     private String productionLocation;

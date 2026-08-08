@@ -45,9 +45,7 @@ public class ProductCreateRequest {
     @NotNull(message = "수확일은 필수입니다.")
     private LocalDate harvestDate;
 
-    // 미입력 시 판매자 닉네임으로 채운다.
-    @Size(max = 60, message = "생산자명은 60자 이하여야 합니다.")
-    private String producerName;
+    // 생산자명은 요청으로 받지 않는다 — 항상 판매자 닉네임으로 고정한다(서비스에서 채움).
 
     @NotBlank(message = "생산 위치는 필수입니다.")
     @Size(max = 255, message = "생산 위치는 255자 이하여야 합니다.")

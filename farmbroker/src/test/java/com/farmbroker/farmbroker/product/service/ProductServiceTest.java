@@ -10,6 +10,7 @@ import com.farmbroker.farmbroker.product.dto.ProductUpdateRequest;
 import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.product.repository.ProductTraceabilityEventRepository;
 import com.farmbroker.farmbroker.user.domain.User;
+import com.farmbroker.farmbroker.user.domain.UserRole;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -49,11 +50,13 @@ class ProductServiceTest {
     @InjectMocks
     private ProductService productService;
 
+    // 판매자는 매칭이 수락돼 FARMER 역할을 가진 사용자다(상품 등록 자격).
     private User seller(String nickname) {
         return User.builder()
                 .email("seller@example.com")
                 .password("hashed")
                 .nickname(nickname)
+                .roles(java.util.Set.of(UserRole.CONSUMER, UserRole.FARMER))
                 .build();
     }
 
@@ -74,8 +77,8 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("생산자명을 입력하지 않으면 판매자 닉네임으로 채운다")
-    void createDefaultsProducerNameToNickname() {
+    @DisplayName("생산자명은 요청과 무관하게 판매자 닉네임으로 고정된다")
+    void createFixesProducerNameToNickname() {
         given(userRepository.findById(1L)).willReturn(Optional.of(seller("어반리프")));
         given(productRepository.save(any(Product.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -178,5 +181,32 @@ class ProductServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
+    }
+
+    @Test
+    @DisplayName("FARMER 역할이 없는 사용자가 등록하면 FORBIDDEN_ROLE")
+    void createByNonFarmerThrows() {
+        User consumer = User.builder()
+                .email("consumer@example.com")
+                .password("hashed")
+                .nickname("소비자")
+                .roles(java.util.Set.of(UserRole.CONSUMER))
+                .build();
+        given(userRepository.findById(1L)).willReturn(Optional.of(consumer));
+
+        assertThatThrownBy(() -> productService.create(1L, createRequest("""
+                {
+                  "name": "버터헤드 상추",
+                  "category": "잎채소",
+                  "price": 4300,
+                  "unit": "팩",
+                  "stock": 24,
+                  "harvestDate": "2026-07-05",
+                  "productionLocation": "장전 스마트팜"
+                }
+                """)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN_ROLE);
     }
 }
