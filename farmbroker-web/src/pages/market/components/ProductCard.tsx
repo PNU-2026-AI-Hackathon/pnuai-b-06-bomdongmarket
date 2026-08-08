@@ -6,6 +6,7 @@ import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { ROUTES } from '@/constants/routes';
+import { ProductImage } from '@/pages/market/components/ProductImage';
 import type { MarketItem } from '@/types/api';
 import { formatCurrency, formatDate } from '@/utils/format';
 
@@ -20,7 +21,7 @@ export function ProductCard({ item }: ProductCardProps) {
   return (
     <Card className="overflow-hidden">
       <Link to={ROUTES.productDetail(item.productId)}>
-        <img alt={item.name} className="h-44 w-full object-cover" src={item.imageUrl} />
+        <ProductImage alt={item.name} className="h-44 w-full object-cover" src={item.imageUrl} />
       </Link>
       <div className="p-4">
         <div className="flex flex-wrap gap-1.5">

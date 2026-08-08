@@ -15,6 +15,7 @@ import { getMarketItem } from '@/services/marketService';
 import type { MarketItem } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { ProductImage } from '@/pages/market/components/ProductImage';
 import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTraceabilityTimeline';
 
 // 상품 상세와 생산 이력, 수량 선택, 구매 CTA를 제공하는 마켓 상세 화면입니다.
@@ -41,6 +42,9 @@ export function ProductDetailPage() {
     void load();
   }, [productId]);
 
+  // 마감(CLOSED)·품절(stock 0) 상품은 목록에서 빠지지만 직접 URL로 들어올 수 있어 구매를 막는다.
+  const isSoldOut = item != null && (item.status === 'CLOSED' || item.stock <= 0);
+
   return (
     <PageContainer narrow>
       <Link
@@ -64,13 +68,15 @@ export function ProductDetailPage() {
 
       {item ? (
         <div className="grid gap-5">
-          <img
+          <ProductImage
             alt={item.name}
             className="aspect-[4/3] w-full rounded-app object-cover shadow-card"
             src={item.imageUrl}
           />
           <Card padding="lg">
             <div className="flex flex-wrap gap-2">
+              {/* 목록에선 제외되지만 직접 URL로 들어오면 마감 상품일 수 있어 뱃지로 명시한다 */}
+              {isSoldOut ? <Badge tone="slate">판매 마감</Badge> : null}
               {item.freshnessTags.map((tag) => (
                 <Badge key={tag} tone={tag === '오늘 수확' ? 'yellow' : 'green'}>
                   {tag}
@@ -95,7 +101,7 @@ export function ProductDetailPage() {
               <div className="flex items-center gap-2">
                 <Button
                   aria-label="수량 줄이기"
-                  disabled={quantity === 1}
+                  disabled={isSoldOut || quantity === 1}
                   onClick={() => setQuantity((value) => Math.max(1, value - 1))}
                   size="sm"
                   variant="outline"
@@ -107,6 +113,7 @@ export function ProductDetailPage() {
                 </span>
                 <Button
                   aria-label="수량 늘리기"
+                  disabled={isSoldOut}
                   onClick={() => setQuantity((value) => Math.min(item.stock, value + 1))}
                   size="sm"
                   variant="outline"
@@ -115,9 +122,13 @@ export function ProductDetailPage() {
                 </Button>
               </div>
             </div>
-            <Button className="mt-5 w-full" onClick={() => requireAuth()}>
+            <Button
+              className="mt-5 w-full"
+              disabled={isSoldOut}
+              onClick={() => requireAuth()}
+            >
               <ShoppingBag className="h-5 w-5" aria-hidden />
-              {formatCurrency(item.price * quantity)} 구매하기
+              {isSoldOut ? '판매 마감된 상품입니다' : `${formatCurrency(item.price * quantity)} 구매하기`}
             </Button>
           </Card>
 
@@ -138,7 +149,7 @@ export function ProductDetailPage() {
           <Card padding="lg">
             <h2 className="text-xl font-black text-ink-900">생산 이력</h2>
             <div className="mt-4">
-              <ProductTraceabilityTimeline />
+              <ProductTraceabilityTimeline events={item.traceabilityEvents ?? []} />
             </div>
           </Card>
         </div>
