@@ -269,6 +269,15 @@ export interface MatchingRequest {
   respondedAt: string | null;
 }
 
+// 생산 이력 이벤트(상품 상세에서 내려옴). 등록/수정 시 백엔드에 배열로 함께 전달한다.
+export interface MarketTraceabilityEvent {
+  eventId: number;
+  stage: string;
+  description: string | null;
+  occurredAt: string;
+  sortOrder: number;
+}
+
 export interface MarketItem {
   productId: number;
   name: string;
@@ -278,10 +287,22 @@ export interface MarketItem {
   harvestDate: string;
   price: number;
   unit: string;
-  imageUrl: string;
+  // 사진 없이 등록 가능(백엔드 nullable) → 렌더 시 placeholder guard가 필요하다.
+  imageUrl: string | null;
   freshnessTags: string[];
-  foodMileageKm: number;
+  // 위경도·마일리지는 지도(Task 3) 전까지 백엔드에서 null로 내려올 수 있어 렌더 시 guard가 필요하다.
+  foodMileageKm: number | null;
   stock: number;
+  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  status?: string;
+  sellerNickname?: string;
+  description?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  spaceId?: number | null;
+  createdAt?: string;
+  traceabilityEvents?: MarketTraceabilityEvent[];
 }
 
 export interface DashboardMetric {

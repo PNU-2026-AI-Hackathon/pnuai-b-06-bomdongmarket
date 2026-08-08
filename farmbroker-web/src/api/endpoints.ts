@@ -34,4 +34,10 @@ export const ENDPOINTS = {
     list: '/crops',
     detail: (cropId: number | string) => `/crops/${cropId}`,
   },
+  products: {
+    list: '/products',
+    my: '/products/my',
+    create: '/products',
+    detail: (productId: number | string) => `/products/${productId}`,
+  },
 } as const;
