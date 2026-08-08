@@ -287,7 +287,8 @@ export interface MarketItem {
   harvestDate: string;
   price: number;
   unit: string;
-  imageUrl: string;
+  // 사진 없이 등록 가능(백엔드 nullable) → 렌더 시 placeholder guard가 필요하다.
+  imageUrl: string | null;
   freshnessTags: string[];
   // 위경도·마일리지는 지도(Task 3) 전까지 백엔드에서 null로 내려올 수 있어 렌더 시 guard가 필요하다.
   foodMileageKm: number | null;

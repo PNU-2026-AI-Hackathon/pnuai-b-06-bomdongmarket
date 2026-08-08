@@ -15,6 +15,7 @@ import com.farmbroker.farmbroker.product.dto.TraceabilityEventRequest;
 import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.product.repository.ProductTraceabilityEventRepository;
 import com.farmbroker.farmbroker.user.domain.User;
+import com.farmbroker.farmbroker.user.domain.UserRole;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,8 @@ import java.util.List;
 import java.util.Set;
 
 // 로컬마켓 상품 비즈니스 로직.
-// 판매자 자격은 별도 역할을 요구하지 않는다 — 인증된 사용자면 누구나 등록할 수 있다(당근마켓 스타일).
+// 판매자 자격은 FARMER 역할 보유자로 한정한다 — 매칭이 수락돼 도심 농부가 된 사용자만 생산물을 등록할 수 있다.
+// (역할은 활동에 따라 누적된다: 가입 시 CONSUMER, 공간 등록 시 OWNER, 매칭 수락 시 FARMER — User.addRole 참고.)
 // 클래스 기본은 readOnly 트랜잭션 — 쓰기 메서드에는 개별 @Transactional을 부착한다.
 @Service
 @RequiredArgsConstructor
@@ -45,16 +47,18 @@ public class ProductService {
     private final ProductTraceabilityEventRepository eventRepository;
     private final UserRepository userRepository;
 
-    // 상품 등록 — 인증 사용자면 누구나. sellerId는 항상 인증 컨텍스트의 userId를 쓴다.
+    // 상품 등록 — FARMER 역할 보유자만. sellerId는 항상 인증 컨텍스트의 userId를 쓴다.
     @Transactional
     public ProductDetailResponse create(Long userId, ProductCreateRequest request) {
         User seller = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (!seller.hasRole(UserRole.FARMER)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ROLE);
+        }
 
         ProductCategory category = parseCategory(request.getCategory());
-        String producerName = hasText(request.getProducerName())
-                ? request.getProducerName()
-                : seller.getNickname();
+        // 생산자명은 입력받지 않고 항상 판매자 닉네임으로 고정한다.
+        String producerName = seller.getNickname();
 
         Product product = productRepository.save(Product.builder()
                 .seller(seller)
@@ -119,9 +123,10 @@ public class ProductService {
 
         ProductCategory category = request.getCategory() == null ? null : parseCategory(request.getCategory());
         ProductStatus status = request.getStatus() == null ? null : parseStatus(request.getStatus());
+        // producerName은 수정 대상이 아니다(등록 시 닉네임으로 고정) — null을 넘겨 기존 값을 유지한다.
         product.update(request.getName(), category, request.getPrice(), request.getUnit(),
                 request.getStock(), request.getImageUrl(), request.getDescription(),
-                request.getHarvestDate(), request.getProducerName(), request.getProductionLocation(),
+                request.getHarvestDate(), null, request.getProductionLocation(),
                 request.getAddress(), request.getLatitude(), request.getLongitude(),
                 request.getSpaceId(), request.getFoodMileageKm(), status);
 
