@@ -7,7 +7,7 @@ import com.farmbroker.farmbroker.ai.dto.AiRecommendOutcome;
 import com.farmbroker.farmbroker.ai.dto.AiRecommendRequest;
 import com.farmbroker.farmbroker.ai.dto.AiRecommendResponse;
 import com.farmbroker.farmbroker.ai.dto.GeminiRecommendOutput;
-import com.farmbroker.farmbroker.ai.dto.ProfitEstimateResponse;
+import com.farmbroker.farmbroker.profit.dto.ProfitEstimateResponse;
 import com.farmbroker.farmbroker.ai.prompt.RecommendPromptBuilder;
 import com.farmbroker.farmbroker.profit.ProfitCalculator;
 import com.farmbroker.farmbroker.profit.SpaceInputs;

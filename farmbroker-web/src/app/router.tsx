@@ -6,11 +6,10 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
 import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
-import { ProfitPredictionPage } from '@/pages/farmer';
 import { HomePage } from '@/pages/home';
 import { MarketPage, ProductDetailPage } from '@/pages/market';
 import { SpaceDetailPage } from '@/pages/space-detail';
-import { SpaceCreatePage, SpacesPage } from '@/pages/spaces';
+import { SpaceCreatePage, SpacePredictionPage, SpacesPage } from '@/pages/spaces';
 
 export function AppRouter() {
   return (
@@ -30,7 +29,7 @@ export function AppRouter() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardPage />} path={ROUTES.dashboard} />
           <Route element={<SpaceCreatePage />} path={ROUTES.newSpace} />
-          <Route element={<ProfitPredictionPage />} path={ROUTES.prediction} />
+          <Route element={<SpacePredictionPage />} path={ROUTES.newSpacePrediction} />
           <Route element={<ContractsPage />} path={ROUTES.contracts} />
           <Route element={<MyPage />} path={ROUTES.myPage} />
         </Route>

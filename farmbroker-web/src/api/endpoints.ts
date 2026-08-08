@@ -16,6 +16,13 @@ export const ENDPOINTS = {
   ai: {
     recommend: '/ai/recommend',
   },
+  profit: {
+    estimate: '/profit/estimate',
+  },
+  files: {
+    upload: '/files',
+    detail: (fileName: string) => `/files/${fileName}`,
+  },
   matchings: {
     create: '/matchings',
     myRequests: '/matchings/my-requests',

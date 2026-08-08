@@ -93,7 +93,7 @@ export function DashboardPage() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 ['공간 등록', ROUTES.newSpace],
-                ['수익 시뮬레이션', ROUTES.prediction],
+                ['수익 시뮬레이션', ROUTES.newSpace],
                 ['매칭 찾기', ROUTES.spaces],
                 ['마켓 열기', ROUTES.market],
               ].map(([label, href]) => (

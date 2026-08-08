@@ -1,4 +1,4 @@
-package com.farmbroker.farmbroker.ai.dto;
+package com.farmbroker.farmbroker.profit.dto;
 
 import com.farmbroker.farmbroker.profit.ProfitEstimate;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -155,6 +155,7 @@ export async function updateSpace(
     hasVentilation: input.hasVentilation ?? space.hasVentilation,
     description: input.description ?? space.description,
     imageUrls: input.imageUrls ?? space.imageUrls,
+    floorPlanUrls: input.floorPlanUrls ?? space.floorPlanUrls,
     spaceId,
     status: input.status ?? space.status,
     ownerId: space.owner.userId,
