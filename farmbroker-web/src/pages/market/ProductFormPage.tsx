@@ -1,9 +1,8 @@
-import { CheckCircle2, Download, Plus, Trash2 } from 'lucide-react';
+import { Camera, FileText, Plus, Route, Sprout, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/common/Button';
-import { Card } from '@/components/common/Card';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -12,6 +11,8 @@ import { Select } from '@/components/common/Select';
 import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
+import { FormSection } from '@/pages/market/components/FormSection';
+import { ProductImageUploader } from '@/pages/market/components/ProductImageUploader';
 import {
   productCategories,
   traceabilitySteps,
@@ -24,9 +25,12 @@ import type { AsyncStatus } from '@/types/common';
 // 판매자가 로컬마켓 상품을 등록·수정하는 화면입니다.
 // 백엔드 계약(#54 합의사항, #56 구현)에 맞춰 요청 바디를 구성합니다.
 // - category는 계약에 정의된 한글 라벨('잎채소'/'허브'/'과채류')만 전송합니다.
-// - '작업장에서 가져오기'는 GET /spaces/my 로 내 공간을 불러와 생산 위치·주소·spaceId를 채웁니다.
+// - '내 작업장에서 불러오기'는 GET /spaces/my 로 내 공간을 불러와 생산 위치·주소·spaceId를 채웁니다.
 //   spaceId는 FK가 아닌 스냅샷이라 직접 입력만으로도 등록됩니다.
+// - imageUrl은 POST /files 업로드 결과 URL입니다. 판매자가 사진을 인터넷 어딘가에 먼저
+//   올려 둘 필요가 없도록 URL 입력 대신 로컬 파일 업로드만 받습니다.
 // - 위경도·푸드 마일리지는 지도 연동(Task 3)에서 서버가 채우므로 이 폼에서 받지 않습니다.
+// 필수는 기본 정보 한 섹션에 모으고 나머지는 접어 두어, 처음 여는 사람이 채울 칸이 적어 보이게 합니다.
 export function ProductFormPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
@@ -34,7 +38,6 @@ export function ProductFormPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [loadStatus, setLoadStatus] = useState<AsyncStatus>(isEdit ? 'loading' : 'success');
 
   const [mySpaces, setMySpaces] = useState<SpaceSummary[]>([]);
@@ -160,7 +163,6 @@ export function ProductFormPage() {
       const result = isEdit
         ? await updateProduct(Number(productId), payload)
         : await createProduct(payload);
-      setSaved(true);
       navigate(ROUTES.productDetail(result.productId));
     } catch (caught) {
       setError(
@@ -203,9 +205,28 @@ export function ProductFormPage() {
         />
       </div>
 
-      <form className="grid gap-5" onSubmit={handleSubmit}>
-        <Card className="grid gap-4" padding="lg">
-          <h2 className="text-lg font-black text-ink-900">기본 정보</h2>
+      <form className="grid gap-5 pb-4" onSubmit={handleSubmit}>
+        <FormSection
+          description="여섯 칸만 채우면 바로 판매를 시작할 수 있습니다."
+          icon={<Sprout className="h-8 w-8" aria-hidden />}
+          title="기본 정보"
+        >
+          {/* 등록한 작업장을 고르면 생산 위치·주소가 한 번에 채워져 직접 칠 칸이 줄어듭니다. */}
+          {mySpaces.length > 0 ? (
+            <Select
+              helperText="고르면 생산 위치와 주소가 자동으로 채워집니다."
+              label="내 작업장에서 불러오기"
+              onChange={(event) => importFromSpace(event.target.value)}
+              value={spaceId === null ? '' : String(spaceId)}
+            >
+              <option value="">직접 입력할게요</option>
+              {mySpaces.map((space) => (
+                <option key={space.spaceId} value={String(space.spaceId)}>
+                  {space.title}
+                </option>
+              ))}
+            </Select>
+          ) : null}
           <Input
             label="상품명"
             maxLength={100}
@@ -237,7 +258,7 @@ export function ProductFormPage() {
               value={fields.price}
             />
             <Input
-              label="단위"
+              label="판매 단위"
               maxLength={20}
               onChange={(event) => setField('unit', event.target.value)}
               placeholder="팩"
@@ -254,13 +275,44 @@ export function ProductFormPage() {
               value={fields.stock}
             />
           </div>
-          <Input
-            label="수확일"
-            onChange={(event) => setField('harvestDate', event.target.value)}
-            required
-            type="date"
-            value={fields.harvestDate}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="수확일"
+              onChange={(event) => setField('harvestDate', event.target.value)}
+              required
+              type="date"
+              value={fields.harvestDate}
+            />
+            <Input
+              label="생산 위치"
+              maxLength={255}
+              onChange={(event) => setField('productionLocation', event.target.value)}
+              placeholder="예: 장전 스마트팜"
+              required
+              value={fields.productionLocation}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          description="비워 두면 기본 이미지가 표시됩니다."
+          icon={<Camera className="h-8 w-8" aria-hidden />}
+          optional
+          title="대표 사진"
+        >
+          <ProductImageUploader
+            onChange={(imageUrl) => setField('imageUrl', imageUrl)}
+            value={fields.imageUrl}
           />
+        </FormSection>
+
+        <FormSection
+          collapsible
+          description="적어 두면 구매자가 더 믿고 삽니다. 나중에 수정해도 됩니다."
+          icon={<FileText className="h-8 w-8" aria-hidden />}
+          optional
+          title="상세 정보"
+        >
           <Textarea
             label="상품 설명"
             onChange={(event) => setField('description', event.target.value)}
@@ -269,48 +321,7 @@ export function ProductFormPage() {
             value={fields.description}
           />
           <Input
-            helperText="이미지 1장을 URL로 등록합니다. 비워 두면 기본 이미지가 표시됩니다."
-            label="대표 이미지 URL"
-            maxLength={500}
-            onChange={(event) => setField('imageUrl', event.target.value)}
-            placeholder="https://"
-            type="url"
-            value={fields.imageUrl}
-          />
-        </Card>
-
-        <Card className="grid gap-4" padding="lg">
-          <div>
-            <h2 className="text-lg font-black text-ink-900">생산 위치</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              등록한 작업장에서 불러오거나 직접 입력할 수 있습니다.
-            </p>
-          </div>
-          {mySpaces.length > 0 ? (
-            <Select
-              icon={<Download className="h-4 w-4" aria-hidden />}
-              label="작업장에서 가져오기"
-              onChange={(event) => importFromSpace(event.target.value)}
-              value={spaceId === null ? '' : String(spaceId)}
-            >
-              <option value="">직접 입력</option>
-              {mySpaces.map((space) => (
-                <option key={space.spaceId} value={String(space.spaceId)}>
-                  {space.title}
-                </option>
-              ))}
-            </Select>
-          ) : null}
-          <Input
-            label="생산 위치"
-            maxLength={255}
-            onChange={(event) => setField('productionLocation', event.target.value)}
-            placeholder="예: 장전 스마트팜"
-            required
-            value={fields.productionLocation}
-          />
-          <Input
-            helperText="지도 표시에 사용됩니다. 비워 두어도 등록됩니다."
+            helperText="지도 표시에 사용됩니다."
             label="주소"
             maxLength={255}
             onChange={(event) => setField('address', event.target.value)}
@@ -325,34 +336,16 @@ export function ProductFormPage() {
             placeholder="예: 어반리프"
             value={fields.producerName}
           />
-        </Card>
+        </FormSection>
 
-        <Card className="grid gap-4" padding="lg">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-black text-ink-900">생산 이력</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                파종부터 등록까지의 과정을 남기면 상세 화면에 타임라인으로 표시됩니다.
-              </p>
-            </div>
-            <Button
-              className="shrink-0 whitespace-nowrap"
-              onClick={addEvent}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              추가
-            </Button>
-          </div>
-
-          {events.length === 0 ? (
-            <p className="rounded-app bg-leaf-50 p-4 text-sm text-slate-600">
-              아직 추가한 이력이 없습니다. 생략해도 등록할 수 있습니다.
-            </p>
-          ) : null}
-
+        <FormSection
+          collapsible
+          defaultOpen={events.length > 0}
+          description="파종부터 등록까지의 과정을 남기면 상세 화면에 타임라인으로 표시됩니다."
+          icon={<Route className="h-8 w-8" aria-hidden />}
+          optional
+          title="생산 이력"
+        >
           {events.map((event, index) => (
             <div className="grid gap-3 rounded-app border border-leaf-100 p-4" key={index}>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -392,23 +385,29 @@ export function ProductFormPage() {
               </Button>
             </div>
           ))}
-        </Card>
+          <Button
+            className="w-full"
+            onClick={addEvent}
+            type="button"
+            variant="outline"
+          >
+            <Plus className="h-5 w-5" aria-hidden />
+            {events.length === 0 ? '첫 이력 추가' : '이력 추가'}
+          </Button>
+        </FormSection>
 
         {error ? (
-          <p className="text-sm font-semibold text-red-700" role="alert">
+          <p className="text-sm font-semibold text-feedback-danger" role="alert">
             {error}
           </p>
         ) : null}
-        {saved ? (
-          <p className="flex items-center gap-2 text-sm font-semibold text-leaf-700" role="status">
-            <CheckCircle2 className="h-4 w-4" aria-hidden />
-            상품이 저장되었습니다.
-          </p>
-        ) : null}
 
-        <Button disabled={isSaving} type="submit">
-          {isSaving ? '저장 중...' : isEdit ? '상품 수정' : '상품 등록'}
-        </Button>
+        {/* 폼이 길어 모바일에서 제출 버튼이 화면 밖으로 밀리므로 공간 등록 화면과 같이 하단에 고정합니다. */}
+        <div className="sticky bottom-20 z-10 rounded-app border border-leaf-100 bg-white p-3 shadow-lift lg:static lg:p-0 lg:shadow-none">
+          <Button className="w-full" disabled={isSaving} size="lg" type="submit">
+            {isSaving ? '저장 중...' : isEdit ? '수정 내용 저장' : '상품 등록하기'}
+          </Button>
+        </div>
       </form>
     </PageContainer>
   );

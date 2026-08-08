@@ -26,7 +26,7 @@ export function Input({
     [props['aria-describedby'], messageId].filter(Boolean).join(' ') || undefined;
 
   return (
-    <div className="block text-sm font-medium text-content-muted">
+    <div className="block text-sm font-semibold text-content-muted">
       {label ? (
         <label className="mb-2 block" htmlFor={inputId}>
           {label}
@@ -52,7 +52,7 @@ export function Input({
       </span>
       {errorMessage ? (
         <span
-          className="mt-1.5 block text-xs font-medium text-feedback-danger"
+          className="mt-1.5 block text-sm font-medium text-feedback-danger"
           id={messageId}
           role="alert"
         >
@@ -60,7 +60,7 @@ export function Input({
         </span>
       ) : helperText ? (
         <span
-          className="mt-1.5 block text-xs font-normal text-content-subtle"
+          className="mt-1.5 block text-sm font-normal text-content-subtle"
           id={messageId}
         >
           {helperText}

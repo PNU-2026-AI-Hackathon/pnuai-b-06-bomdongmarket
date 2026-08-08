@@ -82,7 +82,7 @@ export function MyProductsPage() {
       ) : null}
 
       {error ? (
-        <p className="mb-4 text-sm font-semibold text-red-700" role="alert">
+        <p className="mb-4 text-sm font-semibold text-feedback-danger" role="alert">
           {error}
         </p>
       ) : null}
