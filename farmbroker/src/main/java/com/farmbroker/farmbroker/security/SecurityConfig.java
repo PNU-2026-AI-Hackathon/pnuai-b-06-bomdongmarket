@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/products/my").authenticated()
                 // 인증 불필요 — 상품 목록/상세는 비로그인 조회 허용 (로컬마켓). 등록/수정/삭제는 아래 anyRequest로 보호
                 .requestMatchers(HttpMethod.GET, "/products", "/products/*").permitAll()
-                // 인증 불필요 — 업로드된 사진 조회. 공간·상품 목록/상세가 비로그인 허용이므로 이미지도 함께 연다.
+                // 인증 불필요 — 업로드된 공간 사진 조회. 목록/상세가 비로그인 허용이므로 이미지도 함께 연다.
                 // 업로드(POST /files)는 아래 anyRequest().authenticated()로 보호된다.
                 .requestMatchers(HttpMethod.GET, "/files/*").permitAll()
                 // swagger 경로 설정
