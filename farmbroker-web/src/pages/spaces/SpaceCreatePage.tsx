@@ -1,6 +1,6 @@
-import { ArrowRight, Camera, CheckCircle2 } from 'lucide-react';
-import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Camera, Ruler } from 'lucide-react';
+import { FormEvent, KeyboardEvent, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -9,45 +9,79 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
-import { createSpace } from '@/services/spaceService';
+import { SpaceImageUploader } from '@/pages/spaces/components/SpaceImageUploader';
+import {
+  AREA_MAX,
+  FLOOR_MAX,
+  FLOOR_MIN,
+  RENT_MIN,
+  validateSpaceNumbers,
+  type SpaceNumberErrors,
+} from '@/pages/spaces/constants/spaceNumberLimits';
+import type { SpaceCreateLocationState } from '@/pages/spaces/types';
+
+// 면적·월세 칸에서 음수 입력 자체를 막습니다. type="number"는 '-'와 지수 표기('e')를 허용하기 때문입니다.
+// 층수는 지하가 음수로 표현되므로 이 핸들러를 달지 않습니다.
+function blockNegativeKeys(event: KeyboardEvent<HTMLInputElement>) {
+  if (['-', '+', 'e', 'E'].includes(event.key)) {
+    event.preventDefault();
+  }
+}
 
 // 공실 제공자가 API 명세의 필수 공간 필드를 입력하는 모바일 우선 등록 폼입니다.
+// 실제 등록은 다음 단계인 수익 예측 확인 화면에서 확정합니다.
 export function SpaceCreatePage() {
   const navigate = useNavigate();
-  const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const location = useLocation();
+  // 예측 화면에서 수정하러 돌아온 경우 직전 입력값을 그대로 복원합니다.
+  const previous = (location.state as SpaceCreateLocationState | null)?.input;
+  // 사진·도면은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
+  const [imageUrls, setImageUrls] = useState<string[]>(previous?.imageUrls ?? []);
+  const [floorPlanUrls, setFloorPlanUrls] = useState<string[]>(
+    previous?.floorPlanUrls ?? [],
+  );
+  const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
+  const [numberErrors, setNumberErrors] = useState<SpaceNumberErrors>({});
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // 도면은 파일 입력이라 브라우저 required 검증이 걸리지 않아 여기서 직접 막습니다.
+    if (floorPlanUrls.length === 0) {
+      setFloorPlanError('도면을 최소 1장 등록해야 합니다.');
+      return;
+    }
+    setFloorPlanError(null);
+
     const formData = new FormData(event.currentTarget);
-    const imageUrls = String(formData.get('imageUrls') ?? '')
-      .split(/[\n,]/)
-      .map((url) => url.trim())
-      .filter(Boolean);
+    const numbers = {
+      area: Number(formData.get('area')),
+      monthlyRent: Number(formData.get('monthlyRent')),
+      floor: Number(formData.get('floor')),
+    };
 
-    setIsSaving(true);
-    setError(null);
+    // 키 입력 차단으로는 붙여넣기와 모바일 키패드를 막을 수 없어 제출 시점에 다시 검사합니다.
+    const errors = validateSpaceNumbers(numbers);
+    setNumberErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
 
-    try {
-      await createSpace({
+    const state: SpaceCreateLocationState = {
+      input: {
         title: String(formData.get('title')),
         address: String(formData.get('address')),
-        area: Number(formData.get('area')),
-        monthlyRent: Number(formData.get('monthlyRent')),
-        floor: Number(formData.get('floor')),
+        ...numbers,
         hasWater: formData.get('hasWater') === 'on',
         hasElectricity: formData.get('hasElectricity') === 'on',
         hasVentilation: formData.get('hasVentilation') === 'on',
         description: String(formData.get('description')),
         imageUrls,
-      });
-      setSaved(true);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : '공간 등록에 실패했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+        floorPlanUrls,
+      },
+    };
+
+    navigate(ROUTES.newSpacePrediction, { state });
   }
 
   return (
@@ -59,12 +93,14 @@ export function SpaceCreatePage() {
       <form className="grid gap-5" onSubmit={handleSubmit}>
         <Card className="grid gap-4" padding="lg">
           <Input
+            defaultValue={previous?.title}
             label="공간 이름"
             name="title"
             placeholder="예: 부산대 앞 20평 상가 공실"
             required
           />
           <Input
+            defaultValue={previous?.address}
             label="공간 위치"
             name="address"
             placeholder="예: 부산광역시 금정구 장전동"
@@ -72,18 +108,39 @@ export function SpaceCreatePage() {
           />
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
+              defaultValue={previous?.area}
+              errorMessage={numberErrors.area}
+              helperText="㎡ 단위, 0보다 커야 합니다"
               label="전체 면적"
-              min={1}
+              max={AREA_MAX}
+              min={0}
               name="area"
+              onKeyDown={blockNegativeKeys}
               placeholder="예: 66"
+              required
+              step="any"
+              type="number"
+            />
+            <Input
+              defaultValue={previous?.floor}
+              errorMessage={numberErrors.floor}
+              helperText="지하는 -1, -2처럼 음수로 입력합니다"
+              label="층수"
+              max={FLOOR_MAX}
+              min={FLOOR_MIN}
+              name="floor"
+              placeholder="예: 2"
               required
               type="number"
             />
-            <Input label="층수" name="floor" placeholder="예: 2" required type="number" />
             <Input
+              defaultValue={previous?.monthlyRent}
+              errorMessage={numberErrors.monthlyRent}
+              helperText="원 단위, 0 이상"
               label="희망 월세"
-              min={0}
+              min={RENT_MIN}
               name="monthlyRent"
+              onKeyDown={blockNegativeKeys}
               placeholder="예: 500000"
               required
               type="number"
@@ -94,18 +151,20 @@ export function SpaceCreatePage() {
         <Card padding="lg">
           <h2 className="text-lg font-bold text-ink-900">공간 조건</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {[
-              ['hasWater', '수도 사용 가능'],
-              ['hasElectricity', '전기 사용 가능'],
-              ['hasVentilation', '환기 가능'],
-            ].map(([name, label]) => (
+            {(
+              [
+                ['hasWater', '수도 사용 가능'],
+                ['hasElectricity', '전기 사용 가능'],
+                ['hasVentilation', '환기 가능'],
+              ] as const
+            ).map(([name, label]) => (
               <label
                 key={name}
                 className="flex min-h-12 items-center gap-3 rounded-app border border-leaf-100 bg-leaf-50 px-3 text-sm font-semibold text-ink-700"
               >
                 <input
                   className="h-4 w-4 accent-leaf-700"
-                  defaultChecked
+                  defaultChecked={previous ? previous[name] : true}
                   name={name}
                   type="checkbox"
                 />
@@ -116,6 +175,7 @@ export function SpaceCreatePage() {
           <div className="mt-4">
             <Textarea
               className="min-h-28"
+              defaultValue={previous?.description}
               label="상세 메모"
               name="description"
               placeholder="예: 채광이 좋고 수도 사용이 가능하며 다단 재배 선반을 배치할 수 있는 상가 공간입니다."
@@ -126,55 +186,53 @@ export function SpaceCreatePage() {
         <Card padding="lg">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-ink-900">사진 업로드</h2>
+              <h2 className="text-lg font-bold text-ink-900">
+                도면 업로드 <span className="text-feedback-danger">*</span>
+              </h2>
               <p className="mt-1 text-sm text-slate-600">
-                카드에 노출될 순서대로 이미지를 등록합니다.
+                재배 모듈 배치를 검토하려면 도면이 필요합니다. 최소 1장은 등록해 주세요.
               </p>
             </div>
-            <Camera className="h-8 w-8 text-leaf-700" aria-hidden />
+            <Ruler className="h-8 w-8 text-leaf-700" aria-hidden />
           </div>
-          <p className="mt-4 rounded-app border border-dashed border-leaf-300 bg-leaf-50 p-4 text-sm font-semibold leading-6 text-leaf-800">
-            Swagger 명세에는 별도 업로드 API가 없어 공개 이미지 URL을 줄 단위로
-            입력합니다.
-          </p>
           <div className="mt-4">
-            <Textarea
-              className="min-h-24"
-              label="이미지 URL"
-              name="imageUrls"
-              placeholder="https://example.com/space.jpg"
+            <SpaceImageUploader
+              label="도면"
+              onChange={(next) => {
+                setFloorPlanUrls(next);
+                if (next.length > 0) setFloorPlanError(null);
+              }}
+              requiredMessage={floorPlanError}
+              value={floorPlanUrls}
             />
           </div>
         </Card>
 
-        {error ? (
-          <div
-            className="rounded-app border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
-            role="alert"
-          >
-            {error}
+        <Card padding="lg">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-ink-900">사진 업로드 (선택)</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                먼저 선택한 사진이 목록 카드의 대표 이미지가 됩니다.
+              </p>
+            </div>
+            <Camera className="h-8 w-8 text-leaf-700" aria-hidden />
           </div>
-        ) : null}
-
-        {saved ? (
-          <div className="rounded-app border border-leaf-200 bg-leaf-50 p-4 text-leaf-900">
-            <CheckCircle2 className="inline h-5 w-5 align-[-4px]" aria-hidden /> 공간
-            등록이 완료되었습니다. 수익 예측 화면으로 이어서 확인해보세요.
+          <div className="mt-4">
+            <SpaceImageUploader
+              label="공간 사진"
+              onChange={setImageUrls}
+              showsPrimaryBadge
+              value={imageUrls}
+            />
           </div>
-        ) : null}
+        </Card>
 
         <div className="sticky bottom-20 z-10 rounded-app border border-leaf-100 bg-white p-3 shadow-lift lg:static lg:p-0 lg:shadow-none">
-          {saved ? (
-            <Button className="w-full" onClick={() => navigate(ROUTES.prediction)}>
-              수익 예측으로 이동
-              <ArrowRight className="h-5 w-5" aria-hidden />
-            </Button>
-          ) : (
-            <Button className="w-full" disabled={isSaving} type="submit">
-              {isSaving ? '등록 중...' : '공간 등록'}
-              <ArrowRight className="h-5 w-5" aria-hidden />
-            </Button>
-          )}
+          <Button className="w-full" type="submit">
+            수익 예측 확인
+            <ArrowRight className="h-5 w-5" aria-hidden />
+          </Button>
         </div>
       </form>
     </PageContainer>

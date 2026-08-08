@@ -26,7 +26,10 @@ export async function apiRequest<T>(
 ): Promise<ApiResponse<T>> {
   const requestHeaders = new Headers(headers);
 
-  if (body !== undefined && !requestHeaders.has('Content-Type')) {
+  // FormData는 브라우저가 boundary를 포함한 Content-Type을 직접 만들어야 하므로 건드리지 않습니다.
+  const isFormData = body instanceof FormData;
+
+  if (body !== undefined && !isFormData && !requestHeaders.has('Content-Type')) {
     requestHeaders.set('Content-Type', 'application/json');
   }
 
@@ -35,7 +38,7 @@ export async function apiRequest<T>(
     // 인증은 httpOnly 쿠키로 이뤄지므로 크로스오리진 요청에도 쿠키를 포함시킨다.
     credentials: 'include',
     headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined || isFormData ? (body as BodyInit | undefined) : JSON.stringify(body),
   });
 
   let payload: ApiResponse<T> | null = null;
