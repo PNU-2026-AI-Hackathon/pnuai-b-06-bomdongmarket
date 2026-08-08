@@ -250,6 +250,33 @@ export interface MarketItem {
   traceabilityEvents?: MarketTraceabilityEvent[];
 }
 
+// 상품 등록(POST /products)·수정(PATCH /products/{id}) 요청 바디.
+// 서버가 정하는 값(sellerNickname·freshnessTags·status)은 보내지 않는다.
+// 위경도·푸드 마일리지는 지도 연동(Task 3)에서 채우므로 이 폼에서는 다루지 않는다.
+export interface ProductEventInput {
+  stage: string;
+  description?: string | null;
+  occurredAt: string;
+  sortOrder?: number;
+}
+
+export interface ProductInput {
+  name: string;
+  category: string;
+  price: number;
+  unit: string;
+  stock: number;
+  imageUrl?: string | null;
+  description?: string | null;
+  harvestDate: string;
+  producerName?: string | null;
+  productionLocation: string;
+  address?: string | null;
+  // '작업장에서 가져오기'로 채운 경우에만 값이 있는 느슨한 스냅샷(FK 아님)
+  spaceId?: number | null;
+  events?: ProductEventInput[];
+}
+
 export interface DashboardMetric {
   label: string;
   value: string;

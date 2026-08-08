@@ -8,7 +8,12 @@ import { LoginPage, SignupPage } from '@/pages/auth';
 import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
 import { ProfitPredictionPage } from '@/pages/farmer';
 import { HomePage } from '@/pages/home';
-import { MarketPage, ProductDetailPage } from '@/pages/market';
+import {
+  MarketPage,
+  MyProductsPage,
+  ProductDetailPage,
+  ProductFormPage,
+} from '@/pages/market';
 import { SpaceDetailPage } from '@/pages/space-detail';
 import { SpaceCreatePage, SpacesPage } from '@/pages/spaces';
 
@@ -33,6 +38,10 @@ export function AppRouter() {
           <Route element={<ProfitPredictionPage />} path={ROUTES.prediction} />
           <Route element={<ContractsPage />} path={ROUTES.contracts} />
           <Route element={<MyPage />} path={ROUTES.myPage} />
+          {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
+          <Route element={<MyProductsPage />} path={ROUTES.myProducts} />
+          <Route element={<ProductFormPage />} path={ROUTES.newProduct} />
+          <Route element={<ProductFormPage />} path="/market/:productId/edit" />
         </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />
       </Route>

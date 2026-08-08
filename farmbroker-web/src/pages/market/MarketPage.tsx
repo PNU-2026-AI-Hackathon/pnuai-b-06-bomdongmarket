@@ -1,5 +1,7 @@
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, Search, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -11,6 +13,7 @@ import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
 import { useMarketItems } from '@/pages/market/hooks/useMarketItems';
 import type { MarketCategory } from '@/pages/market/types';
+import { ROUTES } from '@/constants/routes';
 
 // 소비자가 근처 스마트팜 상품을 검색하고 담을 수 있는 로컬 마켓 화면입니다.
 export function MarketPage() {
@@ -21,10 +24,20 @@ export function MarketPage() {
     <PageContainer>
       <PageHeader
         action={
-          <Card className="text-sm font-semibold text-action" padding="sm">
-            <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
-            부산 반경 8km 이내
-          </Card>
+          <div className="flex flex-wrap items-center gap-2">
+            <Card className="text-sm font-semibold text-action" padding="sm">
+              <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
+              부산 반경 8km 이내
+            </Card>
+            {/* 판매자 진입점 — 인증 필요 화면이라 비로그인 시 로그인으로 유도됩니다. */}
+            <Link
+              className={buttonStyles({ size: 'sm', variant: 'outline' })}
+              to={ROUTES.myProducts}
+            >
+              <Store className="h-4 w-4" aria-hidden />
+              판매 관리
+            </Link>
+          </div>
         }
         actionBreakpoint="lg"
         description="수확일, 푸드 마일리지, 생산 이력, 바로 담기 기능으로 로컬 농산물을 비교해보세요."

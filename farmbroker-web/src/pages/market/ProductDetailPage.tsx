@@ -9,6 +9,7 @@ import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { getMarketItem } from '@/services/marketService';
@@ -64,7 +65,7 @@ export function ProductDetailPage() {
 
       {item ? (
         <div className="grid gap-5">
-          <img
+          <RemoteImage
             alt={item.name}
             className="aspect-[4/3] w-full rounded-app object-cover shadow-card"
             src={item.imageUrl}
@@ -138,7 +139,7 @@ export function ProductDetailPage() {
           <Card padding="lg">
             <h2 className="text-xl font-black text-ink-900">생산 이력</h2>
             <div className="mt-4">
-              <ProductTraceabilityTimeline />
+              <ProductTraceabilityTimeline events={item.traceabilityEvents} />
             </div>
           </Card>
         </div>
