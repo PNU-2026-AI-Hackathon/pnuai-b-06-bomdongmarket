@@ -2,7 +2,10 @@ import { Camera, FileText, Plus, Route, Sprout, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { useAuth } from '@/auth/authContext';
+import { hasRole } from '@/auth/roles';
 import { Button } from '@/components/common/Button';
+import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -34,7 +37,10 @@ import type { AsyncStatus } from '@/types/common';
 export function ProductFormPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const { user } = useAuth();
   const isEdit = Boolean(productId);
+  // 서버가 FARMER가 아닌 등록을 403으로 막으므로(#56) 폼을 다 채운 뒤 실패하지 않도록 먼저 안내합니다.
+  const isFarmer = hasRole(user, 'FARMER');
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +58,6 @@ export function ProductFormPage() {
     harvestDate: '',
     description: '',
     imageUrl: '',
-    producerName: '',
     productionLocation: '',
     address: '',
   });
@@ -79,7 +84,6 @@ export function ProductFormPage() {
           harvestDate: item.harvestDate,
           description: item.description ?? '',
           imageUrl: item.imageUrl ?? '',
-          producerName: item.producerName,
           productionLocation: item.productionLocation,
           address: item.address ?? '',
         });
@@ -148,8 +152,6 @@ export function ProductFormPage() {
       imageUrl: fields.imageUrl.trim() || null,
       description: fields.description.trim() || null,
       harvestDate: fields.harvestDate,
-      // 미입력 시 서버가 판매자 닉네임을 기본값으로 사용합니다(계약).
-      producerName: fields.producerName.trim() || null,
       productionLocation: fields.productionLocation,
       address: fields.address.trim() || null,
       spaceId,
@@ -173,6 +175,17 @@ export function ProductFormPage() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (!isFarmer) {
+    return (
+      <PageContainer narrow>
+        <EmptyState
+          description="공간 제공자와의 매칭이 수락되면 도심 농부가 되고, 그때부터 수확물을 등록할 수 있습니다."
+          title="아직 상품을 등록할 수 없습니다"
+        />
+      </PageContainer>
+    );
   }
 
   if (loadStatus === 'loading') {
@@ -327,14 +340,6 @@ export function ProductFormPage() {
             onChange={(event) => setField('address', event.target.value)}
             placeholder="예: 부산광역시 금정구 장전동"
             value={fields.address}
-          />
-          <Input
-            helperText="비워 두면 내 닉네임으로 표시됩니다."
-            label="생산자명"
-            maxLength={60}
-            onChange={(event) => setField('producerName', event.target.value)}
-            placeholder="예: 어반리프"
-            value={fields.producerName}
           />
         </FormSection>
 

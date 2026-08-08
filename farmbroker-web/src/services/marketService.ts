@@ -1,5 +1,6 @@
 import { apiRequest, USE_MOCKS } from '@/api/client';
 import { ENDPOINTS } from '@/api/endpoints';
+import { getStoredUser } from '@/auth/session';
 import { mockDelay } from '@/mocks/handlers';
 import { mockMarketItems } from '@/mocks/mockMarketItems';
 import type { MarketItem, ProductInput } from '@/types/api';
@@ -96,7 +97,8 @@ function toMockProduct(input: ProductInput, productId: number): MarketItem {
     name: input.name,
     category: input.category,
     productionLocation: input.productionLocation,
-    producerName: input.producerName?.trim() || '그린스페이스랩',
+    // 서버가 판매자 닉네임으로 고정하므로 목업도 로그인 사용자 닉네임을 그대로 씁니다.
+    producerName: getStoredUser()?.nickname ?? '그린스페이스랩',
     harvestDate: input.harvestDate,
     price: input.price,
     unit: input.unit,

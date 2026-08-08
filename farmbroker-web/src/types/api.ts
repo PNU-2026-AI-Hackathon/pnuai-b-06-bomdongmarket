@@ -293,8 +293,10 @@ export interface MarketItem {
   // 위경도·마일리지는 지도(Task 3) 전까지 백엔드에서 null로 내려올 수 있어 렌더 시 guard가 필요하다.
   foodMileageKm: number | null;
   stock: number;
-  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  // 판매 상태(ON_SALE/CLOSED)는 목록·상세 양쪽에 내려온다.
+  // 공개 목록은 ON_SALE·재고>0만 나오지만 판매자 본인 목록(GET /products/my)은 마감·품절도 포함한다.
   status?: string;
+  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
   sellerNickname?: string;
   description?: string | null;
   address?: string | null;
@@ -324,7 +326,7 @@ export interface ProductInput {
   imageUrl?: string | null;
   description?: string | null;
   harvestDate: string;
-  producerName?: string | null;
+  // producerName은 요청에 없습니다 — 서버가 판매자 닉네임으로 고정합니다(#56 리뷰 반영).
   productionLocation: string;
   address?: string | null;
   // '작업장에서 가져오기'로 채운 경우에만 값이 있는 느슨한 스냅샷(FK 아님)

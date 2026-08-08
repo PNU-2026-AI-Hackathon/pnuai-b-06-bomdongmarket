@@ -10,8 +10,8 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
-import { RemoteImage } from '@/components/common/RemoteImage';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { ProductImage } from '@/pages/market/components/ProductImage';
 import { ROUTES } from '@/constants/routes';
 import { deleteProduct, getMyProducts } from '@/services/marketService';
 import type { MarketItem } from '@/types/api';
@@ -91,7 +91,7 @@ export function MyProductsPage() {
         {items.map((item) => (
           <Card className="overflow-hidden" key={item.productId}>
             <div className="flex gap-4 p-4">
-              <RemoteImage
+              <ProductImage
                 alt={item.name}
                 className="h-24 w-24 shrink-0 rounded-app object-cover"
                 src={item.imageUrl}
@@ -99,6 +99,11 @@ export function MyProductsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="green">{item.category}</Badge>
+                  {/* 공개 목록은 판매중·재고 있는 상품만 노출되므로, 왜 마켓에 안 보이는지 여기서 알려 줍니다. */}
+                  {item.status === 'CLOSED' ? <Badge tone="slate">판매 마감</Badge> : null}
+                  {item.status !== 'CLOSED' && item.stock <= 0 ? (
+                    <Badge tone="slate">품절 · 마켓 미노출</Badge>
+                  ) : null}
                   <span className="text-xs font-semibold text-slate-500">
                     수확일 {formatDate(item.harvestDate)}
                   </span>

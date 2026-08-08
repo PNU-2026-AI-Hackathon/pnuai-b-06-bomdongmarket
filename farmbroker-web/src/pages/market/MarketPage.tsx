@@ -1,6 +1,8 @@
 import { MapPin, Search, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { useAuth } from '@/auth/authContext';
+import { hasRole } from '@/auth/roles';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -19,6 +21,10 @@ import { ROUTES } from '@/constants/routes';
 export function MarketPage() {
   const { keyword, setKeyword, category, setCategory, items, status, error, reload } =
     useMarketItems();
+  const { user } = useAuth();
+  // 상품 등록은 FARMER만 가능하므로(#56) 판매 진입점도 도심 농부에게만 보입니다.
+  // 소비자에게 눌러 봐야 403이 나는 버튼을 보여 주지 않기 위함입니다.
+  const isFarmer = hasRole(user, 'FARMER');
 
   return (
     <PageContainer>
@@ -29,14 +35,15 @@ export function MarketPage() {
               <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
               부산 반경 8km 이내
             </Card>
-            {/* 판매자 진입점 — 인증 필요 화면이라 비로그인 시 로그인으로 유도됩니다. */}
-            <Link
-              className={buttonStyles({ size: 'sm', variant: 'outline' })}
-              to={ROUTES.myProducts}
-            >
-              <Store className="h-4 w-4" aria-hidden />
-              판매 관리
-            </Link>
+            {isFarmer ? (
+              <Link
+                className={buttonStyles({ size: 'sm', variant: 'outline' })}
+                to={ROUTES.myProducts}
+              >
+                <Store className="h-4 w-4" aria-hidden />
+                판매 관리
+              </Link>
+            ) : null}
           </div>
         }
         actionBreakpoint="lg"
