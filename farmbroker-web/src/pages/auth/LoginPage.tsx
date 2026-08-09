@@ -1,11 +1,12 @@
 import { ArrowRight, Lock, Mail } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { resolveReturnLocation } from '@/auth/redirect';
 import { useAuth } from '@/auth/authContext';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
+import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { useLoginForm } from '@/pages/auth/hooks/useLoginForm';
@@ -28,6 +29,11 @@ export function LoginPage() {
     await login(values);
     navigate(resolveReturnLocation(location.state, ROUTES.dashboard), { replace: true });
   });
+  const signupCompleted =
+    typeof location.state === 'object' &&
+    location.state !== null &&
+    'signupCompleted' in location.state &&
+    location.state.signupCompleted === true;
 
   return (
     <PageContainer
@@ -35,17 +41,22 @@ export function LoginPage() {
       narrow
     >
       <div className="w-full max-w-md">
-        <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
-            Welcome back
-          </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-900">봄동마켓 로그인</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            계정 정보를 입력하면 확인된 권한으로 서비스를 이용할 수 있습니다.
-          </p>
-        </div>
+        <PageHeader
+          align="center"
+          description="계정 정보를 입력하면 확인된 권한으로 서비스를 이용할 수 있습니다."
+          eyebrow="Welcome back"
+          title="봄동마켓 로그인"
+        />
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">
+          {signupCompleted ? (
+            <div
+              className="mb-5 rounded-app border border-leaf-200 bg-leaf-50 p-3 text-sm font-semibold text-leaf-800"
+              role="status"
+            >
+              회원가입이 완료되었습니다. 새 계정으로 로그인해 주세요.
+            </div>
+          ) : null}
           <form className="grid gap-5" noValidate onSubmit={handleSubmit}>
             {submitError ? (
               <div
@@ -93,12 +104,12 @@ export function LoginPage() {
           </form>
           <p className="mt-5 text-center text-sm text-slate-600">
             봄동마켓이 처음이신가요?{' '}
-            <button
+            <Link
               className="rounded-sm font-bold text-leaf-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 focus-visible:ring-offset-2"
-              type="button"
+              to={ROUTES.signup}
             >
               회원가입
-            </button>
+            </Link>
           </p>
         </Card>
       </div>

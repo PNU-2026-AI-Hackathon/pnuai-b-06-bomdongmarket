@@ -23,6 +23,10 @@ public class ProfitCalculator {
         return data.hasCultivationData(cropName);
     }
 
+    public List<String> supportedCrops() {
+        return data.supportedCropNames();
+    }
+
     // 공간 입력 + 작물명 + 판매 단가로 월평균 수익성을 계산한다.
     // 단가는 계산기가 직접 들고 있지 않고 MarketPriceProvider가 조회한 값을 주입받는다 —
     // 시세 출처(백과사전/KAMIS)가 바뀌어도 계산 로직은 그대로 두기 위함.

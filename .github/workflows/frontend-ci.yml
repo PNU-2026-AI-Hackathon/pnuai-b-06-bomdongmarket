@@ -1,0 +1,93 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - ".agents/skills/frontend-design-system-bootstrap/**"
+      - ".agents/skills/frontend-ui-consistency/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/requirements-ci.txt"
+      - ".github/scripts/quick_validate.py"
+      - "farmbroker-web/**"
+      - "AGENTS.md"
+      - ".github/workflows/frontend-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".agents/skills/frontend-design-system-bootstrap/**"
+      - ".agents/skills/frontend-ui-consistency/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/requirements-ci.txt"
+      - ".github/scripts/quick_validate.py"
+      - "farmbroker-web/**"
+      - "AGENTS.md"
+      - ".github/workflows/frontend-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-skills:
+    name: Validate frontend skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check -r .github/requirements-ci.txt
+
+      - name: Validate skill metadata
+        run: |
+          python .github/scripts/quick_validate.py .agents/skills/frontend-design-system-bootstrap
+          python .github/scripts/quick_validate.py .agents/skills/frontend-ui-consistency
+
+      - name: Check shell script syntax
+        run: |
+          for script in .agents/skills/frontend-*/scripts/*.sh; do
+            sh -n "$script"
+          done
+
+  validate-frontend:
+    name: Lint, test, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: farmbroker-web
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: farmbroker-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

@@ -1,15 +1,21 @@
-import { Leaf, LogIn, Plus } from 'lucide-react';
+import { Leaf, LogIn, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { APP_INFO } from '@/constants/appInfo';
-import { ROUTES } from '@/constants/routes';
+import { useAuth } from '@/auth/authContext';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { DesktopNavigation } from '@/components/layout/DesktopNavigation';
+import { APP_INFO } from '@/constants/appInfo';
+import { ROUTES } from '@/constants/routes';
 
 // 브랜드, 데스크탑 네비게이션, 빠른 액션을 담당하는 상단 앱 바입니다.
 export function Header() {
+  const { isAuthenticated, user } = useAuth();
+
   return (
-    <header className="sticky top-0 z-20 border-b border-leaf-200 bg-white/[0.97] shadow-[0_10px_30px_-24px_rgba(16,32,22,0.45)] backdrop-blur-md">
+    <header
+      className="sticky top-0 z-20 border-b border-leaf-200 bg-white/[0.97] shadow-[0_10px_30px_-24px_rgba(16,32,22,0.45)] backdrop-blur-md"
+      data-build="auth-header-v2"
+    >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:gap-5">
         <Link
           className="flex items-center gap-2"
@@ -29,26 +35,29 @@ export function Header() {
           </span>
         </Link>
         <DesktopNavigation />
-        <div className="flex items-center gap-2">
-          <Link
-            className={buttonStyles({
-              variant: 'outline',
-              size: 'sm',
-              className: 'hidden sm:inline-flex',
-            })}
-            to={ROUTES.login}
-          >
-            <LogIn className="h-4 w-4" aria-hidden />
-            로그인
-          </Link>
-          <Link
-            className={buttonStyles({ variant: 'primary', size: 'sm' })}
-            to={ROUTES.newSpace}
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">공간 등록</span>
-            <span className="sm:hidden">등록</span>
-          </Link>
+        <div className="flex shrink-0 items-center">
+          {isAuthenticated ? (
+            <Link
+              aria-label={`${user?.nickname ?? '사용자'} 마이페이지`}
+              className={buttonStyles({
+                variant: 'outline',
+                size: 'sm',
+                className: 'max-w-36',
+              })}
+              to={ROUTES.myPage}
+            >
+              <UserRound className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="truncate">{user?.nickname ?? '마이페이지'}</span>
+            </Link>
+          ) : (
+            <Link
+              className={buttonStyles({ variant: 'outline', size: 'sm' })}
+              to={ROUTES.login}
+            >
+              <LogIn className="h-4 w-4" aria-hidden />
+              로그인
+            </Link>
+          )}
         </div>
       </div>
     </header>

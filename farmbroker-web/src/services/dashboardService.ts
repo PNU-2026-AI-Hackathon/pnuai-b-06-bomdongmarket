@@ -18,6 +18,7 @@ import type {
 export interface DashboardData {
   metrics: DashboardMetric[];
   matchings: MatchingRequest[];
+  sentMatchings: MyMatching[];
   contracts: ContractSummary[];
 }
 
@@ -58,6 +59,17 @@ export async function getDashboardData(): Promise<DashboardData> {
     return {
       metrics: mockDashboardMetrics,
       matchings: mockMatchingRequests,
+      sentMatchings: mockMatchingRequests.map((matching) => ({
+        matchingId: matching.matchingId,
+        spaceId: matching.spaceId,
+        spaceTitle: matching.spaceTitle,
+        spaceImageUrl: matching.spaceImageUrl ?? null,
+        monthlyRent: matching.monthlyRent ?? 0,
+        ownerNickname: matching.ownerNickname ?? '공간 제공자',
+        status: matching.status,
+        createdAt: matching.createdAt,
+        respondedAt: matching.respondedAt,
+      })),
       contracts: mockContracts,
     };
   }
@@ -95,22 +107,23 @@ export async function getDashboardData(): Promise<DashboardData> {
         label: '등록 공간',
         value: String(spaces.length),
         helper: `매칭 가능 ${spaces.filter((space) => space.status === 'AVAILABLE').length}개`,
-        trend: '실시간',
+        trend: '',
       },
       {
         label: '매칭 신청',
         value: String(allStatuses.length),
         helper: `검토 대기 ${requestedCount}건`,
-        trend: '실시간',
+        trend: '',
       },
       {
         label: '매칭 완료',
         value: String(acceptedCount),
         helper: '수락된 신청',
-        trend: '실시간',
+        trend: '',
       },
     ],
     matchings: enrichedReceived,
+    sentMatchings: sent,
     contracts,
   };
 }

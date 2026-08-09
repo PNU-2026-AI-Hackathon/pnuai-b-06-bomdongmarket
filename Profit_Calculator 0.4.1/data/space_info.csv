@@ -1,0 +1,4 @@
+﻿site_id,site_name,total_area_m2,cultivable_ratio,module_layers,ceiling_height_m,desired_monthly_rent_krw
+S001,부산 금정구 농장,164,0.6,4,2.5,1200000
+S002,부산 해운대 농장,66,0.6,4,2.5,800000
+S003,부산 사하구 농장,324,0.7,5,2.5,3500000

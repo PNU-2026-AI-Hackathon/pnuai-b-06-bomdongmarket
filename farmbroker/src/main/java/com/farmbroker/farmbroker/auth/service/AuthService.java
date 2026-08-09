@@ -36,11 +36,12 @@ public class AuthService {
         // 비밀번호 BCrypt 해싱 — 평문을 DB에 저장하지 않는다
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
+        // 역할은 지정하지 않는다 — User 빌더가 기본 CONSUMER를 넣고,
+        // 이후 공간 등록(OWNER) · 매칭 수락(FARMER) 시점에 서버가 더해준다.
         User user = User.builder()
                 .email(request.getEmail())
                 .password(encodedPassword)
                 .nickname(request.getNickname())
-                .role(request.getRole())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -48,7 +49,10 @@ public class AuthService {
         return SignupResponse.from(savedUser);
     }
 
-    public LoginResponse login(LoginRequest request) {
+    // 로그인 결과 — 컨트롤러가 accessToken은 httpOnly 쿠키로 내리고, body는 응답 본문(data)으로 반환한다.
+    public record LoginResult(String accessToken, LoginResponse body) {}
+
+    public LoginResult login(LoginRequest request) {
         // 이메일로 유저 조회 — 없거나 비밀번호 불일치 시 동일하게 401 반환 (사용자 존재 여부 노출 방지)
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
@@ -57,8 +61,17 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getRole());
+        String accessToken = jwtTokenProvider.generateToken(user.getId());
 
-        return LoginResponse.of(accessToken, user);
+        return new LoginResult(accessToken, LoginResponse.of(user));
+    }
+
+    // 로그아웃 — 현재는 Access Token만 쓰는 stateless 구조라 서버가 보관하는 세션/토큰이 없다.
+    // 따라서 실제 토큰 폐기는 클라이언트가 저장한 토큰을 삭제하는 방식으로 처리하고,
+    // 서버는 인증된 사용자의 요청임을 확인하는 역할만 한다.
+    // (추후 토큰 블랙리스트 방식으로 확장할 경우, 이 메서드에서 해당 토큰을 무효화하면 된다.
+    //  이때 JwtAuthenticationFilter의 검증 로직도 함께 수정이 필요하므로 공용 계약 변경에 주의할 것.)
+    public void logout(Long userId) {
+        // no-op: 클라이언트 방식 로그아웃이라 서버 측 상태 변경이 없다.
     }
 }

@@ -49,6 +49,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/spaces/my").authenticated()
                 // 인증 불필요 — 공간 목록/상세는 비로그인 조회 허용 (space 도메인 명세 2.2/2.3)
                 .requestMatchers(HttpMethod.GET, "/spaces", "/spaces/*").permitAll()
+                // 내 판매 상품은 인증 유지 — 아래 /products/* 와일드카드가 /products/my까지 열지 않도록 반드시 먼저 선언
+                .requestMatchers(HttpMethod.GET, "/products/my").authenticated()
+                // 인증 불필요 — 상품 목록/상세는 비로그인 조회 허용 (로컬마켓). 등록/수정/삭제는 아래 anyRequest로 보호
+                .requestMatchers(HttpMethod.GET, "/products", "/products/*").permitAll()
+                // 인증 불필요 — 업로드된 공간 사진 조회. 목록/상세가 비로그인 허용이므로 이미지도 함께 연다.
+                // 업로드(POST /files)는 아래 anyRequest().authenticated()로 보호된다.
+                .requestMatchers(HttpMethod.GET, "/files/*").permitAll()
                 // swagger 경로 설정
                 .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // 그 외 모든 요청은 인증 필요 (다른 팀원 도메인 API도 자동 보호됨)

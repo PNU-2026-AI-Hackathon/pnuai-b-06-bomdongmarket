@@ -71,6 +71,13 @@ public class ProfitReferenceData {
         return cropName != null && cropProduction.containsKey(cropName);
     }
 
+    // 재배 파라미터를 가진 작물 목록. CSV 등재 순서를 유지한다.
+    // 단가는 더 이상 이 클래스가 들고 있지 않으므로(MarketPriceProvider 담당) 여기서 거르지 않는다.
+    // 단가를 모르는 작물은 호출부가 MarketPriceProvider의 빈 결과로 걸러 낸다.
+    public List<String> supportedCropNames() {
+        return List.copyOf(cropProduction.keySet());
+    }
+
     public CropProduction cropProduction(String cropName) {
         CropProduction crop = cropProduction.get(cropName);
         if (crop == null) {

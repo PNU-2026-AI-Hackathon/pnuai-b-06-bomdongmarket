@@ -33,6 +33,10 @@ services:
     environment:
       # .env에 DB_URL이 없던 기존 개발 환경도 컨테이너 DB를 사용하도록 기본값을 둡니다.
       DB_URL: ${DB_URL:-jdbc:mysql://db:3306/farmbroker?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+      # 업로드 이미지는 컨테이너 밖 볼륨에 두어야 재시작·재빌드 후에도 남는다.
+      FILE_UPLOAD_DIR: ${FILE_UPLOAD_DIR:-/var/farmbroker/uploads}
+    volumes:
+      - farmbroker-uploads:/var/farmbroker/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -49,3 +53,4 @@ services:
 
 volumes:
   farmbroker-mysql-data:
+  farmbroker-uploads:

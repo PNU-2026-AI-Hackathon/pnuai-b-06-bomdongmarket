@@ -28,8 +28,9 @@ public class MatchingController {
 
     private final MatchingService matchingService;
 
-    // POST /api/matchings — 매칭 신청 (FARMER 전용)
-    @Operation(summary = "매칭 신청 (FARMER 전용)")
+    // POST /api/matchings — 매칭 신청 (로그인 필요, 수락되면 FARMER 역할이 부여됨)
+    @Operation(summary = "매칭 신청 (로그인 필요)",
+            description = "역할 제한 없이 로그인한 회원이면 신청할 수 있고, 공간 소유자가 수락하면 신청자에게 FARMER 역할이 부여된다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MatchingApplyResponse> apply(@RequestBody @Valid MatchingApplyRequest request,

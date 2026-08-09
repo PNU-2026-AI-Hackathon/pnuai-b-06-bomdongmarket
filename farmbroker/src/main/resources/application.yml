@@ -7,6 +7,11 @@ spring:
     url: "${DB_URL:jdbc:mysql://localhost:3307/farmbroker?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}"
     username: "${DB_USERNAME:root}"
     password: "${DB_PASSWORD}"
+  servlet:
+    multipart:
+      # 한 장 5MB × 최대 10장 + 멀티파트 오버헤드
+      max-file-size: "${FILE_MAX_FILE_SIZE:5MB}"
+      max-request-size: "${FILE_MAX_REQUEST_SIZE:55MB}"
   jpa:
     hibernate:
       ddl-auto: "${JPA_DDL_AUTO:update}"
@@ -20,9 +25,18 @@ server:
   servlet:
     context-path: "${SERVER_CONTEXT_PATH:/api}"
 
+file:
+  # 업로드 이미지 저장 경로. Docker에서는 named volume을 이 경로에 마운트한다.
+  upload-dir: "${FILE_UPLOAD_DIR:./uploads}"
+
 jwt:
   secret: "${JWT_SECRET}"
   expiration: "${JWT_EXPIRATION:86400000}"
+  cookie:
+    # Access Token을 담는 httpOnly 쿠키 속성. dev(http)는 secure=false, prod(https)는 secure=true로 토글.
+    name: "${JWT_COOKIE_NAME:accessToken}"
+    secure: "${JWT_COOKIE_SECURE:false}"
+    same-site: "${JWT_COOKIE_SAMESITE:Lax}"
 
 gemini:
   api-key: "${GEMINI_API_KEY:}"

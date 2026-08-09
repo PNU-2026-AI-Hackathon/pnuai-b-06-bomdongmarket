@@ -25,7 +25,9 @@ export interface User {
   userId: number;
   email: string;
   nickname: string;
-  role: UserRole;
+  // 역할은 가입 시 고르는 값이 아니라 활동에 따라 누적된다.
+  // 가입 시 CONSUMER, 공간을 등록하면 OWNER, 매칭이 수락되면 FARMER가 더해진다.
+  roles: UserRole[];
 }
 
 export interface LoginInput {
@@ -34,13 +36,12 @@ export interface LoginInput {
 }
 
 export interface LoginResult {
-  accessToken: string;
+  // Access Token은 httpOnly 쿠키로 내려가므로 응답 본문에는 사용자 정보만 담긴다.
   user: User;
 }
 
 export interface SignupInput extends LoginInput {
   nickname: string;
-  role: UserRole;
 }
 
 export interface PageResponse<T> {
@@ -73,6 +74,7 @@ export interface SpaceDetail extends SpaceSummary {
   hasVentilation: boolean;
   description: string;
   imageUrls: string[];
+  floorPlanUrls: string[];
   owner: UserSummary;
   createdAt: string;
   updatedAt: string;
@@ -98,6 +100,8 @@ export interface SpaceCreateInput {
   hasVentilation: boolean;
   description?: string;
   imageUrls?: string[];
+  // 도면은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
+  floorPlanUrls: string[];
 }
 
 export type SpaceUpdateInput = Partial<SpaceCreateInput> & {
@@ -107,6 +111,7 @@ export type SpaceUpdateInput = Partial<SpaceCreateInput> & {
 export interface SpaceMutationResult extends SpaceCreateInput {
   spaceId: number;
   imageUrls: string[];
+  floorPlanUrls: string[];
   status: SpaceStatus;
   ownerId: number;
   createdAt: string;
@@ -116,6 +121,12 @@ export interface SpaceMutationResult extends SpaceCreateInput {
 export interface SpaceDeleteResult {
   spaceId: number;
   deleted: boolean;
+}
+
+export interface UploadedFile {
+  url: string;
+  originalName: string;
+  size: number;
 }
 
 export interface CropSummary {
@@ -152,6 +163,49 @@ export interface CropRecommendation {
   avgPricePerKg: number | null;
 }
 
+// 서버의 결정론적 수익 계산기(ProfitCalculator) 결과입니다. 금액은 KRW/월, 적자는 음수로 옵니다.
+export interface ProfitEstimate {
+  cropName: string;
+  // 계산 근거(표준 가정값 포함)
+  totalAreaM2: number;
+  cultivableRatio: number;
+  areaUtilizationPercent: number;
+  moduleLayers: number;
+  ceilingHeightM: number;
+  availableFloorAreaM2: number;
+  cultivationAreaM2: number;
+  lightingPowerW: number;
+  averageMonthlyEnergyKwh: number;
+  // 생산·매출
+  monthlyTotalProductionKg: number;
+  monthlySalesKg: number;
+  pricePerKgKrw: number;
+  monthlyRevenueKrw: number;
+  // 비용
+  electricityCostKrw: number;
+  waterCostKrw: number;
+  materialCostKrw: number;
+  laborCostKrw: number;
+  depreciationAndOtherCostKrw: number;
+  monthlyOperatingCostKrw: number;
+  // 손익·배분·계약 추천
+  monthlyOperatingProfitKrw: number;
+  landlordShareRatio: number;
+  landlordExpectedIncomeKrw: number;
+  desiredMonthlyRentKrw: number;
+  businessOperatingProfitKrw: number;
+  operatingLoss: boolean;
+  longTermRecommended: boolean;
+  recommendation: string;
+  contractType: string;
+}
+
+// 등록 전 예측이라 spaceId 없이 공간 등록 폼의 면적·월세만 보냅니다.
+export interface ProfitEstimateInput {
+  area: number;
+  monthlyRent: number;
+}
+
 export interface AiRecommendation {
   recommendationId: number;
   spaceId: number;
@@ -159,6 +213,7 @@ export interface AiRecommendation {
   layoutSuggestion: string;
   cautions: string[];
   createdAt: string;
+  profitEstimate: ProfitEstimate | null;
 }
 
 export interface AiRecommendationInput {
@@ -214,6 +269,15 @@ export interface MatchingRequest {
   respondedAt: string | null;
 }
 
+// 생산 이력 이벤트(상품 상세에서 내려옴). 등록/수정 시 백엔드에 배열로 함께 전달한다.
+export interface MarketTraceabilityEvent {
+  eventId: number;
+  stage: string;
+  description: string | null;
+  occurredAt: string;
+  sortOrder: number;
+}
+
 export interface MarketItem {
   productId: number;
   name: string;
@@ -223,10 +287,22 @@ export interface MarketItem {
   harvestDate: string;
   price: number;
   unit: string;
-  imageUrl: string;
+  // 사진 없이 등록 가능(백엔드 nullable) → 렌더 시 placeholder guard가 필요하다.
+  imageUrl: string | null;
   freshnessTags: string[];
-  foodMileageKm: number;
+  // 위경도·마일리지는 지도(Task 3) 전까지 백엔드에서 null로 내려올 수 있어 렌더 시 guard가 필요하다.
+  foodMileageKm: number | null;
   stock: number;
+  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  status?: string;
+  sellerNickname?: string;
+  description?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  spaceId?: number | null;
+  createdAt?: string;
+  traceabilityEvents?: MarketTraceabilityEvent[];
 }
 
 export interface DashboardMetric {

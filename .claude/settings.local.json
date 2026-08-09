@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls /c/Users/sosez/.claude/ide/ && cat /c/Users/sosez/.claude/ide/*.json 2>/dev/null | head -50)"
+      "Bash(ls /c/Users/sosez/.claude/ide/ && cat /c/Users/sosez/.claude/ide/*.json 2>/dev/null | head -50)",
+      "Bash(curl -s --noproxy * https://api.github.com/repos/PNU-2026-AI-Hackathon/pnuai-b-06-bomdongmarket/pulls/31/reviews)",
+      "Bash(python -c ' *)",
+      "Bash(git merge *)",
+      "Bash(git add *)",
+      "Bash(rm -rf C:/Users/sosez/AppData/Local/Temp/claude/C--Users-sosez-OneDrive------------------PNU----AI----pnuai-b-06-bomdongmarket/e02b7001-3676-40c1-9fd4-7641df59cc9a/scratchpad/fbtest/src)",
+      "Bash(cp -r 'C:/Users/sosez/OneDrive/바탕 화면/범수/대외활동/대회/PNU창의융합AI해커톤/pnuai-b-06-bomdongmarket/farmbroker/src' C:/Users/sosez/AppData/Local/Temp/claude/C--Users-sosez-OneDrive------------------PNU----AI----pnuai-b-06-bomdongmarket/e02b7001-3676-40c1-9fd4-7641df59cc9a/scratchpad/fbtest/src)",
+      "Bash(cp 'C:/Users/sosez/OneDrive/바탕 화면/범수/대외활동/대회/PNU창의융합AI해커톤/pnuai-b-06-bomdongmarket/farmbroker/build.gradle' 'C:/Users/sosez/OneDrive/바탕 화면/범수/대외활동/대회/PNU창의융합AI해커톤/pnuai-b-06-bomdongmarket/farmbroker/settings.gradle' C:/Users/sosez/AppData/Local/Temp/claude/C--Users-sosez-OneDrive------------------PNU----AI----pnuai-b-06-bomdongmarket/e02b7001-3676-40c1-9fd4-7641df59cc9a/scratchpad/fbtest/)",
+      "Bash(./gradlew test *)",
+      "Bash(python *)",
+      "Bash(curl -s --noproxy \"*\" \"https://api.github.com/repos/nitally0715/pnuai-b-06-bomdongmarket/branches/feature/auth-logout\")",
+      "Bash(curl -s --noproxy \"*\" \"https://api.github.com/repos/PNU-2026-AI-Hackathon/pnuai-b-06-bomdongmarket/pulls/31\")",
+      "Bash(curl -s --noproxy * -H 'Cache-Control: no-cache' https://api.github.com/repos/PNU-2026-AI-Hackathon/pnuai-b-06-bomdongmarket/pulls/31?nocache=__CMDSUB_OUTPUT__)",
+      "Bash(curl -s --noproxy * https://api.github.com/repos/PNU-2026-AI-Hackathon/pnuai-b-06-bomdongmarket/compare/main...nitally0715:feature/auth-logout?nocache=__CMDSUB_OUTPUT__)",
+      "Bash(curl -s --noproxy * https://api.github.com/repos/PNU-2026-AI-Hackathon/pnuai-b-06-bomdongmarket/pulls/31?nocache=__CMDSUB_OUTPUT__)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

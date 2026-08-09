@@ -1,9 +1,11 @@
 # 🌱 봄동마켓 (Farm Broker)
 
 > **직방형 스마트팜 중개 플랫폼**
-> 도심 유휴공간을 스마트팜으로 전환하여 공실 제공자 · 도심 농부 · 소비자 3자를 하나의 앱으로 연결합니다.
+> 도심 유휴공간을 스마트팜으로 전환하여 공실 제공자 · 도심 농부 · 소비자 3자를 하나의 웹 플랫폼으로 연결합니다.
 
 **제7회 PNU 창의융합 AI 해커톤 · 지정과제트랙**
+
+> 📌 **문서 버전: 2026.08.06 기준** — 현재 개발 진행상황을 반영해 최신화한 버전입니다.
 
 <br/>
 
@@ -67,16 +69,16 @@
 ### 2.3. 사용 기술
 | 이름 | 버전 |
 |:---:|:---:|
-| React Native | 추후 확정 |
-| Spring Boot (Java) | 추후 확정 |
-| FastAPI (Python) | 추후 확정 |
-| Python | 추후 확정 |
-| PyTorch | 추후 확정 |
+| React (Vite · TypeScript) | 19.2 |
+| Spring Boot (Java) | 4.1.0 (Java 21) |
+| Spring Security · Data JPA | 6.x |
+| MySQL | 8.4 |
+| Gemini API | gemini-2.5-flash |
 
-- **Frontend** — React Native (Android·iOS 동시 지원 크로스플랫폼 앱. 공실 탐색, 수익 예측 결과 조회, 직거래 마켓 UI)
-- **Backend** — Spring Boot (회원 관리·계약·결제·정산 등 트랜잭션 핵심 로직) / FastAPI (AI 모델 서빙)
-- **AI / Data** — Python·PyTorch (수익 예측 모델), Gemini API (작물 추천 및 공간 배치 최적화 청사진)
-- **협업 · 버전 관리** — GitHub(main/dev/feature 브랜치 전략), VS Code(ESLint·Prettier), Notion / Google 공유 문서, Discord
+- **Frontend** — React + Vite + TypeScript 웹 SPA (TailwindCSS · React Router). 공실 탐색, 수익 예측·작물 추천 결과 조회, 매칭 신청, 직거래 마켓 UI
+- **Backend** — Spring Boot (Java 21) REST API. 회원·인증(JWT), 공간 등록·매칭·계약, 수익 예측 계산, 작물 백과사전 등 핵심 로직. MySQL 영속화, Swagger(springdoc) API 문서화
+- **AI / Data** — Gemini API (작물 추천 및 공간 활용 청사진 생성). 수익 예측은 Python 계산 로직(`Profit_Calculator`)을 백엔드 Java(`profit` 패키지)로 이식하여 CSV 기준데이터 기반으로 산정
+- **협업 · 버전 관리** — GitHub(main/feature 브랜치 전략, GitHub Actions CI), Docker Compose 기반 로컬 인프라, VS Code(ESLint·Prettier), Notion / Google 공유 문서, Discord
 
 **(필수) 활용 생성형 AI · AI 코딩 도구**
 - **Claude Code** — Superpowers 플러그인, Custom Skills / Subagents, MCP(GitHub·Notion 연동)
@@ -127,28 +129,29 @@
 <br/>
 
 ### 3.4. 디렉토리 구조
-> 개발 진행에 따라 변경될 수 있습니다. (현재는 계획 단계 기준)
+> 개발 진행에 따라 변경될 수 있습니다. (2026.08.06 기준)
 
 ```
 봄동마켓/
-├── frontend/              # React Native 앱
+├── farmbroker-web/        # React + Vite + TypeScript 웹 프론트엔드
 │   └── src/
-│       ├── assets/        # 이미지, 폰트 등 정적 파일
-│       ├── components/    # 공통 컴포넌트
-│       ├── screens/       # 화면 페이지
-│       └── services/      # API 통신
-├── backend/               # Spring Boot (Java)
-│   └── src/main/java/
-│       ├── controller/
-│       ├── service/
-│       ├── domain/
-│       └── repository/
-├── ai-server/             # FastAPI (Python)
-│   └── app/
-│       ├── models/        # 수익 예측 모델
-│       ├── routers/
-│       └── main.py
-├── docs/                  # 다이어그램, 명세서, 이미지
+│       ├── api/           # API 클라이언트·엔드포인트
+│       ├── auth/          # 인증·세션·라우트 가드
+│       ├── components/    # 공통·레이아웃 컴포넌트
+│       ├── pages/         # 화면 페이지 (auth/home/spaces/market/dashboard …)
+│       └── services/      # 도메인별 API 서비스
+├── farmbroker/            # Spring Boot (Java 21) 백엔드
+│   └── src/main/java/com/farmbroker/farmbroker/
+│       ├── common/        # 공통 응답·예외·설정
+│       ├── security/      # JWT·SecurityConfig
+│       ├── auth/  user/   # 인증·회원
+│       ├── space/  matching/   # 공간 등록·매칭·계약
+│       ├── ai/  crop/     # Gemini 작물 추천·작물 백과사전
+│       └── profit/        # 수익 예측 계산 (CSV 기준데이터)
+├── Profit_Calculator/     # 수익 예측 원본 Python 계산 모듈 (참조용)
+├── db/                    # MySQL 초기화 스크립트 (시드)
+├── docs/                  # 디자인 시스템·명세·문서
+├── docker-compose.yml     # 로컬 인프라 (MySQL · 백엔드 · 프론트)
 └── README.md
 ```
 <br/>
@@ -156,9 +159,9 @@
 ### 3.5. AI 도구 활용
 | 단계 | 활용 도구 | 활용 내용 |
 |:---:|:---:|:---|
-| 코드 생성·리팩토링 | Claude Code, Codex | Superpowers·Custom Skills/Subagents로 전용 개발 파이프라인 구성. RN 화면 컴포넌트, Spring Boot 컨트롤러·서비스 보일러플레이트, FastAPI 엔드포인트 등 반복 작업 자동화 |
+| 코드 생성·리팩토링 | Claude Code, Codex | Superpowers·Custom Skills/Subagents로 전용 개발 파이프라인 구성. React 화면 컴포넌트, Spring Boot 컨트롤러·서비스·DTO 보일러플레이트 등 반복 작업 자동화 |
 | 파이프라인 구축 | Claude Code (Superpowers) | MCP 서버로 GitHub·Notion 연동, 이슈 기반 자동 코드 작성 및 CI/CD 자동화 |
-| 설계·아키텍처 검토 | ChatGPT, Claude, Gemini | 아키텍처·ERD 검증, REST API 명세 자동 생성, Spring Boot–FastAPI 간 동시성·트랜잭션 이슈 사전 검토, AI 코드 리뷰 |
+| 설계·아키텍처 검토 | ChatGPT, Claude, Gemini | 아키텍처·ERD 검증, REST API 명세 자동 생성, JWT 인증·JPA 트랜잭션·CORS 이슈 사전 검토, AI 코드 리뷰 |
 | AI 모델 | Gemini API | 작물 추천 및 하드웨어 공간 배치 최적화 청사진 생성 |
 | 기획·UI/UX | ChatGPT, Figma | 와이어프레임·아이콘·일러스트 시안, UX 시나리오 작성, 발표 자료 그래픽 생성 |
 
@@ -166,26 +169,30 @@
 <br/>
 
 ## 4. 설치 및 사용 방법
-> 개발 진행에 따라 명령어가 확정될 예정입니다.
 
 **필요 패키지**
-- 위의 [사용 기술](#23-사용-기술) 참고 (Node.js, JDK, Python 등)
+- 위의 [사용 기술](#23-사용-기술) 참고 (Node.js, JDK 21, Docker / MySQL 8.4)
 
 ```bash
-# Frontend (React Native)
+# 0. 저장소 클론 및 환경변수 설정
 $ git clone https://github.com/<organization>/<repo>.git
-$ cd <repo>/frontend
+$ cd <repo>
+$ cp .env.example .env    # DB_PASSWORD, JWT_SECRET, GEMINI_API_KEY 등 입력
+
+# 1. 전체 실행 (Docker Compose — MySQL + 백엔드 + 프론트)
+$ docker compose up -d
+#   → 프론트 http://localhost:5173  /  API http://localhost:8080/api
+
+# ── 개별 실행 ─────────────────────────────────
+
+# Frontend (React + Vite)
+$ cd farmbroker-web
 $ npm install
-$ npx react-native run-android   # 또는 run-ios
+$ npm run dev            # http://localhost:5173
 
 # Backend (Spring Boot)
-$ cd ../backend
-$ ./gradlew bootRun
-
-# AI Server (FastAPI)
-$ cd ../ai-server
-$ pip install -r requirements.txt
-$ uvicorn app.main:app --reload
+$ cd farmbroker
+$ ./gradlew bootRun      # http://localhost:8080/api  (Swagger: /api/swagger-ui.html)
 ```
 <br/>
 
