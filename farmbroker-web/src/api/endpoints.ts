@@ -6,6 +6,7 @@ export const ENDPOINTS = {
   },
   users: {
     me: '/users/me',
+    withdrawalEligibility: '/users/me/withdrawal-eligibility',
   },
   spaces: {
     list: '/spaces',
