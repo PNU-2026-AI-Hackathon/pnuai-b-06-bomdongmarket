@@ -17,7 +17,7 @@ public class OpenAPIConfig{
         return new OpenAPI()
             .info(new Info()
                 .title("farmbroker API")
-                .description("봄동마켓 BE API 문서")
+                .description("FarmBroker BE API 문서")
                 .version("v1"))
         
         // 모든 api에 jwt Bearer 인증 기본 적용

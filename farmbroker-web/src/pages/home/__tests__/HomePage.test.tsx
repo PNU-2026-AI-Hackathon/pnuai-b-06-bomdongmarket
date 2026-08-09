@@ -12,7 +12,7 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', { name: campaignSlides[0].title }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: '봄동마켓 캠페인' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'FarmBroker 캠페인' })).toBeInTheDocument();
 
     roleSections.forEach((role) => {
       const heading = screen.getByRole('heading', { name: role.title });

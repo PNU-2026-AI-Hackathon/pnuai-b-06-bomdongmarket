@@ -1,4 +1,4 @@
-# Docker 실행 가이드 (봄동마켓)
+# Docker 실행 가이드 (FarmBroker)
 
 로컬에 **Java / Node / MySQL 설치 없이** Docker Desktop만 있으면 전체 스택이 뜹니다.
 

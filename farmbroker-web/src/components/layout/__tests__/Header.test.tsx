@@ -3,12 +3,25 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { Header } from '@/components/layout/Header';
+import { APP_INFO } from '@/constants/appInfo';
 import { PRIMARY_NAVIGATION } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 describe('Header', () => {
   beforeEach(() => clearAuthSession());
+
+  it('FarmBroker 심벌과 제품명을 홈 링크로 제공한다', () => {
+    const { getByRole } = renderWithProviders(<Header />);
+    const brandLink = getByRole('link', { name: `${APP_INFO.name} 홈으로 이동` });
+
+    expect(brandLink).toHaveAttribute('href', ROUTES.home);
+    expect(within(brandLink).getByText(APP_INFO.name)).toBeInTheDocument();
+    expect(brandLink.querySelector('img')).toHaveAttribute(
+      'src',
+      '/brand/farmbroker-symbol.png',
+    );
+  });
 
   it('데스크톱 내비게이션에 넓은 간격과 클릭 영역을 제공한다', () => {
     const { getByRole } = renderWithProviders(<Header />);
