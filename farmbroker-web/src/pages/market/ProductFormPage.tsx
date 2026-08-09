@@ -27,17 +27,19 @@ import {
   saleUnits,
   unitPriceHint,
 } from '@/pages/market/constants/saleUnits';
+import { useMyWorkplaces } from '@/pages/market/hooks/useMyWorkplaces';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
-import { getMySpaces } from '@/services/spaceService';
-import type { ProductEventInput, SpaceSummary } from '@/types/api';
+import type { ProductEventInput } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatCurrency } from '@/utils/format';
 
 // 판매자가 로컬마켓 상품을 등록·수정하는 화면입니다.
 // 백엔드 계약(#54 합의사항, #56 구현)에 맞춰 요청 바디를 구성합니다.
 // - category는 계약에 정의된 한글 라벨('잎채소'/'허브'/'과채류')만 전송합니다.
-// - '내 작업장에서 불러오기'는 GET /spaces/my 로 내 공간을 불러와 생산 위치·주소·spaceId를 채웁니다.
+// - '어디서 생산했나요'는 내가 등록한 공실(GET /spaces/my)과 매칭이 수락돼 재배 중인 공간
+//   (GET /matchings/my-requests 중 ACCEPTED)을 합쳐 보여 주고, 고르면 생산 위치·주소·spaceId를 채웁니다.
 //   spaceId는 FK가 아닌 스냅샷이라 직접 입력만으로도 등록됩니다.
+// - address는 카카오맵으로 생산지를 찍는 데 쓰이므로 접이식 섹션이 아니라 기본 정보에 둡니다.
 // - imageUrl은 POST /files 업로드 결과 URL입니다. 판매자가 사진을 인터넷 어딘가에 먼저
 //   올려 둘 필요가 없도록 URL 입력 대신 로컬 파일 업로드만 받습니다.
 // - 위경도·푸드 마일리지는 지도 연동(Task 3)에서 서버가 채우므로 이 폼에서 받지 않습니다.
@@ -54,7 +56,9 @@ export function ProductFormPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadStatus, setLoadStatus] = useState<AsyncStatus>(isEdit ? 'loading' : 'success');
 
-  const [mySpaces, setMySpaces] = useState<SpaceSummary[]>([]);
+  const { workplaces } = useMyWorkplaces();
+  const ownedPlaces = workplaces.filter((place) => place.source === 'owned');
+  const farmingPlaces = workplaces.filter((place) => place.source === 'farming');
   const [spaceId, setSpaceId] = useState<number | null>(null);
   const [events, setEvents] = useState<ProductEventInput[]>([]);
   const [fields, setFields] = useState({
@@ -70,13 +74,6 @@ export function ProductFormPage() {
     productionLocation: '',
     address: '',
   });
-
-  // '작업장에서 가져오기'용 목록. 공간이 없어도 직접 입력으로 등록할 수 있어 실패는 무시합니다.
-  useEffect(() => {
-    void getMySpaces()
-      .then(setMySpaces)
-      .catch(() => setMySpaces([]));
-  }, []);
 
   useEffect(() => {
     if (!productId) return;
@@ -127,7 +124,7 @@ export function ProductFormPage() {
   const pricePerBase = unitPriceHint(fields.price, fields.unitAmount, fields.unitType);
 
   function importFromSpace(selectedId: string) {
-    const picked = mySpaces.find((space) => String(space.spaceId) === selectedId);
+    const picked = workplaces.find((place) => String(place.spaceId) === selectedId);
     if (!picked) {
       setSpaceId(null);
       return;
@@ -136,7 +133,8 @@ export function ProductFormPage() {
     setFields((prev) => ({
       ...prev,
       productionLocation: picked.title,
-      address: picked.address ?? prev.address,
+      // 주소는 지도 표시에 쓰이므로 비어 있으면 덮지 않고 기존 입력을 지킵니다.
+      address: picked.address || prev.address,
     }));
   }
 
@@ -248,20 +246,34 @@ export function ProductFormPage() {
           icon={<Sprout className="h-8 w-8" aria-hidden />}
           title="기본 정보"
         >
-          {/* 등록한 작업장을 고르면 생산 위치·주소가 한 번에 채워져 직접 칠 칸이 줄어듭니다. */}
-          {mySpaces.length > 0 ? (
+          {/* 내 공실과 매칭이 수락돼 재배 중인 남의 공간을 함께 보여 줍니다.
+              고르면 생산 위치·주소가 한 번에 채워져 직접 칠 칸이 줄어듭니다. */}
+          {workplaces.length > 0 ? (
             <Select
               helperText="고르면 생산 위치와 주소가 자동으로 채워집니다."
-              label="내 작업장에서 불러오기"
+              label="어디서 생산했나요"
               onChange={(event) => importFromSpace(event.target.value)}
               value={spaceId === null ? '' : String(spaceId)}
             >
               <option value="">직접 입력할게요</option>
-              {mySpaces.map((space) => (
-                <option key={space.spaceId} value={String(space.spaceId)}>
-                  {space.title}
-                </option>
-              ))}
+              {ownedPlaces.length > 0 ? (
+                <optgroup label="내가 등록한 공간">
+                  {ownedPlaces.map((place) => (
+                    <option key={place.spaceId} value={String(place.spaceId)}>
+                      {place.title}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+              {farmingPlaces.length > 0 ? (
+                <optgroup label="내가 재배 중인 공간">
+                  {farmingPlaces.map((place) => (
+                    <option key={place.spaceId} value={String(place.spaceId)}>
+                      {place.title}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
             </Select>
           ) : null}
           <Input
@@ -350,6 +362,7 @@ export function ProductFormPage() {
               value={fields.harvestDate}
             />
             <Input
+              helperText="구매자에게 보이는 이름입니다."
               label="생산 위치"
               maxLength={255}
               onChange={(event) => setField('productionLocation', event.target.value)}
@@ -358,6 +371,15 @@ export function ProductFormPage() {
               value={fields.productionLocation}
             />
           </div>
+          {/* 주소는 지도에 위치를 찍는 데 쓰이므로 접어 두지 않고 기본 정보에 둡니다. */}
+          <Input
+            helperText="이 주소로 지도에 생산지를 표시합니다. 비워 두면 지도에 나오지 않습니다."
+            label="생산지 주소"
+            maxLength={255}
+            onChange={(event) => setField('address', event.target.value)}
+            placeholder="예: 부산광역시 금정구 장전동 30"
+            value={fields.address}
+          />
         </FormSection>
 
         <FormSection
@@ -385,14 +407,6 @@ export function ProductFormPage() {
             placeholder="재배 방식과 보관 방법을 적어 주세요."
             rows={4}
             value={fields.description}
-          />
-          <Input
-            helperText="지도 표시에 사용됩니다."
-            label="주소"
-            maxLength={255}
-            onChange={(event) => setField('address', event.target.value)}
-            placeholder="예: 부산광역시 금정구 장전동"
-            value={fields.address}
           />
         </FormSection>
 
