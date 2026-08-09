@@ -20,10 +20,18 @@ import {
   productCategories,
   traceabilitySteps,
 } from '@/pages/market/constants/marketOptions';
+import {
+  DEFAULT_SALE_UNIT,
+  composeUnit,
+  parseUnit,
+  saleUnits,
+  unitPriceHint,
+} from '@/pages/market/constants/saleUnits';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
 import { getMySpaces } from '@/services/spaceService';
 import type { ProductEventInput, SpaceSummary } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
+import { formatCurrency } from '@/utils/format';
 
 // 판매자가 로컬마켓 상품을 등록·수정하는 화면입니다.
 // 백엔드 계약(#54 합의사항, #56 구현)에 맞춰 요청 바디를 구성합니다.
@@ -53,7 +61,8 @@ export function ProductFormPage() {
     name: '',
     category: productCategories[0] as string,
     price: '',
-    unit: '',
+    unitAmount: '',
+    unitType: DEFAULT_SALE_UNIT as string,
     stock: '',
     harvestDate: '',
     description: '',
@@ -79,7 +88,9 @@ export function ProductFormPage() {
           name: item.name,
           category: item.category,
           price: String(item.price),
-          unit: item.unit,
+          // 자유 입력으로 저장된 옛 값('팩' 등)은 양을 알 수 없어 빈 칸으로 두고 다시 받습니다.
+          unitAmount: parseUnit(item.unit)?.amount ?? '',
+          unitType: parseUnit(item.unit)?.unit ?? DEFAULT_SALE_UNIT,
           stock: String(item.stock),
           harvestDate: item.harvestDate,
           description: item.description ?? '',
@@ -107,6 +118,13 @@ export function ProductFormPage() {
   function setField(key: keyof typeof fields, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
   }
+
+  const composedUnit = composeUnit(fields.unitAmount, fields.unitType);
+  const salePreview =
+    composedUnit && fields.price
+      ? `${composedUnit} · ${formatCurrency(Number(fields.price))}`
+      : null;
+  const pricePerBase = unitPriceHint(fields.price, fields.unitAmount, fields.unitType);
 
   function importFromSpace(selectedId: string) {
     const picked = mySpaces.find((space) => String(space.spaceId) === selectedId);
@@ -146,7 +164,7 @@ export function ProductFormPage() {
       name: fields.name,
       category: fields.category,
       price: Number(fields.price),
-      unit: fields.unit,
+      unit: composeUnit(fields.unitAmount, fields.unitType),
       stock: Number(fields.stock),
       // 비우면 목록·상세가 기본 이미지를 사용합니다.
       imageUrl: fields.imageUrl.trim() || null,
@@ -218,7 +236,13 @@ export function ProductFormPage() {
         />
       </div>
 
-      <form className="grid gap-5 pb-4" onSubmit={handleSubmit}>
+      {/* 입력 본문만 16px로 키웁니다(공통 기본값은 14px).
+          모바일에서 읽기 편하고, iOS 사파리가 16px 미만 입력에 포커스할 때 페이지를 강제 확대하는 것도 막힙니다.
+          공통 컴포넌트를 바꾸면 로그인·공간 등록 등 다른 담당자 화면까지 영향을 주므로 이 화면에만 한정합니다. */}
+      <form
+        className="grid gap-5 pb-4 [&_input]:text-base [&_select]:text-base [&_textarea]:text-base"
+        onSubmit={handleSubmit}
+      >
         <FormSection
           description="여섯 칸만 채우면 바로 판매를 시작할 수 있습니다."
           icon={<Sprout className="h-8 w-8" aria-hidden />}
@@ -260,7 +284,30 @@ export function ProductFormPage() {
               </option>
             ))}
           </Select>
+          {/* 한 번에 파는 양과 그 값을 붙여 두면 '무엇을 얼마에 파는지'를 한 줄로 읽을 수 있습니다. */}
           <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              label="한 번에 파는 양"
+              min={0}
+              onChange={(event) => setField('unitAmount', event.target.value)}
+              placeholder="200"
+              required
+              step="any"
+              type="number"
+              value={fields.unitAmount}
+            />
+            <Select
+              label="단위"
+              onChange={(event) => setField('unitType', event.target.value)}
+              required
+              value={fields.unitType}
+            >
+              {saleUnits.map((unit) => (
+                <option key={unit.value} value={unit.value}>
+                  {unit.label}
+                </option>
+              ))}
+            </Select>
             <Input
               label="가격(원)"
               min={0}
@@ -270,24 +317,30 @@ export function ProductFormPage() {
               type="number"
               value={fields.price}
             />
-            <Input
-              label="판매 단위"
-              maxLength={20}
-              onChange={(event) => setField('unit', event.target.value)}
-              placeholder="팩"
-              required
-              value={fields.unit}
-            />
-            <Input
-              label="재고"
-              min={0}
-              onChange={(event) => setField('stock', event.target.value)}
-              placeholder="24"
-              required
-              type="number"
-              value={fields.stock}
-            />
           </div>
+
+          {/* 구매자가 보게 될 문구를 그대로 미리 보여 줍니다.
+              '팩'처럼 양을 알 수 없는 표기를 막는 것이 이 칸들의 목적이라, 결과를 눈으로 확인시켜 줍니다. */}
+          <div className="rounded-app bg-leaf-50 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-600">구매자에게 이렇게 보입니다</p>
+            <p className="mt-1 text-lg font-black text-ink-900">
+              {salePreview ?? '양과 가격을 입력하면 여기에 표시됩니다'}
+            </p>
+            {pricePerBase ? (
+              <p className="mt-1 text-sm font-semibold text-leaf-700">{pricePerBase}</p>
+            ) : null}
+          </div>
+
+          <Input
+            helperText="위 묶음을 몇 개까지 팔 수 있는지 적습니다."
+            label="재고 수량"
+            min={0}
+            onChange={(event) => setField('stock', event.target.value)}
+            placeholder="24"
+            required
+            type="number"
+            value={fields.stock}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="수확일"

@@ -1,8 +1,7 @@
-import { MapPin, Search, Store } from 'lucide-react';
+import { MapPin, Plus, Search, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
-import { hasRole } from '@/auth/roles';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -21,10 +20,7 @@ import { ROUTES } from '@/constants/routes';
 export function MarketPage() {
   const { keyword, setKeyword, category, setCategory, items, status, error, reload } =
     useMarketItems();
-  const { user } = useAuth();
-  // 상품 등록은 FARMER만 가능하므로(#56) 판매 진입점도 도심 농부에게만 보입니다.
-  // 소비자에게 눌러 봐야 403이 나는 버튼을 보여 주지 않기 위함입니다.
-  const isFarmer = hasRole(user, 'FARMER');
+  const { isAuthenticated } = useAuth();
 
   return (
     <PageContainer>
@@ -35,7 +31,8 @@ export function MarketPage() {
               <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
               부산 반경 8km 이내
             </Card>
-            {isFarmer ? (
+            {/* 판매 관리는 내 상품이 있어야 의미가 있어 로그인한 사람에게만 보입니다. */}
+            {isAuthenticated ? (
               <Link
                 className={buttonStyles({ size: 'sm', variant: 'outline' })}
                 to={ROUTES.myProducts}
@@ -44,6 +41,12 @@ export function MarketPage() {
                 판매 관리
               </Link>
             ) : null}
+            {/* 등록 진입점은 비로그인에도 보여 줍니다. 무엇을 할 수 있는 서비스인지 먼저 알리고,
+                누르면 ProtectedRoute가 로그인으로 보냈다가 로그인 후 이 화면으로 되돌립니다. */}
+            <Link className={buttonStyles({ size: 'sm' })} to={ROUTES.newProduct}>
+              <Plus className="h-4 w-4" aria-hidden />
+              상품 등록
+            </Link>
           </div>
         }
         actionBreakpoint="lg"
