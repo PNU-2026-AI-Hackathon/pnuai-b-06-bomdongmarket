@@ -20,7 +20,7 @@ import java.util.List;
 // product(로컬마켓) 도메인 엔드포인트. 얇게 유지: 서비스 위임 + ApiResponse 래핑만 한다.
 // 인증 사용자는 @AuthenticationPrincipal Long userId로 주입받는다.
 //
-// [프론트 참고] 목록/상세는 비로그인 조회 허용, 등록/수정/삭제는 로그인 필요.
+// [프론트 참고] 목록/상세는 비로그인 조회 허용, 수정/삭제는 로그인+소유자, 등록은 FARMER 역할 필요.
 //              등록 UI는 이 계약을 기준으로 추후 구현한다(당근마켓 스타일 CRUD).
 @Tag(name = "로컬마켓", description = "상품 등록/조회/수정/삭제 API")
 @RestController
@@ -37,8 +37,11 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // POST /api/products — 상품 등록 (로그인 필요)
-    @Operation(summary = "상품 등록 (로그인 필요)", description = "인증된 사용자면 누구나 등록할 수 있다. sellerId는 body로 받지 않고 토큰에서 식별한다.")
+    // POST /api/products — 상품 등록 (FARMER 역할 필요)
+    @Operation(summary = "상품 등록 (FARMER 역할 필요)",
+            description = "FARMER 역할 보유자만 등록할 수 있다(매칭 수락으로 도심 농부가 된 사용자). "
+                    + "역할이 없으면 403 FORBIDDEN_ROLE. sellerId는 body로 받지 않고 토큰에서 식별하며, "
+                    + "생산자명(producerName)은 입력받지 않고 판매자 닉네임으로 고정한다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ProductDetailResponse> create(@AuthenticationPrincipal Long userId,
