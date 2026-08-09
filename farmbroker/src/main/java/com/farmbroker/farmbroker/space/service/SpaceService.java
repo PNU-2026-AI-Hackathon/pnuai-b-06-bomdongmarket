@@ -54,7 +54,7 @@ public class SpaceService {
     // ownerId는 항상 인증 컨텍스트의 userId를 쓴다.
     @Transactional
     public SpaceResponse create(Long userId, SpaceCreateRequest request) {
-        User owner = userRepository.findById(userId)
+        User owner = userRepository.findActiveByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Space space = spaceRepository.save(Space.builder()
@@ -139,12 +139,18 @@ public class SpaceService {
     // 공간 부분수정 — 등록자 본인만. null이 아닌 필드만 반영하고, imageUrls는 전체 교체(replace)한다.
     @Transactional
     public SpaceResponse update(Long userId, Long spaceId, SpaceUpdateRequest request) {
+        userRepository.findActiveByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         Space space = spaceRepository.findByIdAndDeletedFalse(spaceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
         validateOwner(space, userId);
 
         if (request.getStatus() != null) {
-            space.changeStatus(parseUpdatableStatus(request.getStatus()));
+            SpaceStatus requestedStatus = parseUpdatableStatus(request.getStatus());
+            if (space.getStatus() == SpaceStatus.MATCHED && requestedStatus != SpaceStatus.CLOSED) {
+                throw new BusinessException(ErrorCode.INVALID_STATUS_CHANGE);
+            }
+            space.changeStatus(requestedStatus);
         }
         space.update(request.getTitle(), request.getAddress(), request.getArea(),
                 request.getMonthlyRent(), request.getFloor(), request.getHasWater(),
@@ -177,6 +183,8 @@ public class SpaceService {
     // 이미 삭제된 공간은 findByIdAndDeletedFalse에서 걸러져 404가 된다.
     @Transactional
     public SpaceDeleteResponse delete(Long userId, Long spaceId) {
+        userRepository.findActiveByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         Space space = spaceRepository.findByIdAndDeletedFalse(spaceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
         validateOwner(space, userId);

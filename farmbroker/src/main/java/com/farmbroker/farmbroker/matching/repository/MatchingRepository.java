@@ -4,11 +4,15 @@ import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import jakarta.persistence.LockModeType;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 // 매칭 신청 레포지토리.
 // - existsBySpaceIdAndFarmerIdAndStatus: 같은 공간에 대한 본인의 REQUESTED 중복 신청 차단용.
@@ -26,6 +30,14 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
             "WHERE s.owner.id = :ownerId ORDER BY m.createdAt DESC")
     List<Matching> findAllReceivedByOwnerId(@Param("ownerId") Long ownerId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Matching m WHERE m.id = :matchingId")
+    Optional<Matching> findByIdForUpdate(@Param("matchingId") Long matchingId);
+
+    @Query("SELECT m.farmer.id AS farmerId, s.owner.id AS ownerId, s.id AS spaceId " +
+            "FROM Matching m JOIN m.space s WHERE m.id = :matchingId")
+    Optional<MatchingParticipantProjection> findParticipantsById(@Param("matchingId") Long matchingId);
+
     // 수락 트랜잭션 마지막 단계: 같은 공간의 나머지 REQUESTED 신청을 벌크로 자동 거절.
     // flushAutomatically — 벌크 UPDATE 전에 수락 건의 변경(ACCEPTED)을 먼저 flush해 유실을 방지하고,
     // clearAutomatically — 벌크 UPDATE는 영속성 컨텍스트를 우회하므로 stale 엔티티를 비운다.
@@ -38,4 +50,36 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
     int rejectRemainingRequested(@Param("spaceId") Long spaceId,
                                  @Param("excludeId") Long excludeId,
                                  @Param("now") LocalDateTime now);
+
+    @Query("SELECT count(m) FROM Matching m JOIN m.space s " +
+            "WHERE m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.ACCEPTED " +
+            "AND s.status = com.farmbroker.farmbroker.space.domain.SpaceStatus.MATCHED " +
+            "AND (m.farmer.id = :userId OR s.owner.id = :userId)")
+    long countActiveContractsByUserId(@Param("userId") Long userId);
+
+    // 탈퇴와 매칭 수락이 같은 신청 행을 동시에 처리하지 않도록, 탈퇴 직전에 REQUESTED 행을 잠근다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Matching m JOIN m.space s " +
+            "WHERE m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.REQUESTED " +
+            "AND (m.farmer.id = :userId OR s.owner.id = :userId)")
+    List<Matching> findRequestedForWithdrawalByUserIdForUpdate(@Param("userId") Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Matching m JOIN m.space s " +
+            "WHERE m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.ACCEPTED " +
+            "AND s.status = com.farmbroker.farmbroker.space.domain.SpaceStatus.MATCHED " +
+            "AND (m.farmer.id = :userId OR s.owner.id = :userId)")
+    List<Matching> findActiveContractsByUserIdForUpdate(@Param("userId") Long userId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE Matching m SET m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.CANCELED, " +
+            "m.respondedAt = :now WHERE m.farmer.id = :userId " +
+            "AND m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.REQUESTED")
+    int cancelRequestedByFarmerId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE Matching m SET m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.REJECTED, " +
+            "m.respondedAt = :now WHERE m.space.owner.id = :userId " +
+            "AND m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.REQUESTED")
+    int rejectRequestedBySpaceOwnerId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 }

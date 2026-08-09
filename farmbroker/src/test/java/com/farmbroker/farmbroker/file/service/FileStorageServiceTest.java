@@ -4,6 +4,8 @@ import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.file.domain.UploadedFile;
 import com.farmbroker.farmbroker.file.repository.UploadedFileRepository;
+import com.farmbroker.farmbroker.user.domain.User;
+import com.farmbroker.farmbroker.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -43,11 +46,16 @@ class FileStorageServiceTest {
     @Mock
     UploadedFileRepository uploadedFileRepository;
 
+    @Mock
+    UserRepository userRepository;
+
     private FileStorageService service;
 
     @BeforeEach
     void setUp() {
-        service = new FileStorageService(tempDir.toString(), uploadedFileRepository);
+        service = new FileStorageService(tempDir.toString(), uploadedFileRepository, userRepository);
+        given(userRepository.findActiveByIdForUpdate(anyLong())).willReturn(Optional.of(User.builder()
+                .email("active@example.com").password("hashed").nickname("활성 사용자").build()));
         service.createUploadDirectory();
     }
 

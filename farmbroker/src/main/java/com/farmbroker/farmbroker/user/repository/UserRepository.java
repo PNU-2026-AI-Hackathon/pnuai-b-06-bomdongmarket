@@ -1,7 +1,11 @@
 package com.farmbroker.farmbroker.user.repository;
 
+import jakarta.persistence.LockModeType;
 import com.farmbroker.farmbroker.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -11,6 +15,16 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
+
+    Optional<User> findByEmailAndWithdrawnAtIsNull(String email);
+
+    Optional<User> findByIdAndWithdrawnAtIsNull(Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :userId AND u.withdrawnAt IS NULL")
+    Optional<User> findActiveByIdForUpdate(@Param("userId") Long userId);
+
+    boolean existsByIdAndWithdrawnAtIsNull(Long id);
 
     boolean existsByEmail(String email);
 }

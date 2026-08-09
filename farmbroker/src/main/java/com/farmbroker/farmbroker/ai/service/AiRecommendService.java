@@ -63,7 +63,7 @@ public class AiRecommendService {
 
     @Transactional
     public AiRecommendOutcome recommend(Long userId, AiRecommendRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findActiveByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         SpaceSummary space = spaceContractAdapter.getSummaryById(request.getSpaceId()); // 미존재 시 SPACE_NOT_FOUND

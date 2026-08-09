@@ -10,6 +10,7 @@ import com.farmbroker.farmbroker.matching.dto.MatchingStatusResponse;
 import com.farmbroker.farmbroker.matching.dto.MyMatchingResponse;
 import com.farmbroker.farmbroker.matching.dto.ReceivedMatchingResponse;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
+import com.farmbroker.farmbroker.matching.repository.MatchingParticipantProjection;
 import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.space.domain.SpaceStatus;
 import com.farmbroker.farmbroker.matching.support.SpaceSummary;
@@ -47,11 +48,10 @@ public class MatchingService {
 
     @Transactional
     public MatchingApplyResponse apply(Long userId, MatchingApplyRequest request) {
-        // 역할 검증 없음 — 조회는 Matching 엔티티의 farmer 연관관계를 채우기 위한 것이다.
-        User farmer = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        SpaceSummary space = spaceContractAdapter.getSummaryById(request.getSpaceId()); // 미존재 시 SPACE_NOT_FOUND
+        // 공간 소유권 변경 기능은 없으므로 초기 요약은 참여자 잠금 대상을 찾는 용도다.
+        SpaceSummary initialSpace = spaceContractAdapter.getSummaryById(request.getSpaceId());
+        User farmer = lockActiveParticipantPair(userId, initialSpace.getOwnerId());
+        SpaceSummary space = spaceContractAdapter.getSummaryByIdForUpdate(request.getSpaceId());
         if (space.isDeleted()) {
             throw new BusinessException(ErrorCode.SPACE_NOT_FOUND);
         }
@@ -114,12 +114,9 @@ public class MatchingService {
 
         matching.accept();
         spaceContractAdapter.markMatched(matching.getSpace().getId());
+        matching.getFarmer().addRole(UserRole.FARMER);
         matchingRepository.rejectRemainingRequested(
                 matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
-
-        // 재배가 확정된 시점에 신청자가 농부가 된다 — 거절(reject)에는 부여하지 않는다.
-        // 같은 트랜잭션이라 더티 체킹으로 반영되고, 공간 상태 전환이 실패하면 함께 롤백된다.
-        matching.getFarmer().addRole(UserRole.FARMER);
 
         return MatchingStatusResponse.from(matching);
     }
@@ -134,7 +131,11 @@ public class MatchingService {
 
     // 수락/거절 공통 전제: 매칭 존재 → 공간 owner 본인 → 아직 REQUESTED 상태
     private Matching getOwnedRequestedMatching(Long matchingId, Long userId) {
-        Matching matching = matchingRepository.findById(matchingId)
+        MatchingParticipantProjection participants = matchingRepository.findParticipantsById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        lockActiveParticipantPair(participants.getOwnerId(), participants.getFarmerId());
+        spaceContractAdapter.getSummaryByIdForUpdate(participants.getSpaceId());
+        Matching matching = matchingRepository.findByIdForUpdate(matchingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
         if (!matching.getSpace().getOwner().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
@@ -143,5 +144,18 @@ public class MatchingService {
             throw new BusinessException(ErrorCode.MATCHING_ALREADY_PROCESSED);
         }
         return matching;
+    }
+
+    private User lockActiveParticipantPair(Long targetUserId, Long otherUserId) {
+        Long firstUserId = Math.min(targetUserId, otherUserId);
+        Long secondUserId = Math.max(targetUserId, otherUserId);
+        User firstUser = userRepository.findActiveByIdForUpdate(firstUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (!firstUserId.equals(secondUserId)) {
+            User secondUser = userRepository.findActiveByIdForUpdate(secondUserId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            return targetUserId.equals(secondUserId) ? secondUser : firstUser;
+        }
+        return firstUser;
     }
 }

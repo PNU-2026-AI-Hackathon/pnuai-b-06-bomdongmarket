@@ -5,6 +5,7 @@ import com.farmbroker.farmbroker.security.AuthCookieProvider;
 import com.farmbroker.farmbroker.security.JwtAuthenticationFilter;
 import com.farmbroker.farmbroker.security.JwtTokenProvider;
 import com.farmbroker.farmbroker.security.SecurityConfig;
+import com.farmbroker.farmbroker.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.BDDMockito.given;
 
 // POST /auth/logout 의 인증 계약(security contract)을 검증하는 슬라이스 테스트.
 //
@@ -46,14 +48,28 @@ class AuthControllerLogoutTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
     @Test
     @DisplayName("유효한 JWT로 로그아웃을 요청하면 200을 반환한다")
     void logout_withValidToken_returns200() throws Exception {
         String token = jwtTokenProvider.generateToken(1L);
+        given(userRepository.existsByIdAndWithdrawnAtIsNull(1L)).willReturn(true);
 
         mockMvc.perform(post("/auth/logout")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("탈퇴한 사용자의 기존 JWT로 로그아웃을 요청하면 401을 반환한다")
+    void logout_withWithdrawnUserToken_returns401() throws Exception {
+        String token = jwtTokenProvider.generateToken(1L);
+
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
