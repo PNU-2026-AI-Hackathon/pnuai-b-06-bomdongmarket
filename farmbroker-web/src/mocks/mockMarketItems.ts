@@ -15,6 +15,11 @@ export const mockMarketItems: MarketItem[] = [
     freshnessTags: ['오늘 수확', '근거리 농장', '이력 확인'],
     foodMileageKm: 3.2,
     stock: 24,
+    traceabilityEvents: [
+      { eventId: 1, stage: '파종', description: '유기농 상추 씨앗 파종', occurredAt: '2026-06-05', sortOrder: 0 },
+      { eventId: 2, stage: '생육 관리', description: '수경재배 EC/pH 관리', occurredAt: '2026-06-20', sortOrder: 1 },
+      { eventId: 3, stage: '수확', description: null, occurredAt: '2026-07-05', sortOrder: 2 },
+    ],
   },
   {
     productId: 2,
@@ -45,6 +50,10 @@ export const mockMarketItems: MarketItem[] = [
     freshnessTags: ['오늘 수확', '이력 확인'],
     foodMileageKm: 6.1,
     stock: 18,
+    traceabilityEvents: [
+      { eventId: 4, stage: '파종', description: null, occurredAt: '2026-06-10', sortOrder: 0 },
+      { eventId: 5, stage: '수확', description: '당일 아침 수확', occurredAt: '2026-07-05', sortOrder: 1 },
+    ],
   },
   {
     productId: 4,
