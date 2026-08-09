@@ -5,9 +5,10 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
-import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
+import { ContractsPage, DashboardPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
 import { MarketPage, ProductDetailPage } from '@/pages/market';
+import { MyPage, ProfileEditPage, WithdrawPage } from '@/pages/mypage';
 import { SpaceDetailPage } from '@/pages/space-detail';
 import { SpaceCreatePage, SpacePredictionPage, SpacesPage } from '@/pages/spaces';
 
@@ -32,6 +33,8 @@ export function AppRouter() {
           <Route element={<SpacePredictionPage />} path={ROUTES.newSpacePrediction} />
           <Route element={<ContractsPage />} path={ROUTES.contracts} />
           <Route element={<MyPage />} path={ROUTES.myPage} />
+          <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
+          <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
         </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />
       </Route>

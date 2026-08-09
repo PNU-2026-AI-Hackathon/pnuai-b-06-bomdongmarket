@@ -11,4 +11,6 @@ export const ROUTES = {
   market: '/market',
   productDetail: (productId: number | string) => `/market/${productId}`,
   myPage: '/mypage',
+  myPageProfile: '/mypage/profile',
+  myPageWithdraw: '/mypage/withdraw',
 } as const;
