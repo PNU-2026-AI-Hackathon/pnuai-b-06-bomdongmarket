@@ -108,8 +108,8 @@ public class MatchingService {
                 .toList();
     }
 
-    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 나머지 REQUESTED 자동 REJECTED
-    // ④ 신청자에게 FARMER 역할 부여.
+    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 신청자에게 FARMER 역할 부여
+    // ④ 나머지 REQUESTED 자동 REJECTED.
     // 공간 상태 전환은 백엔드 2 제공 markMatched()로만 수행(직접 UPDATE 금지) —
     // 내부에서 AVAILABLE·미삭제를 검증해 위반 시 SPACE_NOT_AVAILABLE(409)을 던지고 수락 전체가 롤백된다.
     @Transactional
@@ -118,12 +118,16 @@ public class MatchingService {
 
         matching.accept();
         spaceContractAdapter.markMatched(matching.getSpace().getId());
-        matchingRepository.rejectRemainingRequested(
-                matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
 
         // 재배가 확정된 시점에 신청자가 농부가 된다 — 거절(reject)에는 부여하지 않는다.
-        // 같은 트랜잭션이라 더티 체킹으로 반영되고, 공간 상태 전환이 실패하면 함께 롤백된다.
+        // 반드시 아래 벌크 UPDATE보다 먼저 호출한다: rejectRemainingRequested의 clearAutomatically가
+        // 영속성 컨텍스트를 비우면 아직 초기화되지 않은 farmer LAZY 프록시가 detached 되어
+        // 초기화 시점에 LazyInitializationException이 나고, 예외를 피하더라도 더티 체킹이 유실된다.
+        // 여기서 부여하면 flushAutomatically가 벌크 UPDATE 직전에 이 변경까지 함께 flush한다.
         matching.getFarmer().addRole(UserRole.FARMER);
+
+        matchingRepository.rejectRemainingRequested(
+                matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
 
         return MatchingStatusResponse.from(matching);
     }
