@@ -80,8 +80,11 @@ public class MatchingService {
     // 내가 farmer로서 신청한 목록. 공간 정보(제목/대표이미지/월세/소유자 닉네임)는
     // 매칭 건마다 단건 조회하면 N+1이 발생하므로 getSummariesByIds 배치 호출 1번으로 채운다.
     // 삭제된 공간도 Summary가 반환되므로(백엔드 2 계약) 이력에 그대로 노출된다.
-    public List<MyMatchingResponse> getMyRequests(Long userId) {
-        List<Matching> matchings = matchingRepository.findAllByFarmerIdOrderByCreatedAtDesc(userId);
+    // spaceId를 주면 해당 공간 건만 — 신청 상세 화면이 목록 전체를 받아 걸러내지 않도록 한다.
+    public List<MyMatchingResponse> getMyRequests(Long userId, Long spaceId) {
+        List<Matching> matchings = spaceId == null
+                ? matchingRepository.findAllByFarmerIdOrderByCreatedAtDesc(userId)
+                : matchingRepository.findAllByFarmerIdAndSpaceIdOrderByCreatedAtDesc(userId, spaceId);
         if (matchings.isEmpty()) {
             return List.of();
         }
@@ -130,6 +133,24 @@ public class MatchingService {
     public MatchingStatusResponse reject(Long matchingId, Long userId) {
         Matching matching = getOwnedRequestedMatching(matchingId, userId);
         matching.reject();
+        return MatchingStatusResponse.from(matching);
+    }
+
+    // 취소 — 신청자 본인이 아직 응답받지 않은 신청을 거둬들인다.
+    // 공간 상태 롤백은 필요 없다: markMatched는 수락 시점에만 일어나고 취소는 REQUESTED에서만 허용된다.
+    // 행을 지우지 않고 CANCELED로 남기므로 중복 신청 검사(REQUESTED만 확인)를 통과해 재신청이 가능하다.
+    @Transactional
+    public MatchingStatusResponse cancel(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        if (!matching.getFarmer().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
+        if (matching.getStatus() != MatchingStatus.REQUESTED) {
+            throw new BusinessException(ErrorCode.MATCHING_ALREADY_PROCESSED);
+        }
+
+        matching.cancel();
         return MatchingStatusResponse.from(matching);
     }
 

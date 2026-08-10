@@ -40,10 +40,13 @@ public class MatchingController {
     }
 
     // GET /api/matchings/my-requests — 내가 신청한 매칭 목록 (farmer 시점)
-    @Operation(summary = "내가 신청한 매칭 목록 조회 (farmer 시점)")
+    @Operation(summary = "내가 신청한 매칭 목록 조회 (farmer 시점)",
+            description = "spaceId를 주면 해당 공간에 보낸 신청만 반환한다 — 신청 상세 화면용.")
     @GetMapping("/my-requests")
-    public ApiResponse<List<MyMatchingResponse>> getMyRequests(@AuthenticationPrincipal Long userId) {
-        List<MyMatchingResponse> response = matchingService.getMyRequests(userId);
+    public ApiResponse<List<MyMatchingResponse>> getMyRequests(
+            @RequestParam(required = false) Long spaceId,
+            @AuthenticationPrincipal Long userId) {
+        List<MyMatchingResponse> response = matchingService.getMyRequests(userId, spaceId);
         return ApiResponse.success("내 신청 목록 조회에 성공했습니다.", response);
     }
 
@@ -71,5 +74,16 @@ public class MatchingController {
                                                       @AuthenticationPrincipal Long userId) {
         MatchingStatusResponse response = matchingService.reject(matchingId, userId);
         return ApiResponse.success("매칭 신청을 거절했습니다.", response);
+    }
+
+    // PATCH /api/matchings/{matchingId}/cancel — 신청 취소 (신청자 본인 전용)
+    // DELETE가 아닌 PATCH — 행을 지우지 않고 CANCELED로 남겨 신청 이력을 보존한다.
+    @Operation(summary = "매칭 신청 취소 (신청자 본인 전용)",
+            description = "아직 수락·거절되지 않은(REQUESTED) 신청만 취소할 수 있고, 취소 후 같은 공간에 재신청할 수 있다.")
+    @PatchMapping("/{matchingId}/cancel")
+    public ApiResponse<MatchingStatusResponse> cancel(@PathVariable Long matchingId,
+                                                      @AuthenticationPrincipal Long userId) {
+        MatchingStatusResponse response = matchingService.cancel(matchingId, userId);
+        return ApiResponse.success("매칭 신청을 취소했습니다.", response);
     }
 }
