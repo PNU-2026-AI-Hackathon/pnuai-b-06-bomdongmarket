@@ -11,6 +11,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { AddressField, type AddressValue } from '@/pages/spaces/components/AddressField';
 import { SpaceImageUploader } from '@/pages/spaces/components/SpaceImageUploader';
+import { SpaceLocationMap } from '@/pages/spaces/components/SpaceLocationMap';
 import {
   AREA_MAX,
   FLOOR_MAX,
@@ -126,6 +127,8 @@ export function SpaceCreatePage() {
             }}
             roadAddress={address.roadAddress}
           />
+          {/* 고른 주소가 실제로 어디인지 등록 전에 눈으로 확인시켜 줍니다. */}
+          <SpaceLocationMap address={address.roadAddress} />
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
               defaultValue={previous?.area}
