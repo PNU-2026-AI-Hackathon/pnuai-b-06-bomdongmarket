@@ -39,6 +39,6 @@ export function createKakaoSdkMock() {
 export async function searchAddress(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: '주소 검색' }));
   await waitFor(() => {
-    expect(screen.getByLabelText('공간 위치')).toHaveValue(SEARCHED_ADDRESS);
+    expect(screen.getByLabelText('주소')).toHaveValue(SEARCHED_ADDRESS);
   });
 }

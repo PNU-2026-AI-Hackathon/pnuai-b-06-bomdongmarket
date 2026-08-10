@@ -24,9 +24,9 @@ async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
   await searchAddress(user);
   await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
-  await user.type(screen.getByLabelText('전체 면적'), '66');
+  await user.type(screen.getByLabelText('전체 면적(㎡)'), '66');
   await user.type(screen.getByLabelText('층수'), '2');
-  await user.type(screen.getByLabelText('희망 월세'), '500000');
+  await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
   await uploadFloorPlan(user);
 }
 
@@ -64,9 +64,10 @@ describe('공간 등록 전 수익 예측 확인', () => {
 
     await user.type(screen.getByLabelText('공간 이름'), '넓은 공실');
     await searchAddress(user);
-    await user.type(screen.getByLabelText('전체 면적'), '132');
+    await user.type(screen.getByLabelText('상세 주소'), '1층 전체');
+    await user.type(screen.getByLabelText('전체 면적(㎡)'), '132');
     await user.type(screen.getByLabelText('층수'), '1');
-    await user.type(screen.getByLabelText('희망 월세'), '500000');
+    await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
     await uploadFloorPlan(user);
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
@@ -140,9 +141,9 @@ describe('공간 등록 전 수익 예측 확인', () => {
     await user.click(await screen.findByRole('link', { name: /입력 정보 수정하기/i }));
 
     expect(await screen.findByLabelText('공간 이름')).toHaveValue('테스트 상가 공실');
-    expect(screen.getByLabelText('희망 월세')).toHaveValue(500000);
+    expect(screen.getByLabelText('희망 월세(원)')).toHaveValue(500000);
     // 합쳐서 보낸 주소가 원래의 두 칸으로 그대로 나뉘어 돌아옵니다.
-    expect(screen.getByLabelText('공간 위치')).toHaveValue(SEARCHED_ADDRESS);
+    expect(screen.getByLabelText('주소')).toHaveValue(SEARCHED_ADDRESS);
     expect(screen.getByLabelText('상세 주소')).toHaveValue('3층 302호');
     // 이미 올린 도면은 URL로 남아 있으므로 다시 업로드할 필요가 없습니다.
     expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();

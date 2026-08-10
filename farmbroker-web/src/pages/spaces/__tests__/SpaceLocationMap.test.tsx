@@ -79,7 +79,7 @@ describe('SpaceLocationMap', () => {
   it('앱키가 없으면 지도 대신 안내 문구를 보여주고 SDK를 부르지 않는다', () => {
     render(<SpaceLocationMap address={ADDRESS} />);
 
-    expect(screen.getByText(/VITE_KAKAO_MAP_APP_KEY/)).toBeInTheDocument();
+    expect(screen.getByText(/카카오 지도 앱키 설정이 필요합니다/)).toBeInTheDocument();
     expect(loadMapsMock).not.toHaveBeenCalled();
   });
 

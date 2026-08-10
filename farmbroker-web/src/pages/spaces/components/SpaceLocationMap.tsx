@@ -83,8 +83,8 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
   if (!isSupported) {
     return (
       <p className="rounded-app border border-line bg-surface-subtle p-3 text-xs font-medium text-content-subtle">
-        지도 미리보기를 사용하려면 카카오 지도 앱키(VITE_KAKAO_MAP_APP_KEY) 설정이
-        필요합니다. 주소 검색과 등록은 그대로 사용할 수 있습니다.
+        지도 미리보기를 사용하려면 카카오 지도 앱키 설정이
+        필요합니다.
       </p>
     );
   }
@@ -111,7 +111,7 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
         {status === 'error' ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-app border border-line bg-surface px-4 text-center">
             <p className="text-xs font-medium text-content-muted" role="alert">
-              지도를 불러오지 못했습니다. 주소는 그대로 등록할 수 있습니다.
+              지도를 불러오지 못했습니다.
             </p>
             <Button
               onClick={() => setRetryCount((count) => count + 1)}

@@ -58,12 +58,11 @@ export function AddressField({
         <div className="flex-1">
           <Input
             errorMessage={errorMessage ?? undefined}
-            helperText="주소 검색으로만 입력할 수 있습니다"
-            label="공간 위치"
+            label="주소"
             name="address"
             // 클릭만 해도 팝업이 열려야 모바일에서 자연스럽습니다.
             onClick={() => void openPostcodeSearch()}
-            placeholder="주소 검색 버튼을 눌러 주세요"
+            placeholder="예: 장전온천천로123-7"
             readOnly
             value={roadAddress}
           />
@@ -85,12 +84,14 @@ export function AddressField({
         </p>
       ) : null}
 
+      {/* 도로명주소만으로는 건물 안 어느 공간인지 특정할 수 없어 상세 주소도 필수로 받습니다.
+          이 칸은 readOnly가 아니라 브라우저 required 검증이 그대로 걸립니다. */}
       <Input
-        helperText="동·호수 등 (선택)"
         label="상세 주소"
         name="addressDetail"
         onChange={(event) => onChange({ roadAddress, detail: event.target.value })}
         placeholder="예: 3층 302호"
+        required
         value={detail}
       />
     </div>

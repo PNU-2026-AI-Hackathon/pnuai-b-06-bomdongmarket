@@ -17,9 +17,10 @@ function imageFile(name: string, sizeBytes = 1024) {
 async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
   await searchAddress(user);
-  await user.type(screen.getByLabelText('전체 면적'), '66');
+  await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
+  await user.type(screen.getByLabelText('전체 면적(㎡)'), '66');
   await user.type(screen.getByLabelText('층수'), '2');
-  await user.type(screen.getByLabelText('희망 월세'), '500000');
+  await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
 }
 
 describe('SpaceCreatePage', () => {
@@ -30,9 +31,8 @@ describe('SpaceCreatePage', () => {
     expect(
       screen.getByPlaceholderText('예: 부산대 앞 20평 상가 공실'),
     ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText('주소 검색 버튼을 눌러 주세요'),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('예: 장전온천천로123-7')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('예: 3층 302호')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('예: 66')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('예: 2')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('예: 500000')).toBeInTheDocument();
@@ -40,22 +40,29 @@ describe('SpaceCreatePage', () => {
   });
 
   // 존재하지 않는 주소가 등록되지 않도록 주소는 검색 결과로만 채운다.
-  it('주소 검색 결과로 공간 위치를 채운다', async () => {
+  it('주소 검색 결과로 주소를 채운다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
 
-    expect(screen.getByLabelText('공간 위치')).toHaveValue('');
+    expect(screen.getByLabelText('주소')).toHaveValue('');
 
     await searchAddress(user);
 
-    expect(screen.getByLabelText('공간 위치')).toHaveValue(SEARCHED_ADDRESS);
+    expect(screen.getByLabelText('주소')).toHaveValue(SEARCHED_ADDRESS);
   });
 
-  it('공간 위치는 직접 입력할 수 없다', async () => {
+  // 건물 안 어느 공간인지까지 특정해야 하므로 상세 주소도 비워 둘 수 없다.
+  it('상세 주소를 필수로 받는다', () => {
+    renderWithProviders(<SpaceCreatePage />);
+
+    expect(screen.getByLabelText('상세 주소')).toBeRequired();
+  });
+
+  it('주소는 직접 입력할 수 없다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
 
-    const addressInput = screen.getByLabelText('공간 위치');
+    const addressInput = screen.getByLabelText('주소');
     expect(addressInput).toHaveAttribute('readonly');
 
     // 칸을 클릭하면 검색 팝업이 열리고, 이어서 친 글자는 값에 섞이지 않습니다.
@@ -69,9 +76,11 @@ describe('SpaceCreatePage', () => {
     renderWithProviders(<SpaceCreatePage />);
 
     await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
-    await user.type(screen.getByLabelText('전체 면적'), '66');
+    // 도로명주소만 비운다 — 상세 주소는 브라우저 required가 먼저 막아버리기 때문이다.
+    await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
+    await user.type(screen.getByLabelText('전체 면적(㎡)'), '66');
     await user.type(screen.getByLabelText('층수'), '2');
-    await user.type(screen.getByLabelText('희망 월세'), '500000');
+    await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
     await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
     await waitFor(() => {
       expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
@@ -167,29 +176,30 @@ describe('SpaceCreatePage', () => {
 
     await user.type(screen.getByLabelText('공간 이름'), '테스트 공실');
     await searchAddress(user);
+    await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
     await user.type(screen.getByLabelText('층수'), '2');
-    await user.type(screen.getByLabelText('희망 월세'), '500000');
+    await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
     await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
     await waitFor(() => {
       expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
     });
 
     // '-' 키는 막혀 있으므로 붙여넣기 경로를 흉내 내 값을 직접 주입한다.
-    const area = screen.getByLabelText('전체 면적');
+    const area = screen.getByLabelText('전체 면적(㎡)');
     fireEvent.change(area, { target: { value: '-5' } });
     expect(area).toBeInvalid();
 
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
     // 등록 폼에 그대로 머문다 (예측 단계로 넘어가지 않음)
-    expect(screen.getByLabelText('전체 면적')).toBeInTheDocument();
+    expect(screen.getByLabelText('전체 면적(㎡)')).toBeInTheDocument();
   });
 
   it('숫자 칸에 음수 방지 제약이 걸려 있다', () => {
     renderWithProviders(<SpaceCreatePage />);
 
-    expect(screen.getByLabelText('전체 면적')).toHaveAttribute('min', '0');
-    expect(screen.getByLabelText('희망 월세')).toHaveAttribute('min', '0');
+    expect(screen.getByLabelText('전체 면적(㎡)')).toHaveAttribute('min', '1');
+    expect(screen.getByLabelText('희망 월세(원)')).toHaveAttribute('min', '0');
     // 층수만 지하를 위해 음수를 허용한다.
     expect(screen.getByLabelText('층수')).toHaveAttribute('min', '-10');
   });
@@ -198,9 +208,9 @@ describe('SpaceCreatePage', () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
 
-    await user.type(screen.getByLabelText('전체 면적'), '-66');
+    await user.type(screen.getByLabelText('전체 면적(㎡)'), '-66');
 
-    expect(screen.getByLabelText('전체 면적')).toHaveValue(66);
+    expect(screen.getByLabelText('전체 면적(㎡)')).toHaveValue(66);
   });
 
   // 지하 공간은 층수가 음수다. 음수 방지를 층수까지 적용하면 안 된다.

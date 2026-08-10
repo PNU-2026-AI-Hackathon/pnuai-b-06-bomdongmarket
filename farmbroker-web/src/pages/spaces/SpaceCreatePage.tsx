@@ -133,10 +133,9 @@ export function SpaceCreatePage() {
             <Input
               defaultValue={previous?.area}
               errorMessage={numberErrors.area}
-              helperText="㎡ 단위, 0보다 커야 합니다"
-              label="전체 면적"
+              label="전체 면적(㎡)"
               max={AREA_MAX}
-              min={0}
+              min={1}
               name="area"
               onKeyDown={blockNegativeKeys}
               placeholder="예: 66"
@@ -159,8 +158,7 @@ export function SpaceCreatePage() {
             <Input
               defaultValue={previous?.monthlyRent}
               errorMessage={numberErrors.monthlyRent}
-              helperText="원 단위, 0 이상"
-              label="희망 월세"
+              label="희망 월세(원)"
               min={RENT_MIN}
               name="monthlyRent"
               onKeyDown={blockNegativeKeys}
