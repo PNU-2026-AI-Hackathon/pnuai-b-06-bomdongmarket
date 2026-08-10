@@ -1,9 +1,14 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { SpaceCreatePage } from '@/pages/spaces/SpaceCreatePage';
+import { SEARCHED_ADDRESS, searchAddress } from '@/test/kakaoSdkMock';
 import { renderWithProviders } from '@/test/renderWithProviders';
+
+vi.mock('@/utils/kakaoSdk', async () =>
+  (await import('@/test/kakaoSdkMock')).createKakaoSdkMock(),
+);
 
 function imageFile(name: string, sizeBytes = 1024) {
   return new File([new Uint8Array(sizeBytes)], name, { type: 'image/jpeg' });
@@ -11,7 +16,7 @@ function imageFile(name: string, sizeBytes = 1024) {
 
 async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
-  await user.type(screen.getByLabelText('공간 위치'), '부산광역시 금정구 장전동');
+  await searchAddress(user);
   await user.type(screen.getByLabelText('전체 면적'), '66');
   await user.type(screen.getByLabelText('층수'), '2');
   await user.type(screen.getByLabelText('희망 월세'), '500000');
@@ -26,12 +31,73 @@ describe('SpaceCreatePage', () => {
       screen.getByPlaceholderText('예: 부산대 앞 20평 상가 공실'),
     ).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText('예: 부산광역시 금정구 장전동'),
+      screen.getByPlaceholderText('주소 검색 버튼을 눌러 주세요'),
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText('예: 66')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('예: 2')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('예: 500000')).toBeInTheDocument();
     expect(screen.getByLabelText('상세 메모')).toHaveValue('');
+  });
+
+  // 존재하지 않는 주소가 등록되지 않도록 주소는 검색 결과로만 채운다.
+  it('주소 검색 결과로 공간 위치를 채운다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    expect(screen.getByLabelText('공간 위치')).toHaveValue('');
+
+    await searchAddress(user);
+
+    expect(screen.getByLabelText('공간 위치')).toHaveValue(SEARCHED_ADDRESS);
+  });
+
+  it('공간 위치는 직접 입력할 수 없다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    const addressInput = screen.getByLabelText('공간 위치');
+    expect(addressInput).toHaveAttribute('readonly');
+
+    // 칸을 클릭하면 검색 팝업이 열리고, 이어서 친 글자는 값에 섞이지 않습니다.
+    await user.type(addressInput, '아무 주소나 입력');
+
+    expect(addressInput).toHaveValue(SEARCHED_ADDRESS);
+  });
+
+  it('주소를 고르지 않고 제출하면 막고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
+    await user.type(screen.getByLabelText('전체 면적'), '66');
+    await user.type(screen.getByLabelText('층수'), '2');
+    await user.type(screen.getByLabelText('희망 월세'), '500000');
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '주소 검색으로 공간 위치를 선택해 주세요.',
+    );
+  });
+
+  // 다른 주소를 고르면 이전 동·호수는 의미가 없어진다.
+  it('주소를 다시 검색하면 상세 주소를 비운다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await searchAddress(user);
+    await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
+    expect(screen.getByLabelText('상세 주소')).toHaveValue('3층 302호');
+
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('상세 주소')).toHaveValue('');
+    });
   });
 
   it('선택한 사진을 업로드하고 미리보기와 등록 장수를 보여준다', async () => {
@@ -71,7 +137,9 @@ describe('SpaceCreatePage', () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
 
-    const eleven = Array.from({ length: 11 }, (_, index) => imageFile(`사진${index}.jpg`));
+    const eleven = Array.from({ length: 11 }, (_, index) =>
+      imageFile(`사진${index}.jpg`),
+    );
     await user.upload(screen.getByLabelText('공간 사진 선택'), eleven);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -98,7 +166,7 @@ describe('SpaceCreatePage', () => {
     renderWithProviders(<SpaceCreatePage />);
 
     await user.type(screen.getByLabelText('공간 이름'), '테스트 공실');
-    await user.type(screen.getByLabelText('공간 위치'), '부산광역시 금정구');
+    await searchAddress(user);
     await user.type(screen.getByLabelText('층수'), '2');
     await user.type(screen.getByLabelText('희망 월세'), '500000');
     await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);

@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
+import { AddressField, type AddressValue } from '@/pages/spaces/components/AddressField';
 import { SpaceImageUploader } from '@/pages/spaces/components/SpaceImageUploader';
 import {
   AREA_MAX,
@@ -34,7 +35,15 @@ export function SpaceCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   // 예측 화면에서 수정하러 돌아온 경우 직전 입력값을 그대로 복원합니다.
-  const previous = (location.state as SpaceCreateLocationState | null)?.input;
+  const previousState = location.state as SpaceCreateLocationState | null;
+  const previous = previousState?.input;
+  // 주소는 우편번호 검색으로만 채우므로 FormData 비제어 방식 대신 상태로 들고 있습니다.
+  // 나머지 필드는 기존대로 제출 시점에 FormData로 읽습니다.
+  // input.address는 두 칸을 합친 값이라 그대로 복원하면 칸 분리가 깨집니다. 나눠진 원본을 함께 받습니다.
+  const [address, setAddress] = useState<AddressValue>(
+    previousState?.addressParts ?? { roadAddress: previous?.address ?? '', detail: '' },
+  );
+  const [addressError, setAddressError] = useState<string | null>(null);
   // 사진·도면은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
   const [imageUrls, setImageUrls] = useState<string[]>(previous?.imageUrls ?? []);
   const [floorPlanUrls, setFloorPlanUrls] = useState<string[]>(
@@ -45,6 +54,13 @@ export function SpaceCreatePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // 주소 칸은 검색으로만 채우는 readOnly라 브라우저 required 검증에 기댈 수 없습니다.
+    if (!address.roadAddress) {
+      setAddressError('주소 검색으로 공간 위치를 선택해 주세요.');
+      return;
+    }
+    setAddressError(null);
 
     // 도면은 파일 입력이라 브라우저 required 검증이 걸리지 않아 여기서 직접 막습니다.
     if (floorPlanUrls.length === 0) {
@@ -68,9 +84,11 @@ export function SpaceCreatePage() {
     }
 
     const state: SpaceCreateLocationState = {
+      // 수정하러 돌아왔을 때 두 칸을 그대로 되살리려면 합치기 전 값도 함께 넘겨야 합니다.
+      addressParts: address,
       input: {
         title: String(formData.get('title')),
-        address: String(formData.get('address')),
+        address: [address.roadAddress, address.detail].filter(Boolean).join(' '),
         ...numbers,
         hasWater: formData.get('hasWater') === 'on',
         hasElectricity: formData.get('hasElectricity') === 'on',
@@ -99,12 +117,14 @@ export function SpaceCreatePage() {
             placeholder="예: 부산대 앞 20평 상가 공실"
             required
           />
-          <Input
-            defaultValue={previous?.address}
-            label="공간 위치"
-            name="address"
-            placeholder="예: 부산광역시 금정구 장전동"
-            required
+          <AddressField
+            detail={address.detail}
+            errorMessage={addressError}
+            onChange={(next) => {
+              setAddress(next);
+              if (next.roadAddress) setAddressError(null);
+            }}
+            roadAddress={address.roadAddress}
           />
           <div className="grid gap-4 sm:grid-cols-3">
             <Input

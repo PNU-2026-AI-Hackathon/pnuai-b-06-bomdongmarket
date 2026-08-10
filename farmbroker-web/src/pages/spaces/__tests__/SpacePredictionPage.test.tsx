@@ -1,10 +1,15 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
 import { clearAuthSession } from '@/auth/session';
+import { SEARCHED_ADDRESS, searchAddress } from '@/test/kakaoSdkMock';
 import { renderWithProviders } from '@/test/renderWithProviders';
+
+vi.mock('@/utils/kakaoSdk', async () =>
+  (await import('@/test/kakaoSdkMock')).createKakaoSdkMock(),
+);
 
 // 도면은 등록 필수라 예측 단계로 넘어가려면 반드시 한 장 올려야 합니다.
 async function uploadFloorPlan(user: ReturnType<typeof userEvent.setup>) {
@@ -17,7 +22,8 @@ async function uploadFloorPlan(user: ReturnType<typeof userEvent.setup>) {
 
 async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
-  await user.type(screen.getByLabelText('공간 위치'), '부산광역시 금정구 장전동');
+  await searchAddress(user);
+  await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
   await user.type(screen.getByLabelText('전체 면적'), '66');
   await user.type(screen.getByLabelText('층수'), '2');
   await user.type(screen.getByLabelText('희망 월세'), '500000');
@@ -39,6 +45,8 @@ describe('공간 등록 전 수익 예측 확인', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('테스트 상가 공실')).toBeInTheDocument();
     expect(screen.getByText('66㎡')).toBeInTheDocument();
+    // 검색한 도로명주소와 직접 입력한 상세주소가 한 줄로 합쳐져 서버로 넘어갑니다.
+    expect(screen.getByText(`${SEARCHED_ADDRESS} 3층 302호`)).toBeInTheDocument();
 
     // 66㎡ 기준 배분수익 1위는 딸기이며 수치는 서버 계산기 값과 같아야 합니다.
     expect(await screen.findByRole('heading', { name: '딸기' })).toBeInTheDocument();
@@ -55,7 +63,7 @@ describe('공간 등록 전 수익 예측 확인', () => {
     renderWithProviders(<AppRouter />, { authenticated: true, route: '/spaces/new' });
 
     await user.type(screen.getByLabelText('공간 이름'), '넓은 공실');
-    await user.type(screen.getByLabelText('공간 위치'), '부산광역시 사하구');
+    await searchAddress(user);
     await user.type(screen.getByLabelText('전체 면적'), '132');
     await user.type(screen.getByLabelText('층수'), '1');
     await user.type(screen.getByLabelText('희망 월세'), '500000');
@@ -78,7 +86,9 @@ describe('공간 등록 전 수익 예측 확인', () => {
     // 예측 로딩 중에는 비활성 + 이유 안내
     const registerButton = await screen.findByRole('button', { name: '공간 등록' });
     expect(registerButton).toBeDisabled();
-    expect(screen.getByText('예측 결과를 확인한 뒤 등록할 수 있습니다.')).toBeInTheDocument();
+    expect(
+      screen.getByText('예측 결과를 확인한 뒤 등록할 수 있습니다.'),
+    ).toBeInTheDocument();
 
     // 예측이 도착하면 활성화되고 안내는 사라진다
     await waitFor(() => {
@@ -131,6 +141,9 @@ describe('공간 등록 전 수익 예측 확인', () => {
 
     expect(await screen.findByLabelText('공간 이름')).toHaveValue('테스트 상가 공실');
     expect(screen.getByLabelText('희망 월세')).toHaveValue(500000);
+    // 합쳐서 보낸 주소가 원래의 두 칸으로 그대로 나뉘어 돌아옵니다.
+    expect(screen.getByLabelText('공간 위치')).toHaveValue(SEARCHED_ADDRESS);
+    expect(screen.getByLabelText('상세 주소')).toHaveValue('3층 302호');
     // 이미 올린 도면은 URL로 남아 있으므로 다시 업로드할 필요가 없습니다.
     expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
   });
