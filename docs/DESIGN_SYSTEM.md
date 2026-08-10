@@ -137,6 +137,15 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - `ErrorState`: `role="alert"` 성격의 오류 문구와 가능한 경우 다시 시도 action을 제공한다.
 - 상태 컴포넌트를 동시에 둘 이상 렌더링하지 않는다.
 
+### 외부 검색으로 채우는 필드 (AddressField, SpaceLocationMap)
+
+- 목적: 외부 데이터로만 값이 확정되는 입력. 첫 사례는 공간 등록의 주소(카카오 우편번호 API)다.
+- 구성: 검색으로만 채우는 `readOnly` Input + 검색 Button + 검색 결과에 없는 나머지를 받는 보조 Input + 결과 미리보기.
+- 정렬: 검색 Button은 Input의 label 높이(`mt-7`)만큼 내려 입력칸과 윗변을 맞춘다. `items-end`는 helper/error 높이에 따라 흔들려 쓰지 않는다.
+- 검증: `readOnly` 필드는 브라우저 `required`가 걸리지 않으므로 제출 시점에 상위 폼이 직접 막고 `errorMessage`로 이유를 밝힌다.
+- 미리보기: 결과 확인용 지도·이미지는 필드 바로 아래에 두고, 값이 없으면 렌더하지 않는다. 외부 SDK 키가 없거나 로드에 실패해도 안내 문구로 대체하고 폼 자체는 끝까지 동작해야 한다.
+- 접근성: 지도 캔버스는 `aria-hidden`으로 숨기고 같은 정보를 텍스트로 함께 제공한다. 로딩은 `LoadingState`(`role="status"`), 실패는 `role="alert"` 문구와 다시 시도 Button으로 알린다.
+
 ## 사용 규칙
 
 ### 권장
