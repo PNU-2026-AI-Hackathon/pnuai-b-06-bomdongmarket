@@ -130,6 +130,16 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - 반응형: 모바일 세로 배치, 기본 `sm` 이상에서 제목과 action을 양끝 정렬한다. 긴 목록 제목은 `actionBreakpoint="lg"`로 충돌을 피한다.
 - 접근성: 내부 title은 h1이다. 한 페이지에서 한 번만 사용한다.
 
+### ConfirmDialog
+
+- 목적: 되돌리기 어려운 action 직전에 한 번 더 의사를 확인한다. 알림·폼·상세 표시용 modal이 아니다.
+- slot: `title`(질문 문장), 선택 `description`(결과와 복구 경로), `confirmLabel`, 선택 `cancelLabel`(기본 `닫기`)
+- tone: 기본 `default`. 신청 취소처럼 되돌릴 수 없는 결과에는 `danger`를 써서 확인 버튼을 `Button variant="danger"`로 바꾼다.
+- 상태: `isPending` 동안 확인·닫기 버튼과 Escape를 모두 막아 요청이 뜬 채로 닫히지 않게 한다.
+- 열림 상태는 컴포넌트가 갖지 않는다. 호출부가 `useDisclosure`로 들고 `isOpen`/`onCancel`을 내려준다.
+- 접근성: `role="dialog"` + `aria-modal`, `title`/`description`을 `aria-labelledby`/`aria-describedby`로 연결한다. 열릴 때 확인 버튼으로 포커스를 옮기고, Escape와 backdrop 클릭은 취소로 처리한다. 열려 있는 동안 body 스크롤을 잠근다.
+- 확인 팝업이 필요한지 먼저 판단한다. 되돌리기 쉬운 action에 습관적으로 붙이면 사용자가 팝업을 읽지 않고 넘기게 된다.
+
 ### LoadingState, EmptyState, ErrorState
 
 - `LoadingState`: `role="status"`와 현재 작업을 설명하는 문구를 제공한다. spinner는 장식으로 숨긴다.
@@ -165,6 +175,7 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 | Input                                          | 규격화         | 생성 ID와 공통 field style 적용         |
 | Select                                         | 신규 규격      | `/spaces`에서 시험                      |
 | Textarea                                       | 신규 규격      | 등록 메모·URL·매칭 메시지에 적용        |
+| ConfirmDialog                                  | 신규 규격      | 매칭 신청·신청 취소 확인에 적용         |
 | PageHeader                                     | 확장 적용      | 목록·폼·인증 정렬과 action breakpoint   |
 | LoadingState                                   | 규격화         | spinner를 보조기술에서 숨김             |
 | 공간 목록 `/spaces`                            | 시험 적용 완료 | 대표 화면                               |
