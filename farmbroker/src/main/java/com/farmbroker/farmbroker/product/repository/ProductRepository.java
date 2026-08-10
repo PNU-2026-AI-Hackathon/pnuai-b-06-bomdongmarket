@@ -2,7 +2,9 @@ package com.farmbroker.farmbroker.product.repository;
 
 import com.farmbroker.farmbroker.product.domain.Product;
 import com.farmbroker.farmbroker.product.domain.ProductCategory;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +17,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // 공개 상세 조회 — 삭제된 상품은 404 처리 대상
     Optional<Product> findByIdAndDeletedFalse(Long id);
+
+    // 결제 확정 전용 — 재고를 읽고 줄이는 사이 다른 주문이 끼어들면 재고가 음수가 될 수 있어
+    // 행을 잠근 뒤 검사·차감한다. 조회 경로에서는 쓰지 않는다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Product p where p.id = :id and p.deleted = false")
+    Optional<Product> findForUpdate(@Param("id") Long id);
 
     // 내가 등록한 상품 — 상태 무관 전부, 삭제 제외, 최신순
     List<Product> findBySellerIdAndDeletedFalseOrderByCreatedAtDesc(Long sellerId);

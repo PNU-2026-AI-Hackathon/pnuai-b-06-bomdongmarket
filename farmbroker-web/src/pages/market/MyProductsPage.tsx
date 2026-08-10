@@ -24,6 +24,8 @@ export function MyProductsPage() {
   const [items, setItems] = useState<MarketItem[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  // 삭제는 화면에서 되돌릴 수 없어(서버는 소프트 삭제지만 복구 화면이 없다) 한 번 더 확인받습니다.
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -46,6 +48,7 @@ export function MyProductsPage() {
     try {
       await deleteProduct(productId);
       setItems((prev) => prev.filter((item) => item.productId !== productId));
+      setConfirmingId(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '상품 삭제에 실패했습니다.');
     } finally {
@@ -118,24 +121,53 @@ export function MyProductsPage() {
                   {formatCurrency(item.price)} / {item.unit} · 재고 {item.stock}
                 </p>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link
-                    className={buttonStyles({ size: 'sm', variant: 'outline' })}
-                    to={ROUTES.editProduct(item.productId)}
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden />
-                    수정
-                  </Link>
-                  <Button
-                    disabled={deletingId === item.productId}
-                    onClick={() => handleDelete(item.productId)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                    {deletingId === item.productId ? '삭제 중...' : '삭제'}
-                  </Button>
-                </div>
+                {confirmingId === item.productId ? (
+                  <div className="mt-3 rounded-app border border-feedback-danger/40 bg-feedback-danger-soft p-3">
+                    <p className="text-sm font-semibold text-ink-900">
+                      &lsquo;{item.name}&rsquo;을(를) 삭제할까요?
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      마켓에서 바로 내려가고, 이 화면에서는 되돌릴 수 없습니다.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        disabled={deletingId === item.productId}
+                        onClick={() => handleDelete(item.productId)}
+                        size="sm"
+                        variant="danger"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                        {deletingId === item.productId ? '삭제 중...' : '삭제합니다'}
+                      </Button>
+                      <Button
+                        disabled={deletingId === item.productId}
+                        onClick={() => setConfirmingId(null)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        취소
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      className={buttonStyles({ size: 'sm', variant: 'outline' })}
+                      to={ROUTES.editProduct(item.productId)}
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden />
+                      수정
+                    </Link>
+                    <Button
+                      onClick={() => setConfirmingId(item.productId)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                      삭제
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
