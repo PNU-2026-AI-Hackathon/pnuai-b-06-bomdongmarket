@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.product.dto;
 
+import com.farmbroker.farmbroker.common.validation.NullOrNotBlank;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -37,6 +38,7 @@ public class ProductCreateRequest {
     @Min(value = 0, message = "재고는 0 이상이어야 합니다.")
     private Integer stock;
 
+    @NullOrNotBlank(message = "이미지 URL은 공백일 수 없습니다.")
     @Size(max = 500, message = "이미지 URL은 500자 이하여야 합니다.")
     private String imageUrl;
 
@@ -51,6 +53,7 @@ public class ProductCreateRequest {
     @Size(max = 255, message = "생산 위치는 255자 이하여야 합니다.")
     private String productionLocation;
 
+    @NullOrNotBlank(message = "주소는 공백일 수 없습니다.")
     @Size(max = 255, message = "주소는 255자 이하여야 합니다.")
     private String address;
 

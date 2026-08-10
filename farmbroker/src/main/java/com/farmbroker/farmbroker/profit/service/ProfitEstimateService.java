@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.profit.service;
 
+import com.farmbroker.farmbroker.profit.MarketPriceProvider;
 import com.farmbroker.farmbroker.profit.ProfitCalculator;
 import com.farmbroker.farmbroker.profit.ProfitEstimate;
 import com.farmbroker.farmbroker.profit.SpaceInputs;
@@ -20,14 +21,18 @@ import java.util.List;
 public class ProfitEstimateService {
 
     private final ProfitCalculator profitCalculator;
+    private final MarketPriceProvider marketPriceProvider;
 
     public List<ProfitEstimateResponse> estimate(ProfitEstimateRequest request) {
         SpaceInputs inputs = SpaceInputs.fromSpace(
                 request.getArea().doubleValue(),
                 request.getMonthlyRent());
 
+        // 재배 파라미터가 있어도 단가를 모르는 작물은 매출을 계산할 수 없으므로 목록에서 뺀다.
+        // (단가 출처는 MarketPriceProvider가 정한다 — 백과사전 기준값, 이후 KAMIS 시세)
         return profitCalculator.supportedCrops().stream()
-                .map(cropName -> profitCalculator.estimate(inputs, cropName))
+                .flatMap(cropName -> marketPriceProvider.findByCropName(cropName).stream()
+                        .map(price -> profitCalculator.estimate(inputs, cropName, price)))
                 .sorted(Comparator.comparingDouble(ProfitEstimate::landlordExpectedIncomeKrw).reversed())
                 .map(ProfitEstimateResponse::from)
                 .toList();

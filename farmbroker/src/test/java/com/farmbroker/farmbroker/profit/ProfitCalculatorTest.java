@@ -3,6 +3,8 @@ package com.farmbroker.farmbroker.profit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProfitCalculatorTest {
 
     private static ProfitCalculator calculator;
+
+    // Python 원본 crop_sale_info.csv의 단가 — 파이썬 동등성 기준을 고정하기 위해 테스트에서 직접 주입한다.
+    // (운영 경로에서는 MarketPriceProvider가 작물 백과사전 단가를 넣어준다)
+    private static final LocalDate BASIS = LocalDate.of(2026, 7, 4);
+    private static final MarketPrice LETTUCE_PRICE = MarketPrice.seed(8000, BASIS);
+    private static final MarketPrice STRAWBERRY_PRICE = MarketPrice.seed(30000, BASIS);
 
     @BeforeAll
     static void setUp() {
@@ -29,7 +37,7 @@ class ProfitCalculatorTest {
 
     @Test
     void lettuce_matches_python_reference() {
-        ProfitEstimate e = calculator.estimate(SpaceInputs.fromSpace(164, 1_200_000), "상추");
+        ProfitEstimate e = calculator.estimate(SpaceInputs.fromSpace(164, 1_200_000), "상추", LETTUCE_PRICE);
 
         assertClose(98.39999999999999, e.availableFloorAreaM2());
         assertClose(393.59999999999997, e.cultivationAreaM2());
@@ -53,7 +61,7 @@ class ProfitCalculatorTest {
 
     @Test
     void strawberry_matches_python_reference() {
-        ProfitEstimate e = calculator.estimate(SpaceInputs.fromSpace(164, 1_200_000), "딸기");
+        ProfitEstimate e = calculator.estimate(SpaceInputs.fromSpace(164, 1_200_000), "딸기", STRAWBERRY_PRICE);
 
         assertClose(16_472_160.0, e.monthlyRevenueKrw());
         assertClose(41252.06972313001, e.averageMonthlyEnergyKwh());

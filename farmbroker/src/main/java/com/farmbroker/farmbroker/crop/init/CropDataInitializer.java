@@ -15,6 +15,8 @@ import java.util.List;
 
 // 서버 기동 시 작물 백과사전 시드 데이터(12종)를 1회 적재하는 로더.
 // crops 테이블이 비어 있을 때만 삽입하므로 재기동해도 중복되지 않는다.
+// avgPricePerKg는 수익 계산의 단일 가격 소스다(SeedPriceProvider가 이 값을 읽는다) —
+// 과거 수익 계산기 CSV가 따로 들고 있던 단가는 제거했고, 값이 어긋났던 상추·바질·딸기는 계산기 기준으로 맞췄다.
 // 외부 공공 API(농사로) 실시간 연동 대신 시드 데이터로 시작하는 것은 팀 확정 방침 —
 // 이후 NONGSARO 배치 적재로 확장한다.
 @Component
@@ -34,7 +36,7 @@ public class CropDataInitializer implements ApplicationRunner {
 
     private List<Crop> seedCrops() {
         return List.of(
-                crop("상추", "잎채소", 30, CropDifficulty.EASY, 15.0, 22.0, 65.0, LightRequirement.MEDIUM, 3.5, 7000,
+                crop("상추", "잎채소", 30, CropDifficulty.EASY, 15.0, 22.0, 65.0, LightRequirement.MEDIUM, 3.5, 8000,
                         "저온성 잎채소로 실내 다단 재배에 가장 널리 쓰인다. 재배 기간이 짧고 초기 설비 부담이 낮아 입문용으로 적합하다."),
                 crop("로메인", "잎채소", 35, CropDifficulty.EASY, 15.0, 22.0, 65.0, LightRequirement.MEDIUM, 3.0, 8000,
                         "샐러드 수요가 꾸준한 잎채소. 상추와 재배 조건이 비슷해 함께 기르기 좋다."),
@@ -46,13 +48,13 @@ public class CropDataInitializer implements ApplicationRunner {
                         "수분 관리만 잘하면 실패가 적은 잎채소. 볶음·쌈 수요가 꾸준하다."),
                 crop("시금치", "잎채소", 40, CropDifficulty.NORMAL, 10.0, 20.0, 60.0, LightRequirement.MEDIUM, 2.5, 8000,
                         "저온을 선호해 겨울철 실내 재배에 유리하다. 고온에서는 웃자람에 주의해야 한다."),
-                crop("바질", "허브", 40, CropDifficulty.NORMAL, 20.0, 28.0, 60.0, LightRequirement.HIGH, 1.5, 30000,
+                crop("바질", "허브", 40, CropDifficulty.NORMAL, 20.0, 28.0, 60.0, LightRequirement.HIGH, 1.5, 20000,
                         "단가가 높고 소규모 공간에서도 재배 효율이 좋은 대표 허브. 고온성이라 보온·광량 관리가 중요하다."),
                 crop("민트", "허브", 35, CropDifficulty.EASY, 18.0, 25.0, 60.0, LightRequirement.MEDIUM, 1.8, 25000,
                         "생명력이 강해 초보자도 기르기 쉽다. 음료·디저트용 수요가 꾸준하다."),
                 crop("고수", "허브", 30, CropDifficulty.NORMAL, 17.0, 24.0, 60.0, LightRequirement.MEDIUM, 1.5, 20000,
                         "동남아 음식 수요 증가로 단가가 좋아진 허브. 더위에 약해 온도 관리가 필요하다."),
-                crop("딸기", "과채류", 90, CropDifficulty.HARD, 15.0, 23.0, 65.0, LightRequirement.HIGH, 2.0, 15000,
+                crop("딸기", "과채류", 90, CropDifficulty.HARD, 15.0, 23.0, 65.0, LightRequirement.HIGH, 2.0, 30000,
                         "수경 재배 프리미엄 작물. 재배 기간이 길고 수분(꽃가루받이)·온도 관리 난도가 높지만 단가가 좋다."),
                 crop("방울토마토", "과채류", 75, CropDifficulty.NORMAL, 20.0, 28.0, 65.0, LightRequirement.HIGH, 4.0, 9000,
                         "㎡당 수확량이 많은 과채류. 지주 설치가 필요하고 충분한 광량이 확보돼야 한다."),
