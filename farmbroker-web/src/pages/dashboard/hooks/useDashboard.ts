@@ -2,19 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getDashboardData } from '@/services/dashboardService';
 import { acceptMatching, rejectMatching } from '@/services/matchingService';
-import type {
-  ContractSummary,
-  DashboardMetric,
-  MatchingRequest,
-  MyMatching,
-} from '@/types/api';
+import type { ContractSummary, DashboardMetric, MatchingRequest } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
 // 대시보드에 필요한 세 데이터 묶음을 병렬로 로드해 페이지 렌더링을 단순화합니다.
 export function useDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
   const [matchings, setMatchings] = useState<MatchingRequest[]>([]);
-  const [sentMatchings, setSentMatchings] = useState<MyMatching[]>([]);
   const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +23,6 @@ export function useDashboard() {
       const result = await getDashboardData();
       setMetrics(result.metrics);
       setMatchings(result.matchings);
-      setSentMatchings(result.sentMatchings);
       setContracts(result.contracts);
       setStatus('success');
     } catch (caught) {
@@ -64,17 +57,7 @@ export function useDashboard() {
               : matching,
           ),
         );
-        setContracts((current) =>
-          current.map((contract) =>
-            contract.contractId === matchingId
-              ? {
-                  ...contract,
-                  status: action === 'accept' ? '완료' : '검토',
-                  period: action === 'accept' ? '협의 완료' : contract.period,
-                }
-              : contract,
-          ),
-        );
+        // 계약 카드는 내가 보낸 신청이라 여기서 처리하는 받은 신청과 별개다 — 함께 갱신하지 않는다.
       } catch (caught) {
         setActionError(
           caught instanceof Error ? caught.message : '매칭 처리에 실패했습니다.',
@@ -89,7 +72,6 @@ export function useDashboard() {
   return {
     metrics,
     matchings,
-    sentMatchings,
     contracts,
     status,
     error,

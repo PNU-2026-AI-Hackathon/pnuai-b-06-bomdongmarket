@@ -1,16 +1,19 @@
 import { FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/common/Badge';
-import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { buttonStyles } from '@/components/common/buttonStyles';
+import { ROUTES } from '@/constants/routes';
 import type { ContractSummary } from '@/types/api';
 import { formatCurrency } from '@/utils/format';
+import { getMatchingTypeLabel } from '@/utils/labels';
 
 interface ContractCardProps {
   contract: ContractSummary;
 }
 
-// 계약 관리를 테이블 대신 카드로 보여주는 컴포넌트입니다.
+// 내가 보낸 신청 한 건을 카드로 보여주고, 상세·취소가 가능한 신청 화면으로 연결합니다.
 export function ContractCard({ contract }: ContractCardProps) {
   return (
     <Card className="p-4">
@@ -32,13 +35,16 @@ export function ContractCard({ contract }: ContractCardProps) {
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold text-slate-500">계약 기간</dt>
-          <dd className="font-bold text-ink-900">{contract.period}</dd>
+          <dt className="text-xs font-semibold text-slate-500">유형</dt>
+          <dd className="font-bold text-ink-900">{getMatchingTypeLabel(contract.type)}</dd>
         </div>
       </dl>
-      <Button className="mt-4 w-full" variant="outline">
-        검토하기
-      </Button>
+      <Link
+        className={buttonStyles({ className: 'mt-4 w-full', variant: 'outline' })}
+        to={ROUTES.spaceApply(contract.spaceId)}
+      >
+        자세히 보기
+      </Link>
     </Card>
   );
 }
