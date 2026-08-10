@@ -53,7 +53,16 @@ public enum ErrorCode {
 
     // ── product (로컬마켓) ───────────────────────────────────────────────────
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
-    NOT_PRODUCT_OWNER(HttpStatus.FORBIDDEN, "본인이 등록한 상품이 아닙니다.");
+    NOT_PRODUCT_OWNER(HttpStatus.FORBIDDEN, "본인이 등록한 상품이 아닙니다."),
+
+    // ── chat ─────────────────────────────────────────────────────────────────
+    CHAT_CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),
+    CHAT_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."),
+    CHAT_SELF_CONVERSATION(HttpStatus.BAD_REQUEST, "본인에게는 채팅을 보낼 수 없습니다."),
+    CHAT_BLOCKED(HttpStatus.FORBIDDEN, "차단된 사용자와는 채팅할 수 없습니다."),
+    CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "메시지나 이미지를 입력해 주세요."),
+    CHAT_MESSAGE_TOO_LONG(HttpStatus.BAD_REQUEST, "메시지는 1,000자 이하로 입력해 주세요."),
+    CHAT_BLOCK_SELF(HttpStatus.BAD_REQUEST, "본인은 차단할 수 없습니다.");
 
     private final HttpStatus status;
     private final String defaultMessage;
