@@ -1,5 +1,5 @@
 import { ArrowRight, Camera, Ruler } from 'lucide-react';
-import { FormEvent, KeyboardEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, KeyboardEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/common/Button';
@@ -16,6 +16,7 @@ import {
   AREA_MAX,
   FLOOR_MAX,
   FLOOR_MIN,
+  NUMBER_FIELD_MESSAGES,
   RENT_MIN,
   validateSpaceNumbers,
   type SpaceNumberErrors,
@@ -28,6 +29,16 @@ function blockNegativeKeys(event: KeyboardEvent<HTMLInputElement>) {
   if (['-', '+', 'e', 'E'].includes(event.key)) {
     event.preventDefault();
   }
+}
+
+// 건물에 0층은 없지만 min/max는 연속 범위만 표현할 수 있어 '0 제외'를 속성으로 못 씁니다.
+// 면적의 min 위반과 똑같이 브라우저 기본 경고 말풍선이 뜨도록 검증 문구를 직접 심습니다.
+// 값이 0이 아니게 되면 반드시 지워야 합니다 — 남겨 두면 그 칸이 영원히 invalid로 남습니다.
+function markZeroFloorInvalid(event: ChangeEvent<HTMLInputElement>) {
+  const input = event.currentTarget;
+  input.setCustomValidity(
+    input.valueAsNumber === 0 ? NUMBER_FIELD_MESSAGES.floorZero : '',
+  );
 }
 
 // 공실 제공자가 API 명세의 필수 공간 필드를 입력하는 모바일 우선 등록 폼입니다.
@@ -151,6 +162,7 @@ export function SpaceCreatePage() {
               max={FLOOR_MAX}
               min={FLOOR_MIN}
               name="floor"
+              onChange={markZeroFloorInvalid}
               placeholder="예: 2"
               required
               type="number"

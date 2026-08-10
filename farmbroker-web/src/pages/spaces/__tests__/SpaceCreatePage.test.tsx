@@ -223,6 +223,50 @@ describe('SpaceCreatePage', () => {
     expect(screen.getByLabelText('층수')).toHaveValue(-1);
   });
 
+  // 건물에 0층은 없다. min/max로는 표현할 수 없어 setCustomValidity로
+  // 면적의 min 위반과 같은 브라우저 기본 경고 말풍선을 띄운다.
+  it('층수에 0을 넣으면 입력은 되지만 제출을 막는다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+
+    // 0은 그대로 입력된다 — 키 입력을 막지 않는다.
+    const floor = screen.getByLabelText('층수');
+    await user.clear(floor);
+    await user.type(floor, '0');
+    expect(floor).toHaveValue(0);
+
+    // 브라우저 제약 검증이 제출 자체를 막으므로 예측 단계로 넘어가지 않는다.
+    expect(floor).toBeInvalid();
+    expect((floor as HTMLInputElement).validationMessage).toBe(
+      '올바른 숫자를 입력해주세요.',
+    );
+
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    expect(screen.getByLabelText('층수')).toBeInTheDocument();
+  });
+
+  // 0을 지우고 정상 층수를 넣으면 경고가 풀려야 한다. 지우지 않으면 그 칸이 영원히 invalid로 남는다.
+  it('층수를 0에서 다른 값으로 고치면 경고가 풀린다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    const floor = screen.getByLabelText('층수');
+    await user.type(floor, '0');
+    expect(floor).toBeInvalid();
+
+    await user.clear(floor);
+    await user.type(floor, '2');
+
+    expect(floor).toBeValid();
+  });
+
   it('도면을 등록하면 안내가 사라진다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
