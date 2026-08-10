@@ -43,7 +43,6 @@ public class ProfitReferenceData {
     }
 
     private Map<String, CropProduction> cropProduction;
-    private Map<String, Double> cropSalePrice;   // crop_name -> price_krw_kg
     private Map<String, Double> standard;        // key -> value
     private Map<String, Double> electricStandard;
     private Map<String, Double> contraction;
@@ -53,7 +52,6 @@ public class ProfitReferenceData {
     void load() {
         try {
             this.cropProduction = loadCropProduction();
-            this.cropSalePrice = loadCropSalePrice();
             this.standard = loadKeyValue("standard_info.csv");
             this.electricStandard = loadKeyValue("electric_standard_info.csv");
             this.contraction = loadKeyValue("contraction_info.csv");
@@ -68,17 +66,16 @@ public class ProfitReferenceData {
 
     // ── 조회 API ──
 
-    public boolean hasCrop(String cropName) {
-        return cropName != null
-                && cropProduction.containsKey(cropName)
-                && cropSalePrice.containsKey(cropName);
+    // 재배 파라미터(수확량·회전수·광·온습도 등)를 가진 작물인지. 단가는 MarketPriceProvider가 따로 제공한다.
+    public boolean hasCultivationData(String cropName) {
+        return cropName != null && cropProduction.containsKey(cropName);
     }
 
-    // 재배 파라미터와 판매가격이 모두 있는 작물만 계산 가능하다. CSV 등재 순서를 유지한다.
+    // 재배 파라미터를 가진 작물 목록. CSV 등재 순서를 유지한다.
+    // 단가는 더 이상 이 클래스가 들고 있지 않으므로(MarketPriceProvider 담당) 여기서 거르지 않는다.
+    // 단가를 모르는 작물은 호출부가 MarketPriceProvider의 빈 결과로 걸러 낸다.
     public List<String> supportedCropNames() {
-        return cropProduction.keySet().stream()
-                .filter(cropSalePrice::containsKey)
-                .toList();
+        return List.copyOf(cropProduction.keySet());
     }
 
     public CropProduction cropProduction(String cropName) {
@@ -87,14 +84,6 @@ public class ProfitReferenceData {
             throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
         }
         return crop;
-    }
-
-    public double salePriceKrwKg(String cropName) {
-        Double price = cropSalePrice.get(cropName);
-        if (price == null) {
-            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID);
-        }
-        return price;
     }
 
     public double standard(String key) {
@@ -137,14 +126,6 @@ public class ProfitReferenceData {
                     parse(row, "daily_evapotranspiration_mm"),
                     parse(row, "material_cost_per_m2_cycle_krw"),
                     parse(row, "other_material_cost_month_krw")));
-        }
-        return result;
-    }
-
-    private Map<String, Double> loadCropSalePrice() throws IOException {
-        Map<String, Double> result = new LinkedHashMap<>();
-        for (Map<String, String> row : readRows("crop_sale_info.csv")) {
-            result.put(row.get("crop_name").strip(), parse(row, "price_krw_kg"));
         }
         return result;
     }

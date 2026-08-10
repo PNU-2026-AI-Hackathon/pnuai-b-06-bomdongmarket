@@ -19,7 +19,7 @@ public record ProfitEstimate(
         // ── 생산·매출 ──
         double monthlyTotalProductionKg,
         double monthlySalesKg,
-        double pricePerKgKrw,
+        MarketPrice price,          // kg당 단가 + 기준일·출처(백과사전/KAMIS)
         double monthlyRevenueKrw,
 
         // ── 비용 ──
