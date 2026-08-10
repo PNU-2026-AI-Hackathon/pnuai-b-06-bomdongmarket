@@ -305,7 +305,7 @@ export interface ContractSummary {
   spaceId: number;
   spaceName: string;
   counterparty: string;
-  status: '신청' | '협의' | '검토' | '완료';
+  status: MatchingStatus;
   monthlyRent: number;
   type: MatchingType | null;
 }

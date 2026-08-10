@@ -5,13 +5,21 @@ import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { ROUTES } from '@/constants/routes';
-import type { ContractSummary } from '@/types/api';
+import type { BadgeTone } from '@/components/common/Badge';
+import type { ContractSummary, MatchingStatus } from '@/types/api';
 import { formatCurrency } from '@/utils/format';
-import { getMatchingTypeLabel } from '@/utils/labels';
+import { getMatchingProgressLabel, getMatchingTypeLabel } from '@/utils/labels';
 
 interface ContractCardProps {
   contract: ContractSummary;
 }
+
+const statusTones: Record<MatchingStatus, BadgeTone> = {
+  REQUESTED: 'yellow',
+  ACCEPTED: 'green',
+  REJECTED: 'red',
+  CANCELED: 'slate',
+};
 
 // 내가 보낸 신청 한 건을 카드로 보여주고, 상세·취소가 가능한 신청 화면으로 연결합니다.
 export function ContractCard({ contract }: ContractCardProps) {
@@ -19,8 +27,8 @@ export function ContractCard({ contract }: ContractCardProps) {
     <Card className="p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Badge tone={contract.status === '완료' ? 'green' : 'yellow'}>
-            {contract.status}
+          <Badge tone={statusTones[contract.status]}>
+            {getMatchingProgressLabel(contract.status)}
           </Badge>
           <h3 className="mt-3 text-lg font-black text-ink-900">{contract.spaceName}</h3>
           <p className="mt-1 text-sm text-slate-600">{contract.counterparty}</p>

@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 
 import { saveAuthSession } from '@/auth/session';
 import { renderWithProviders } from '@/test/renderWithProviders';
-import { ContractsPage } from '@/pages/dashboard/ContractsPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { MyPage } from '@/pages/dashboard/MyPage';
 
@@ -47,16 +46,6 @@ describe('Dashboard pages', () => {
     await user.click((await screen.findAllByRole('button', { name: '수락' }))[0]);
 
     expect(await screen.findByText('수락됨')).toBeInTheDocument();
-  });
-
-  it('계약 카드를 렌더링하고 상태 탭 클릭에 반응한다', async () => {
-    const user = userEvent.setup();
-    signIn(['OWNER']);
-    renderWithProviders(<ContractsPage />);
-
-    expect(await screen.findByText(/장전동 상가 공실/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '완료' }));
-    expect(screen.getByText(/서면 재배 공간/i)).toBeInTheDocument();
   });
 
   it('마이페이지 프로필 메뉴를 렌더링한다', () => {

@@ -40,7 +40,7 @@ describe('Dashboard 내 신청 섹션', () => {
           spaceId: 1,
           spaceName: '부산대 앞 20평 상가 공실',
           counterparty: '그린스페이스랩',
-          status: '완료',
+          status: 'ACCEPTED',
           monthlyRent: 500000,
           type: 'PROFIT',
         },
@@ -56,6 +56,30 @@ describe('Dashboard 내 신청 섹션', () => {
       'href',
       '/spaces/1/apply',
     );
+  });
+
+  it('신청 상태를 응답 대기중·수락·거절 세 가지로 표시한다', async () => {
+    saveAuthSession(farmerSession);
+    vi.mocked(getDashboardData).mockResolvedValue({
+      ...emptyDashboard,
+      contracts: (['REQUESTED', 'ACCEPTED'] as const).map((status, index) => ({
+        contractId: index,
+        spaceId: index + 1,
+        spaceName: `공간 ${index}`,
+        counterparty: '공간 제공자',
+        status,
+        monthlyRent: 100000,
+        type: 'PROFIT' as const,
+      })),
+    });
+
+    renderWithProviders(<DashboardPage />);
+
+    expect(await screen.findByText('응답 대기중')).toBeInTheDocument();
+    expect(screen.getByText('수락')).toBeInTheDocument();
+    // 이전 계약 단계 문구는 더 이상 쓰지 않는다.
+    expect(screen.queryByText('검토')).not.toBeInTheDocument();
+    expect(screen.queryByText('완료')).not.toBeInTheDocument();
   });
 
   it('결과 로드 실패 후 다시 시도해 빈 상태를 안내한다', async () => {

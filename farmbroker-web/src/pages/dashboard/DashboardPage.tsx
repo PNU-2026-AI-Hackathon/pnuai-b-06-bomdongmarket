@@ -128,16 +128,12 @@ export function DashboardPage() {
             </section>
           ) : null}
 
-          {/* 신청은 역할과 무관하게 누구나 보낼 수 있으므로 이 섹션은 항상 보여줍니다. */}
+          {/* 신청은 역할과 무관하게 누구나 보낼 수 있으므로 이 섹션은 항상 보여줍니다.
+              여기가 보낸 신청을 볼 수 있는 유일한 목록이라 일부만 잘라 보여주지 않습니다. */}
           <section className="mt-8" aria-labelledby="my-applications-title">
-            <div className="flex items-center justify-between gap-3">
-              <h2 id="my-applications-title" className="text-2xl font-black text-ink-900">
-                내 신청
-              </h2>
-              <Link className="text-sm font-bold text-leaf-700" to={ROUTES.contracts}>
-                전체 보기
-              </Link>
-            </div>
+            <h2 id="my-applications-title" className="text-2xl font-black text-ink-900">
+              내 신청
+            </h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {contracts.length === 0 ? (
                 <EmptyState
@@ -145,11 +141,9 @@ export function DashboardPage() {
                   title="보낸 매칭 신청이 없습니다"
                 />
               ) : (
-                contracts
-                  .slice(0, 2)
-                  .map((contract) => (
-                    <ContractCard contract={contract} key={contract.contractId} />
-                  ))
+                contracts.map((contract) => (
+                  <ContractCard contract={contract} key={contract.contractId} />
+                ))
               )}
             </div>
           </section>

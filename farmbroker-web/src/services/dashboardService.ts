@@ -11,7 +11,6 @@ import type {
   ContractSummary,
   DashboardMetric,
   MatchingRequest,
-  MatchingStatus,
   MyMatching,
 } from '@/types/api';
 
@@ -23,12 +22,6 @@ export interface DashboardData {
   contracts: ContractSummary[];
 }
 
-function toContractStatus(status: MatchingStatus): ContractSummary['status'] {
-  if (status === 'ACCEPTED') return '완료';
-  if (status === 'REQUESTED') return '신청';
-  return '검토';
-}
-
 // 계약 카드는 "내가 보낸 신청"만 다룹니다 — 상대는 언제나 공간 제공자입니다.
 function sentToContract(matching: MyMatching): ContractSummary {
   return {
@@ -36,7 +29,7 @@ function sentToContract(matching: MyMatching): ContractSummary {
     spaceId: matching.spaceId,
     spaceName: matching.spaceTitle,
     counterparty: matching.ownerNickname,
-    status: toContractStatus(matching.status),
+    status: matching.status,
     monthlyRent: matching.monthlyRent,
     type: matching.type,
   };
@@ -66,7 +59,10 @@ export async function getDashboardData(): Promise<DashboardData> {
       monthlyRent: space?.monthlyRent,
     };
   });
-  const contracts = sent.map(sentToContract);
+  // 내가 거둬들인 신청은 목록에 남기지 않습니다 — 응답 대기중/수락/거절만 보여줍니다.
+  const contracts = sent
+    .filter((matching) => matching.status !== 'CANCELED')
+    .map(sentToContract);
   const allStatuses = [...received, ...sent].map((matching) => matching.status);
   const requestedCount = allStatuses.filter((status) => status === 'REQUESTED').length;
   const acceptedCount = allStatuses.filter((status) => status === 'ACCEPTED').length;

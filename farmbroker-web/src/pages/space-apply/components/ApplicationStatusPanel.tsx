@@ -5,7 +5,8 @@ import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useDisclosure } from '@/hooks/useDisclosure';
-import type { MyMatching } from '@/types/api';
+import type { BadgeTone } from '@/components/common/Badge';
+import type { MatchingStatus, MyMatching } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatDate } from '@/utils/format';
 import { getMatchingProgressLabel, getMatchingTypeLabel } from '@/utils/labels';
@@ -17,6 +18,13 @@ interface ApplicationStatusPanelProps {
   onCancel: () => void;
 }
 
+const statusTones: Record<MatchingStatus, BadgeTone> = {
+  REQUESTED: 'yellow',
+  ACCEPTED: 'green',
+  REJECTED: 'red',
+  CANCELED: 'slate',
+};
+
 // 이미 보낸 신청의 내용과 매칭 상태를 보여주고, 아직 응답 전이면 취소할 수 있게 합니다.
 export function ApplicationStatusPanel({
   application,
@@ -27,13 +35,12 @@ export function ApplicationStatusPanel({
   const confirmation = useDisclosure();
   const isCanceling = actionStatus === 'loading';
   const isWaiting = application.status === 'REQUESTED';
-  const isAccepted = application.status === 'ACCEPTED';
 
   return (
     <Card padding="lg">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-black text-content">내 신청</h2>
-        <Badge tone={isAccepted ? 'green' : isWaiting ? 'yellow' : 'slate'}>
+        <Badge tone={statusTones[application.status]}>
           {getMatchingProgressLabel(application.status)}
         </Badge>
       </div>
@@ -57,17 +64,16 @@ export function ApplicationStatusPanel({
         </div>
       </dl>
 
-      {isAccepted ? (
-        <div className="mt-5">
-          <Button className="w-full" disabled variant="outline">
-            <MessageCircle className="h-5 w-5" aria-hidden />
-            채팅방으로 이동
-          </Button>
-          <p className="mt-2 text-xs font-normal text-content-subtle">
-            채팅 기능은 준비 중입니다. 그때까지는 공간 제공자에게 직접 연락해 주세요.
-          </p>
-        </div>
-      ) : null}
+      {/* 신청을 보낸 시점부터 공간 제공자와 이야기할 자리가 필요하므로 수락 전에도 노출합니다. */}
+      <div className="mt-5">
+        <Button className="w-full" disabled variant="outline">
+          <MessageCircle className="h-5 w-5" aria-hidden />
+          채팅방으로 이동
+        </Button>
+        <p className="mt-2 text-xs font-normal text-content-subtle">
+          채팅 기능은 준비 중입니다. 그때까지는 공간 제공자에게 직접 연락해 주세요.
+        </p>
+      </div>
 
       {actionError ? (
         <p className="mt-4 text-sm font-semibold text-feedback-danger" role="alert">

@@ -128,6 +128,8 @@ describe('SpaceApplyPage', () => {
     expect(await screen.findByText('응답 대기중')).toBeInTheDocument();
     expect(screen.getByText('취미')).toBeInTheDocument();
     expect(screen.queryByLabelText('신청 메시지')).not.toBeInTheDocument();
+    // 채팅 자리는 수락을 기다리지 않고 신청 직후부터 노출된다.
+    expect(screen.getByRole('button', { name: /채팅방으로 이동/i })).toBeDisabled();
   });
 
   it('응답을 기다리는 신청은 확인 후에만 취소한다', async () => {
@@ -152,14 +154,13 @@ describe('SpaceApplyPage', () => {
     expect(await screen.findByLabelText('신청 메시지')).toBeInTheDocument();
   });
 
-  it('수락된 신청은 취소할 수 없고 채팅 이동은 아직 비활성이다', async () => {
+  it('수락된 신청은 취소할 수 없다', async () => {
     vi.mocked(getMyMatchings).mockResolvedValue([
       requestedApplication({ status: 'ACCEPTED', respondedAt: '2026-08-05T00:00:00' }),
     ]);
     renderPage();
 
-    expect(await screen.findByText('답변 도착 · 수락됨')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /채팅방으로 이동/i })).toBeDisabled();
+    expect(await screen.findByText('수락')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '신청 취소' })).not.toBeInTheDocument();
   });
 
