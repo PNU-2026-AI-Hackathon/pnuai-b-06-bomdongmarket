@@ -40,4 +40,12 @@ export const ENDPOINTS = {
     create: '/products',
     detail: (productId: number | string) => `/products/${productId}`,
   },
+  cart: {
+    detail: '/cart',
+    items: '/cart/items',
+    item: (productId: number | string) => `/cart/items/${productId}`,
+  },
+  orders: {
+    checkout: '/orders',
+  },
 } as const;

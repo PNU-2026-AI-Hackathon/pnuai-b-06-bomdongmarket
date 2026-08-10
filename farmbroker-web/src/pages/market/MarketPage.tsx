@@ -1,4 +1,4 @@
-import { MapPin, Plus, Search, Store } from 'lucide-react';
+import { MapPin, Plus, Search, ShoppingCart, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
@@ -31,6 +31,16 @@ export function MarketPage() {
               <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
               부산 반경 8km 이내
             </Card>
+            {/* 장바구니는 로그인해야 서버에 담기므로 로그인한 사람에게만 보입니다. */}
+            {isAuthenticated ? (
+              <Link
+                className={buttonStyles({ size: 'sm', variant: 'outline' })}
+                to={ROUTES.cart}
+              >
+                <ShoppingCart className="h-4 w-4" aria-hidden />
+                장바구니
+              </Link>
+            ) : null}
             {/* 판매 관리는 내 상품이 있어야 의미가 있어 로그인한 사람에게만 보입니다. */}
             {isAuthenticated ? (
               <Link

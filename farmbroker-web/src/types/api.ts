@@ -334,6 +334,42 @@ export interface ProductInput {
   events?: ProductEventInput[];
 }
 
+// 장바구니 한 줄. purchasable은 담아 둔 뒤 판매자가 품절·마감했을 수 있어 서버가 매번 다시 계산해 준다.
+export interface CartLine {
+  productId: number;
+  name: string;
+  unit: string;
+  price: number;
+  quantity: number;
+  linePrice: number;
+  imageUrl: string | null;
+  stock: number;
+  purchasable: boolean;
+}
+
+export interface Cart {
+  items: CartLine[];
+  // 지금 구매 가능한 줄만 더한 금액이라 화면에서 다시 계산하지 않는다.
+  totalPrice: number;
+}
+
+// 주문 줄은 주문 시점 값으로 고정된다 — 판매자가 나중에 가격을 바꿔도 내역은 그대로다.
+export interface OrderLine {
+  productId: number;
+  name: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+  linePrice: number;
+}
+
+export interface Order {
+  orderId: number;
+  totalPrice: number;
+  createdAt: string;
+  items: OrderLine[];
+}
+
 export interface DashboardMetric {
   label: string;
   value: string;

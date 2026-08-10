@@ -11,6 +11,8 @@ import {
   MarketPage,
   MyProductsPage,
   ProductDetailPage,
+  CartPage,
+  OrderCompletePage,
   ProductFormPage,
 } from '@/pages/market';
 import { SpaceDetailPage } from '@/pages/space-detail';
@@ -38,6 +40,8 @@ export function AppRouter() {
           <Route element={<ContractsPage />} path={ROUTES.contracts} />
           <Route element={<MyPage />} path={ROUTES.myPage} />
           {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
+          <Route element={<CartPage />} path={ROUTES.cart} />
+          <Route element={<OrderCompletePage />} path={ROUTES.orderComplete} />
           <Route element={<MyProductsPage />} path={ROUTES.myProducts} />
           <Route element={<ProductFormPage />} path={ROUTES.newProduct} />
           <Route element={<ProductFormPage />} path="/market/:productId/edit" />
