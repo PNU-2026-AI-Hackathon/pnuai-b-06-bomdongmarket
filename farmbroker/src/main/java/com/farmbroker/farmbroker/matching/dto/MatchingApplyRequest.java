@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.matching.dto;
 
+import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,6 +14,10 @@ public class MatchingApplyRequest {
 
     @NotNull(message = "공간 ID는 필수입니다.")
     private Long spaceId;
+
+    // 컬럼은 nullable이지만(기존 행 호환) 신규 신청에는 유형을 반드시 받는다.
+    @NotNull(message = "신청 유형은 필수입니다.")
+    private MatchingType type;
 
     @NotBlank(message = "신청 메시지는 필수입니다.")
     @Size(max = 500, message = "신청 메시지는 500자 이하여야 합니다.")

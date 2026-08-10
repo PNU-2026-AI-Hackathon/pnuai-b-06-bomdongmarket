@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.matching.dto;
 
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
+import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -15,16 +16,19 @@ public class MatchingApplyResponse {
     private final Long spaceId;
     private final Long farmerId;
     private final Long ownerId;
+    private final MatchingType type;
     private final String message;
     private final MatchingStatus status;
     private final LocalDateTime createdAt;
 
     private MatchingApplyResponse(Long matchingId, Long spaceId, Long farmerId, Long ownerId,
-                                  String message, MatchingStatus status, LocalDateTime createdAt) {
+                                  MatchingType type, String message, MatchingStatus status,
+                                  LocalDateTime createdAt) {
         this.matchingId = matchingId;
         this.spaceId = spaceId;
         this.farmerId = farmerId;
         this.ownerId = ownerId;
+        this.type = type;
         this.message = message;
         this.status = status;
         this.createdAt = createdAt;
@@ -36,6 +40,7 @@ public class MatchingApplyResponse {
                 matching.getSpace().getId(),
                 matching.getFarmer().getId(),
                 ownerId,
+                matching.getType(),
                 matching.getMessage(),
                 matching.getStatus(),
                 matching.getCreatedAt()

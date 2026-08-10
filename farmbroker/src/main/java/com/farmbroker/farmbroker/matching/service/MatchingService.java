@@ -70,6 +70,7 @@ public class MatchingService {
                 .space(entityManager.getReference(Space.class, space.getId()))
                 .farmer(farmer)
                 .message(request.getMessage())
+                .type(request.getType())
                 .build();
         matchingRepository.save(matching);
 

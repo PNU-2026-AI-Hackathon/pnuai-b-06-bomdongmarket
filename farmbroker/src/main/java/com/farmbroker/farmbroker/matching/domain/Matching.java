@@ -41,6 +41,13 @@ public class Matching {
     @Column(nullable = false, length = 500)
     private String message;
 
+    // 신청 유형(수익/취미). 요청 단계에서 @NotNull로 강제하지만 컬럼은 nullable로 둔다 —
+    // ddl-auto=update는 기존 행이 있는 테이블에 NOT NULL 컬럼을 추가하지 못하므로
+    // 유형 도입 이전에 쌓인 신청은 null(미지정)로 남는다.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MatchingType type;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private MatchingStatus status;
@@ -53,10 +60,11 @@ public class Matching {
     private LocalDateTime respondedAt;
 
     @Builder
-    public Matching(Space space, User farmer, String message) {
+    public Matching(Space space, User farmer, String message, MatchingType type) {
         this.space = space;
         this.farmer = farmer;
         this.message = message;
+        this.type = type;
         this.status = MatchingStatus.REQUESTED;
     }
 
@@ -69,6 +77,12 @@ public class Matching {
 
     public void reject() {
         this.status = MatchingStatus.REJECTED;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    // 신청자 본인 취소. 행을 지우지 않고 CANCELED로 남겨 신청 이력을 보존한다.
+    public void cancel() {
+        this.status = MatchingStatus.CANCELED;
         this.respondedAt = LocalDateTime.now();
     }
 }
