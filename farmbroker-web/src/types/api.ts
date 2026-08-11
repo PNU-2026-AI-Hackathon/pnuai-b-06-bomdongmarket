@@ -291,7 +291,11 @@ export interface MarketItem {
   stock: number;
 }
 
+// id는 화면이 지표를 알아보기 위한 안정적인 키입니다 — 라벨 문구가 바뀌어도 연결이 깨지지 않습니다.
+export type DashboardMetricId = 'spaces' | 'received' | 'sent';
+
 export interface DashboardMetric {
+  id: DashboardMetricId;
   label: string;
   value: string;
   helper: string;

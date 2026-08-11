@@ -63,28 +63,31 @@ export async function getDashboardData(): Promise<DashboardData> {
   const contracts = sent
     .filter((matching) => matching.status !== 'CANCELED')
     .map(sentToContract);
-  const allStatuses = [...received, ...sent].map((matching) => matching.status);
-  const requestedCount = allStatuses.filter((status) => status === 'REQUESTED').length;
-  const acceptedCount = allStatuses.filter((status) => status === 'ACCEPTED').length;
+  // 지표는 아래 두 섹션이 실제로 보여주는 목록과 같은 수를 세야 서로 어긋나지 않습니다.
+  const receivedWaiting = received.filter((m) => m.status === 'REQUESTED').length;
+  const sentWaiting = contracts.filter((contract) => contract.status === 'REQUESTED').length;
 
   return {
     metrics: [
       {
+        id: 'spaces',
         label: '등록 공간',
         value: String(spaces.length),
         helper: `매칭 가능 ${spaces.filter((space) => space.status === 'AVAILABLE').length}개`,
         trend: '',
       },
       {
-        label: '매칭 신청',
-        value: String(allStatuses.length),
-        helper: `검토 대기 ${requestedCount}건`,
+        id: 'received',
+        label: '받은 신청',
+        value: String(received.length),
+        helper: `응답 대기 ${receivedWaiting}건`,
         trend: '',
       },
       {
-        label: '매칭 완료',
-        value: String(acceptedCount),
-        helper: '수락된 신청',
+        id: 'sent',
+        label: '보낸 신청',
+        value: String(contracts.length),
+        helper: `응답 대기 ${sentWaiting}건`,
         trend: '',
       },
     ],

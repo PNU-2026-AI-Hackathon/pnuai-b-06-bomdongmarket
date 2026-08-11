@@ -2,22 +2,25 @@ import type { ContractSummary, DashboardMetric, MatchingRequest } from '@/types/
 
 export const mockDashboardMetrics: DashboardMetric[] = [
   {
+    id: 'spaces',
     label: '등록 공간',
     value: '4',
     helper: '매칭 가능한 공간 2개',
     trend: '이번 주 +1',
   },
   {
-    label: '매칭 신청',
+    id: 'received',
+    label: '받은 신청',
     value: '12',
-    helper: '검토 대기 5건',
+    helper: '응답 대기 5건',
     trend: '신규 +4',
   },
   {
-    label: '예상 수익',
-    value: '월 192만원',
-    helper: '월 순수익 예측',
-    trend: '+18%',
+    id: 'sent',
+    label: '보낸 신청',
+    value: '3',
+    helper: '응답 대기 1건',
+    trend: '',
   },
 ];
 

@@ -5,12 +5,14 @@ import type { DashboardMetric } from '@/types/api';
 
 interface MetricCardProps {
   metric: DashboardMetric;
+  // 같은 페이지 안의 상세 섹션으로 보내는 앵커(#id). 대상 섹션이 없으면 생략합니다.
+  href?: string;
 }
 
 // 홈 대시보드의 핵심 수치를 모바일 카드로 스캔하기 쉽게 보여줍니다.
-export function MetricCard({ metric }: MetricCardProps) {
-  return (
-    <Card className="p-4">
+export function MetricCard({ metric, href }: MetricCardProps) {
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-500">{metric.label}</p>
@@ -24,6 +26,23 @@ export function MetricCard({ metric }: MetricCardProps) {
       {metric.trend ? (
         <p className="mt-1 text-xs font-bold text-leaf-700">{metric.trend}</p>
       ) : null}
-    </Card>
+    </>
+  );
+
+  if (!href) {
+    return <Card className="p-4">{body}</Card>;
+  }
+
+  // 페이지 내 이동이라 react-router Link가 아닌 기본 앵커를 씁니다.
+  return (
+    <a
+      aria-label={`${metric.label} 자세히 보기`}
+      className="block rounded-app focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+      href={href}
+    >
+      <Card className="p-4" variant="interactive">
+        {body}
+      </Card>
+    </a>
   );
 }
