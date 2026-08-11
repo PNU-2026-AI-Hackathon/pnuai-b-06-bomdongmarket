@@ -12,6 +12,12 @@ import { ContractCard } from '@/pages/dashboard/components/ContractCard';
 import { MatchingRequestCard } from '@/pages/dashboard/components/MatchingRequestCard';
 import { MetricCard } from '@/pages/dashboard/components/MetricCard';
 import { useDashboard } from '@/pages/dashboard/hooks/useDashboard';
+import type { DashboardMetricId } from '@/types/api';
+
+// 요약 카드에서 같은 페이지의 상세 섹션으로 내려가는 앵커입니다.
+// 대상은 아래 각 section의 heading id이며, 없는 지표(등록 공간)는 링크로 만들지 않습니다.
+const RECEIVED_ANCHOR = '#received-matchings-title';
+const SENT_ANCHOR = '#my-applications-title';
 
 // 로그인 이후의 홈 대시보드로, 소유자 관점의 요약과 신청 검토 흐름을 제공합니다.
 export function DashboardPage() {
@@ -26,8 +32,14 @@ export function DashboardPage() {
     updatingMatchingId,
     reload,
     respondToMatching,
+    dismissMatching,
   } = useDashboard();
   const isOwner = hasRole(user, 'OWNER');
+  // 받은 신청 섹션은 OWNER에게만 렌더되므로, 그 외에는 갈 곳 없는 링크를 만들지 않습니다.
+  const metricAnchors: Partial<Record<DashboardMetricId, string>> = {
+    received: isOwner ? RECEIVED_ANCHOR : undefined,
+    sent: SENT_ANCHOR,
+  };
 
   return (
     <PageContainer>
@@ -80,7 +92,11 @@ export function DashboardPage() {
         <>
           <section className="mt-6 grid gap-4 md:grid-cols-3" aria-label="요약 카드">
             {metrics.map((metric) => (
-              <MetricCard key={metric.label} metric={metric} />
+              <MetricCard
+                href={metricAnchors[metric.id]}
+                key={metric.id}
+                metric={metric}
+              />
             ))}
           </section>
 
@@ -120,6 +136,7 @@ export function DashboardPage() {
                     isUpdating={updatingMatchingId === request.matchingId}
                     key={request.matchingId}
                     onAccept={() => void respondToMatching(request.matchingId, 'accept')}
+                    onDismiss={() => void dismissMatching(request.matchingId)}
                     onReject={() => void respondToMatching(request.matchingId, 'reject')}
                     request={request}
                   />

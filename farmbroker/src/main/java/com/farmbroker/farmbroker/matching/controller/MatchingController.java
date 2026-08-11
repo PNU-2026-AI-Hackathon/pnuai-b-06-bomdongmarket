@@ -76,6 +76,16 @@ public class MatchingController {
         return ApiResponse.success("매칭 신청을 거절했습니다.", response);
     }
 
+    // PATCH /api/matchings/{matchingId}/dismiss — 받은 목록에서 감추기 (공간 owner 전용)
+    @Operation(summary = "받은 매칭 신청 감추기 (공간 owner 전용)",
+            description = "수락·거절·취소된 신청을 소유자의 받은 목록에서 감춘다. 신청자 목록에는 그대로 남는다.")
+    @PatchMapping("/{matchingId}/dismiss")
+    public ApiResponse<Void> dismiss(@PathVariable Long matchingId,
+                                     @AuthenticationPrincipal Long userId) {
+        matchingService.dismissReceived(matchingId, userId);
+        return ApiResponse.success("받은 신청 목록에서 감췄습니다.", null);
+    }
+
     // PATCH /api/matchings/{matchingId}/cancel — 신청 취소 (신청자 본인 전용)
     // DELETE가 아닌 PATCH — 행을 지우지 않고 CANCELED로 남겨 신청 이력을 보존한다.
     @Operation(summary = "매칭 신청 취소 (신청자 본인 전용)",

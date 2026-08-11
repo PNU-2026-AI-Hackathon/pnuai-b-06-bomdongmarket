@@ -34,6 +34,7 @@ export const ENDPOINTS = {
     accept: (matchingId: number | string) => `/matchings/${matchingId}/accept`,
     reject: (matchingId: number | string) => `/matchings/${matchingId}/reject`,
     cancel: (matchingId: number | string) => `/matchings/${matchingId}/cancel`,
+    dismiss: (matchingId: number | string) => `/matchings/${matchingId}/dismiss`,
   },
   crops: {
     list: '/crops',

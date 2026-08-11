@@ -158,6 +158,23 @@ public class MatchingService {
         return MatchingStatusResponse.from(matching);
     }
 
+    // 받은 목록에서 감추기 — 소유자가 검토를 마친 건만 대상이다.
+    // 아직 응답하지 않은(REQUESTED) 신청은 수락/거절로 처리해야 하므로 감출 수 없다.
+    // 신청자 목록(my-requests)에는 그대로 남는다 — 소유자 화면에서만 사라진다.
+    @Transactional
+    public void dismissReceived(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        if (!matching.getSpace().getOwner().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
+        if (matching.getStatus() == MatchingStatus.REQUESTED) {
+            throw new BusinessException(ErrorCode.MATCHING_NOT_PROCESSED);
+        }
+
+        matching.dismissByOwner();
+    }
+
     // 수락/거절 공통 전제: 매칭 존재 → 공간 owner 본인 → 아직 REQUESTED 상태
     private Matching getOwnedRequestedMatching(Long matchingId, Long userId) {
         Matching matching = matchingRepository.findById(matchingId)

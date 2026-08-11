@@ -141,7 +141,7 @@ context-path `/api` 접두 (예: `http://localhost:8080/api/auth/signup`). 컨�
 | auth | `POST /auth/logout` | ✓ |
 | user | `GET /users/me` | ✓ |
 | space | `POST /spaces` / `GET /spaces` / `GET /spaces/my` / `GET /spaces/{id}` / `PATCH /spaces/{id}` / `DELETE /spaces/{id}` | 목록·상세 ✕, 그 외 ✓ |
-| matching | `POST /matchings` / `GET /matchings/my-requests?spaceId=` / `GET /matchings/received` / `PATCH /matchings/{id}/accept` / `PATCH /matchings/{id}/reject` / `PATCH /matchings/{id}/cancel` | ✓ |
+| matching | `POST /matchings` / `GET /matchings/my-requests?spaceId=` / `GET /matchings/received` / `PATCH /matchings/{id}/accept` / `PATCH /matchings/{id}/reject` / `PATCH /matchings/{id}/cancel` / `PATCH /matchings/{id}/dismiss` | ✓ |
 | ai | `POST /ai/recommend` | ✓ |
 | crop | `GET /crops` / `GET /crops/{cropId}` | ✕ |
 

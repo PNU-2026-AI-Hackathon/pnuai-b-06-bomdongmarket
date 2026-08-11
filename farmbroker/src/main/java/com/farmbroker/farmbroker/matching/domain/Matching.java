@@ -59,6 +59,11 @@ public class Matching {
     // 수락/거절 시각. REQUESTED 상태에서는 null
     private LocalDateTime respondedAt;
 
+    // 공간 소유자가 검토를 마친 신청을 받은 목록에서 치운 시각. 안 치웠으면 null.
+    // 신청 자체는 그대로 남고 신청자 화면(my-requests)에는 계속 보인다 —
+    // 소유자 목록에서만 감추는 표시라 상태(status) 전이와는 별개다.
+    private LocalDateTime ownerDismissedAt;
+
     @Builder
     public Matching(Space space, User farmer, String message, MatchingType type) {
         this.space = space;
@@ -84,5 +89,10 @@ public class Matching {
     public void cancel() {
         this.status = MatchingStatus.CANCELED;
         this.respondedAt = LocalDateTime.now();
+    }
+
+    // 소유자가 받은 목록에서 감추기. 상태는 건드리지 않는다(전제 검증은 서비스).
+    public void dismissByOwner() {
+        this.ownerDismissedAt = LocalDateTime.now();
     }
 }

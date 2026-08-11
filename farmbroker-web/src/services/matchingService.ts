@@ -110,3 +110,14 @@ export function rejectMatching(matchingId: number) {
 export function cancelMatching(matchingId: number) {
   return updateMatchingStatus(matchingId, 'cancel');
 }
+
+// 공간 소유자가 검토를 마친 신청을 받은 목록에서 감춥니다.
+// 상태를 바꾸지 않으므로 updateMatchingStatus와 묶지 않고, 응답 데이터도 없습니다.
+export async function dismissReceivedMatching(matchingId: number): Promise<void> {
+  if (!USE_MOCKS) {
+    await apiRequest<void>(ENDPOINTS.matchings.dismiss(matchingId), { method: 'PATCH' });
+    return;
+  }
+
+  await mockDelay();
+}
