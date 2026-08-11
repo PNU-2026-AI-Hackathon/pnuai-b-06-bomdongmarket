@@ -59,6 +59,7 @@ export function SpaceApplyPage() {
       ) : null}
 
       {space ? (
+        // grid 기본 stretch로 두 카드 높이를 맞춥니다 — 늘어난 높이는 각 카드가 내부에서 채웁니다.
         <div className="mt-6 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <AppliedSpaceSummary space={space} />
           {isOwnSpace ? (
