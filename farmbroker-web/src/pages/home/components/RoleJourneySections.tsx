@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { APP_INFO } from '@/constants/appInfo';
 import { roleSections } from '@/pages/home/constants/homeContent';
 import { cn } from '@/utils/cn';
 
@@ -41,8 +42,8 @@ export function RoleJourneySections() {
           공간에서 재배로, 수확에서 소비로 이어지는 도심 스마트팜 생태계
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600">
-          봄동마켓은 유휴공간, 도심 농부, 지역 소비자를 연결해 생산부터 판매까지 생활권
-          안에서 순환하도록 돕습니다.
+          {APP_INFO.name}는 유휴공간, 도심 농부, 지역 소비자를 연결해 생산부터 판매까지
+          생활권 안에서 순환하도록 돕습니다.
         </p>
       </PageContainer>
 
