@@ -20,8 +20,7 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
   const mapRef = useRef<KakaoMap | null>(null);
   const markerRef = useRef<KakaoMarker | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  // 지도 로드 실패 후 '다시 시도'로 같은 주소를 재요청하기 위한 카운터입니다.
-  const [retryCount, setRetryCount] = useState(0);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const isSupported = hasKakaoMapKey();
 
@@ -75,7 +74,7 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
     return () => {
       cancelled = true;
     };
-  }, [address, isSupported, retryCount, showMap]);
+  }, [address, isSupported, reloadToken, showMap]);
 
   // 주소를 고르기 전에는 지도 자리를 비워 둡니다.
   if (!address) return null;
@@ -114,7 +113,7 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
               지도를 불러오지 못했습니다.
             </p>
             <Button
-              onClick={() => setRetryCount((count) => count + 1)}
+              onClick={() => setReloadToken((token) => token + 1)}
               size="sm"
               variant="outline"
             >
