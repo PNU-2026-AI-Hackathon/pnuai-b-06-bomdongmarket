@@ -1,4 +1,4 @@
-# AGENT.md — Farm Broker (봄동마켓) 백엔드
+# AGENT.md — FarmBroker 백엔드
 
 > 이 문서는 AI 에이전트가 **백엔드 모듈(`farmbroker/`)** 에서 작업할 때 따라야 하는 규칙과 컨텍스트입니다.
 > 프론트엔드(`farmbroker-web/**`)는 [`../farmbroker-web/AGENTS.md`](../farmbroker-web/AGENTS.md), 저장소 전반 규칙은 [`../AGENTS.md`](../AGENTS.md)를 따릅니다.
@@ -7,7 +7,7 @@
 
 ## 1. 프로젝트 개요
 
-**봄동마켓 (Farm Broker)** — 도심 공실 소유자·도심 농부·지역 소비자를 연결하는 스마트팜 매칭 플랫폼.
+**FarmBroker** — 도심 공실 소유자·도심 농부·지역 소비자를 연결하는 스마트팜 매칭 플랫폼.
 공실 제공자가 스마트팜 전환 가능한 공간을 등록하면, 도심 농부가 조회 후 **수익 예측·AI 작물 추천**을 확인하고 매칭을 신청하는 흐름.
 
 - **클라이언트: React 웹 SPA** (`farmbroker-web/`, Vite). → **CORS는 백엔드 책임** (아래 8번).
@@ -49,6 +49,7 @@
 | `ai` | Gemini 기반 작물 추천 (`GeminiClient`, 프롬프트 빌더) | 백엔드 3 |
 | `crop` | 작물 백과사전 (초기 데이터 시딩 포함) | 백엔드 3 |
 | `profit` | 수익 예측 계산기 (CSV 기준데이터 기반) | 비전공자 로직 이관 |
+| `product` | 로컬마켓 상품 CRUD, 생산 이력, 하이브리드 Space 참조(spaceId 스냅샷) | 강범수 (백엔드 1) |
 
 > **공용 계약**(`ApiResponse`, `ErrorCode`, `BusinessException`, `SecurityConfig`)은 모든 도메인이 의존한다. 필드명·구조를 임의로 바꾸면 타 도메인 코드가 깨지므로 신중히 변경하고, 변경 시 영향 범위를 명시할 것.
 > 특정 도메인 작업 요청이 아니면 **소유 경계를 넘는 수정은 하지 말 것.**
@@ -87,16 +88,17 @@
 
 ## 6. Security / JWT (`security`)
 
-- 방식: **JWT Access Token** (Refresh Token 없음). 헤더 `Authorization: Bearer {accessToken}`.
+- 방식: **JWT Access Token** (Refresh Token 없음). 전송은 **httpOnly 쿠키**(로그인 시 `Set-Cookie` 발급) 우선, `Authorization: Bearer` 헤더는 폴백(curl·Swagger). same-site + `SameSite=Lax`로 CSRF 방어. 쿠키 속성은 `jwt.cookie.*` env로 토글(운영 HTTPS는 `JWT_COOKIE_SECURE=true`). 상세: `docs/specs/2026-08-06-jwt-httponly-cookie-design.md`.
 - **`JwtTokenProvider`**: `subject = userId` 만 담는다. **role은 claim에 넣지 않는다.**
   - 이유: 역할이 활동에 따라 누적되는 가변 값이라, 토큰에 박으면 발급 직후부터 실제 값과 어긋난다. **권한 판단은 매 요청마다 DB의 `User`를 읽어서** 한다.
   - `secret`/`expiration`은 `application.yml`(→ 환경변수)에서 주입. 하드코딩 금지.
-- **`JwtAuthenticationFilter`**: `OncePerRequestFilter`. 헤더에서 토큰 추출 → 검증 → `SecurityContext`에 인증 세팅.
+- **`AuthCookieProvider`**: 인증 쿠키 발급/삭제(만료)/추출 담당. 속성은 `application.yml`에서 주입.
+- **`JwtAuthenticationFilter`**: `OncePerRequestFilter`. **쿠키 우선, 헤더 폴백**으로 토큰 추출 → 검증 → `SecurityContext`에 인증 세팅.
 - **`SecurityConfig`** (Spring Security 6):
   - `csrf.disable()`, 세션 `STATELESS`, `JwtAuthenticationFilter`를 `UsernamePasswordAuthenticationFilter` 앞에 삽입.
   - `PasswordEncoder` = `BCryptPasswordEncoder` (`common.config.PasswordEncoderConfig`).
-  - **permitAll**: `POST /auth/signup`, `POST /auth/login`, `GET /crops`·`/crops/**`, `GET /spaces`·`/spaces/*`, Swagger 경로.
-  - **authenticated**: `GET /spaces/my`(⚠️ `/spaces/*` 와일드카드보다 **먼저** 선언되어야 열리지 않음), 그 외 `anyRequest()`.
+  - **permitAll**: `POST /auth/signup`, `POST /auth/login`, `GET /crops`·`/crops/**`, `GET /spaces`·`/spaces/*`, `GET /products`·`/products/*`, Swagger 경로.
+  - **authenticated**: `GET /spaces/my`·`GET /products/my`(⚠️ 각각 `/spaces/*`·`/products/*` 와일드카드보다 **먼저** 선언되어야 열리지 않음), 그 외 `anyRequest()`.
   - 세부 권한(OWNER만 등록 등)은 각 도메인 서비스에서 처리.
 
 ---
@@ -144,6 +146,7 @@ context-path `/api` 접두 (예: `http://localhost:8080/api/auth/signup`). 컨�
 | matching | `POST /matchings` / `GET /matchings/my-requests` / `GET /matchings/received` / `PATCH /matchings/{id}/accept` / `PATCH /matchings/{id}/reject` | ✓ |
 | ai | `POST /ai/recommend` | ✓ |
 | crop | `GET /crops` / `GET /crops/{cropId}` | ✕ |
+| product | `GET /products` / `GET /products/{id}` / `GET /products/my` / `POST /products` / `PATCH /products/{id}` / `DELETE /products/{id}` | 목록·상세 ✕, 그 외 ✓ |
 
 ### 대표 계약 (강범수 소유 3종)
 
@@ -153,10 +156,10 @@ context-path `/api` 접두 (예: `http://localhost:8080/api/auth/signup`). 컨�
   "data": { "userId": 1, "email": "owner@example.com", "nickname": "닉네임", "roles": ["CONSUMER"] } }
 ```
 
-**`POST /auth/login`** — 이메일 조회 → 비번 매칭(실패 시 `INVALID_CREDENTIALS`) → JWT 발급.
+**`POST /auth/login`** — 이메일 조회 → 비번 매칭(실패 시 `INVALID_CREDENTIALS`) → JWT를 **httpOnly 쿠키(`Set-Cookie`)로 발급**. 본문에는 토큰을 넣지 않고 user만 반환.
 ```json
 { "success": true, "message": "로그인에 성공했습니다.",
-  "data": { "accessToken": "jwt...", "user": { "userId": 1, "email": "...", "nickname": "...", "roles": ["CONSUMER"] } } }
+  "data": { "user": { "userId": 1, "email": "...", "nickname": "...", "roles": ["CONSUMER"] } } }
 ```
 
 **`GET /users/me`** — 토큰에서 userId 추출 → 조회(없으면 `USER_NOT_FOUND`).

@@ -1,6 +1,6 @@
-# Bomdong Market Web
+# FarmBroker Web
 
-React + TypeScript + Vite frontend for the Bomdong Market hackathon demo. The app translates the mobile-first wireframe into a responsive web experience for space owners, urban farmers, and local consumers.
+React + TypeScript + Vite frontend for the FarmBroker hackathon demo. The app translates the mobile-first wireframe into a responsive web experience for space owners, urban farmers, and local consumers.
 
 ## Implemented Screens
 

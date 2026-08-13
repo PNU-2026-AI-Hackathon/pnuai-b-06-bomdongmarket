@@ -8,7 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,11 +22,21 @@ class ProfitEstimateServiceTest {
 
     private static ProfitEstimateService service;
 
+    // 단가는 이제 계산기가 아니라 MarketPriceProvider가 공급한다.
+    // 운영 구현(SeedPriceProvider)은 DB를 읽으므로, 단위 테스트에서는 같은 값을 주는 스텁을 쓴다.
+    // 값은 작물 백과사전 시드와 동일하다 — Python 기준값과의 동등성을 유지하기 위함.
+    private static final LocalDate BASIS = LocalDate.of(2026, 7, 4);
+    private static final Map<String, Integer> SEED_PRICES =
+            Map.of("상추", 8000, "바질", 20000, "딸기", 30000);
+
     @BeforeAll
     static void setUp() {
         ProfitReferenceData data = new ProfitReferenceData();
         data.load();
-        service = new ProfitEstimateService(new ProfitCalculator(data));
+        MarketPriceProvider prices = cropName ->
+                Optional.ofNullable(SEED_PRICES.get(cropName))
+                        .map(price -> MarketPrice.seed(price, BASIS));
+        service = new ProfitEstimateService(new ProfitCalculator(data), prices);
     }
 
     private static ProfitEstimateRequest request(double area, int monthlyRent) {

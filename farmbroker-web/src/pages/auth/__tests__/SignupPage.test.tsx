@@ -54,7 +54,7 @@ describe('SignupPage', () => {
     await user.click(screen.getByRole('button', { name: '회원가입' }));
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('회원가입이 완료되었습니다. 새 계정으로 로그인해 주세요.'),

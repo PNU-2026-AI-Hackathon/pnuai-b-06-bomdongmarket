@@ -20,17 +20,20 @@ public class ProfitCalculator {
     private final ProfitReferenceData data;
 
     public boolean supports(String cropName) {
-        return data.hasCrop(cropName);
+        return data.hasCultivationData(cropName);
     }
 
     public List<String> supportedCrops() {
         return data.supportedCropNames();
     }
 
-    // 공간 입력 + 작물명으로 월평균 수익성을 계산한다. 참조 데이터에 없는 작물이면 예외 대신 호출 전 supports()로 걸러야 한다.
-    public ProfitEstimate estimate(SpaceInputs space, String cropName) {
+    // 공간 입력 + 작물명 + 판매 단가로 월평균 수익성을 계산한다.
+    // 단가는 계산기가 직접 들고 있지 않고 MarketPriceProvider가 조회한 값을 주입받는다 —
+    // 시세 출처(백과사전/KAMIS)가 바뀌어도 계산 로직은 그대로 두기 위함.
+    // 재배 파라미터가 없는 작물이면 예외 대신 호출 전 supports()로 걸러야 한다.
+    public ProfitEstimate estimate(SpaceInputs space, String cropName, MarketPrice price) {
         CropProduction crop = data.cropProduction(cropName);
-        double pricePerKg = data.salePriceKrwKg(cropName);
+        double pricePerKg = price.pricePerKgKrw();
 
         Space s = calculateSpace(space);
         Production production = calculateProduction(s, crop);
@@ -44,7 +47,7 @@ public class ProfitCalculator {
         double materialCost = calculateMaterialCost(s, crop);                    // 블록8 재료
         double laborCost = calculateLaborCost(production, crop);                 // 블록9 인건
 
-        return calculateProfit(space, cropName, s, production, pricePerKg, revenue,
+        return calculateProfit(space, cropName, s, production, price, revenue,
                 lighting, energy, electricityCost, waterCost, materialCost, laborCost); // 블록10 손익
     }
 
@@ -199,7 +202,7 @@ public class ProfitCalculator {
 
     // 블록10: 손익·수익배분·계약형태 추천
     private ProfitEstimate calculateProfit(SpaceInputs in, String cropName, Space s, Production production,
-                                           double pricePerKg, double revenue, Lighting lighting, Energy energy,
+                                           MarketPrice price, double revenue, Lighting lighting, Energy energy,
                                            double electricityCost, double waterCost, double materialCost,
                                            double laborCost) {
         double depreciation = data.standard("depreciation_and_other_cost_krw_month");
@@ -229,7 +232,7 @@ public class ProfitCalculator {
                 s.totalAreaM2(), in.cultivableRatio(), in.moduleLayers(), in.ceilingHeightM(),
                 s.availableFloorAreaM2(), s.cultivationAreaM2(),
                 lighting.powerW(), energy.averageMonthlyEnergyKwh(),
-                production.monthlyTotalProductionKg(), production.monthlySalesKg(), pricePerKg, revenue,
+                production.monthlyTotalProductionKg(), production.monthlySalesKg(), price, revenue,
                 electricityCost, waterCost, materialCost, laborCost, depreciation, operatingCost,
                 operatingProfit, landlordRatio, landlordExpectedIncome, in.desiredMonthlyRentKrw(),
                 rentIncomeDifference, businessOperatingProfit, operatingLoss, longTermRecommended,
