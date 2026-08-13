@@ -57,4 +57,13 @@ public record KamisProperties(
     public ZoneId zone() {
         return ZoneId.of(timezone);
     }
+
+    public String normalizedRegion() {
+        return normalizeRegion(region);
+    }
+
+    // 전국(빈 값)을 null과 ""로 나눠 저장하면 같은 기준이 서로 다르게 비교된다.
+    static String normalizeRegion(String region) {
+        return region == null || region.isBlank() ? "" : region;
+    }
 }

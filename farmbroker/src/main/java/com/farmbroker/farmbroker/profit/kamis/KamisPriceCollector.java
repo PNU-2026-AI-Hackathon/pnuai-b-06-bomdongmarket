@@ -64,9 +64,11 @@ public class KamisPriceCollector {
         snapshotRepository.findByCropName(cropName)
                 .ifPresentOrElse(
                         snapshot -> snapshot.refresh(
-                                price.pricePerKgKrw(), price.surveyedOn(), price.sampleCount(), now),
+                                price.pricePerKgKrw(), price.surveyedOn(), price.sampleCount(), now,
+                                properties.saleType(), properties.normalizedRegion(), properties.grade()),
                         () -> snapshotRepository.save(new MarketPriceSnapshot(
-                                cropName, price.pricePerKgKrw(), price.surveyedOn(), price.sampleCount(), now)));
+                                cropName, price.pricePerKgKrw(), price.surveyedOn(), price.sampleCount(), now,
+                                properties.saleType(), properties.normalizedRegion(), properties.grade())));
     }
 
     private void sleepBetweenCalls() {

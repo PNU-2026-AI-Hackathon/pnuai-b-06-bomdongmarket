@@ -41,19 +41,42 @@ public class MarketPriceSnapshot {
     @Column(nullable = false)
     private LocalDateTime collectedAt;
 
+    @Column(name = "sale_type", length = 10)
+    private String saleType;
+
+    @Column(length = 40)
+    private String region;
+
+    @Column(length = 20)
+    private String grade;
+
     public MarketPriceSnapshot(String cropName, int pricePerKgKrw, LocalDate surveyedOn,
-                               int sampleCount, LocalDateTime collectedAt) {
+                               int sampleCount, LocalDateTime collectedAt,
+                               String saleType, String region, String grade) {
         this.cropName = cropName;
         this.pricePerKgKrw = pricePerKgKrw;
         this.surveyedOn = surveyedOn;
         this.sampleCount = sampleCount;
         this.collectedAt = collectedAt;
+        this.saleType = saleType;
+        this.region = region;
+        this.grade = grade;
     }
 
-    public void refresh(int pricePerKgKrw, LocalDate surveyedOn, int sampleCount, LocalDateTime collectedAt) {
+    // 이전 기본 생성 경로도 출처 기준이 비지 않도록 당시 기본값을 명시한다.
+    public MarketPriceSnapshot(String cropName, int pricePerKgKrw, LocalDate surveyedOn,
+                               int sampleCount, LocalDateTime collectedAt) {
+        this(cropName, pricePerKgKrw, surveyedOn, sampleCount, collectedAt, "02", "", "상품");
+    }
+
+    public void refresh(int pricePerKgKrw, LocalDate surveyedOn, int sampleCount, LocalDateTime collectedAt,
+                        String saleType, String region, String grade) {
         this.pricePerKgKrw = pricePerKgKrw;
         this.surveyedOn = surveyedOn;
         this.sampleCount = sampleCount;
         this.collectedAt = collectedAt;
+        this.saleType = saleType;
+        this.region = region;
+        this.grade = grade;
     }
 }

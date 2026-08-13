@@ -135,8 +135,8 @@ public class KamisPriceClient {
         if (!properties.grade().equals(node.path("grd_nm").asString(""))) {
             return Optional.empty();
         }
-        String region = properties.region();
-        if (region != null && !region.isBlank() && !region.equals(node.path("sgg_nm").asString(""))) {
+        String region = properties.normalizedRegion();
+        if (!region.isEmpty() && !region.equals(node.path("sgg_nm").asString(""))) {
             return Optional.empty();
         }
 

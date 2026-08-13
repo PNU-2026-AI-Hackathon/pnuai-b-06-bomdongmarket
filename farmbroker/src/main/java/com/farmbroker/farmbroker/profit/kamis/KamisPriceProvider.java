@@ -27,11 +27,21 @@ public class KamisPriceProvider implements MarketPriceProvider {
             return Optional.empty();
         }
         return snapshotRepository.findByCropName(cropName)
+                // 출처를 증명할 기준이 없는 행을 현재 설정으로 추정하면 다른 기준의 시세가 섞여 남는다.
+                .filter(this::matchesCurrentCriteria)
                 .map(snapshot -> new MarketPrice(
                         snapshot.getPricePerKgKrw(),
                         snapshot.getSurveyedOn(),
                         PriceSource.KAMIS,
                         isStale(snapshot.getSurveyedOn())));
+    }
+
+    private boolean matchesCurrentCriteria(MarketPriceSnapshot snapshot) {
+        return snapshot.getSaleType() != null
+                && snapshot.getGrade() != null
+                && properties.saleType().equals(snapshot.getSaleType())
+                && properties.normalizedRegion().equals(KamisProperties.normalizeRegion(snapshot.getRegion()))
+                && properties.grade().equals(snapshot.getGrade());
     }
 
     private boolean isStale(LocalDate surveyedOn) {
