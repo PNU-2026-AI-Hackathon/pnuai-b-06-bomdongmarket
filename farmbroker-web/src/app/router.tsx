@@ -5,9 +5,10 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
-import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
+import { DashboardPage, MyPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
 import { MarketPage, ProductDetailPage } from '@/pages/market';
+import { SpaceApplyPage } from '@/pages/space-apply';
 import { SpaceDetailPage } from '@/pages/space-detail';
 import { SpaceCreatePage, SpacePredictionPage, SpacesPage } from '@/pages/spaces';
 
@@ -30,7 +31,8 @@ export function AppRouter() {
           <Route element={<DashboardPage />} path={ROUTES.dashboard} />
           <Route element={<SpaceCreatePage />} path={ROUTES.newSpace} />
           <Route element={<SpacePredictionPage />} path={ROUTES.newSpacePrediction} />
-          <Route element={<ContractsPage />} path={ROUTES.contracts} />
+          {/* 정적 세그먼트가 우선 매칭되므로 /spaces/new와 충돌하지 않습니다. */}
+          <Route element={<SpaceApplyPage />} path="/spaces/:spaceId/apply" />
           <Route element={<MyPage />} path={ROUTES.myPage} />
         </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />

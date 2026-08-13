@@ -1,15 +1,18 @@
 package com.farmbroker.farmbroker.matching.service;
 
+import com.farmbroker.farmbroker.common.exception.BusinessException;
+import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.Matching;
+import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
+import com.farmbroker.farmbroker.matching.dto.MatchingStatusResponse;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.matching.support.SpaceContractAdapter;
 import com.farmbroker.farmbroker.matching.support.SpaceSummary;
 import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.space.domain.SpaceStatus;
 import com.farmbroker.farmbroker.user.domain.User;
-import com.farmbroker.farmbroker.user.domain.UserRole;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,19 +28,21 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
-// 매칭의 역할 정책을 검증한다.
-// 신청은 역할을 요구하지 않고(요구하면 농부가 될 방법이 없어진다),
-// 수락되어 재배가 확정되는 시점에 신청자가 FARMER 역할을 얻는다.
+// 신청 취소(PATCH /matchings/{id}/cancel)의 권한·상태 전제를 검증한다.
+// 취소는 신청자 본인만, 아직 응답받지 않은(REQUESTED) 신청에 대해서만 가능하고,
+// 행을 지우지 않으므로 취소 후 같은 공간에 재신청할 수 있어야 한다.
 // DB 없이 돌도록 레포지토리·어댑터는 목으로 대체한다.
 @ExtendWith(MockitoExtension.class)
-class MatchingServiceRoleTest {
+class MatchingServiceCancelTest {
 
     private static final long FARMER_ID = 10L;
     private static final long OWNER_ID = 20L;
+    private static final long OTHER_USER_ID = 30L;
     private static final long SPACE_ID = 100L;
     private static final long MATCHING_ID = 1000L;
 
@@ -57,72 +62,93 @@ class MatchingServiceRoleTest {
     private MatchingService matchingService;
 
     @Test
-    @DisplayName("FARMER 역할이 없어도 매칭을 신청할 수 있다")
-    void applyDoesNotRequireFarmerRole() {
-        User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
+    @DisplayName("신청자 본인은 응답 전 신청을 취소할 수 있다")
+    void cancelByApplicantMarksCanceled() {
+        Matching matching = requestedMatching();
+        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
+
+        MatchingStatusResponse response = matchingService.cancel(MATCHING_ID, FARMER_ID);
+
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.CANCELED);
+        assertThat(matching.getRespondedAt()).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(MatchingStatus.CANCELED);
+    }
+
+    @Test
+    @DisplayName("신청자가 아닌 사용자는 취소할 수 없다")
+    void cancelByOtherUserIsForbidden() {
+        Matching matching = requestedMatching();
+        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
+
+        assertThatThrownBy(() -> matchingService.cancel(MATCHING_ID, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MATCHING_FORBIDDEN);
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REQUESTED);
+    }
+
+    @Test
+    @DisplayName("이미 수락된 신청은 취소할 수 없다")
+    void cancelAcceptedMatchingIsRejected() {
+        Matching matching = requestedMatching();
+        matching.accept();
+        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
+
+        assertThatThrownBy(() -> matchingService.cancel(MATCHING_ID, FARMER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MATCHING_ALREADY_PROCESSED);
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("취소한 공간에는 다시 신청할 수 있다")
+    void canReapplyAfterCancel() {
+        // 중복 검사는 REQUESTED 건만 보므로, 취소로 CANCELED가 된 뒤에는 통과해야 한다.
+        User applicant = newUser(FARMER_ID);
         given(userRepository.findById(FARMER_ID)).willReturn(Optional.of(applicant));
         given(spaceContractAdapter.getSummaryById(SPACE_ID)).willReturn(availableSpaceSummary());
+        given(matchingRepository.existsBySpaceIdAndFarmerIdAndStatus(
+                SPACE_ID, FARMER_ID, MatchingStatus.REQUESTED)).willReturn(false);
         given(entityManager.getReference(any(), anyLong())).willReturn(spaceStub());
 
-        matchingService.apply(FARMER_ID, applyRequest());
-
-        // 신청만으로는 아직 농부가 아니다 — 수락되어야 부여된다.
-        assertThat(applicant.hasRole(UserRole.FARMER)).isFalse();
-    }
-
-    @Test
-    @DisplayName("매칭을 수락하면 신청자에게 FARMER 역할이 부여된다")
-    void acceptGrantsFarmerRoleToApplicant() {
-        User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
-        Matching matching = requestedMatching(applicant);
-        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
-
-        matchingService.accept(MATCHING_ID, OWNER_ID);
-
-        assertThat(applicant.getRoles())
-                .containsExactlyInAnyOrder(UserRole.CONSUMER, UserRole.FARMER);
-    }
-
-    @Test
-    @DisplayName("매칭을 거절하면 FARMER 역할을 부여하지 않는다")
-    void rejectDoesNotGrantFarmerRole() {
-        User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
-        Matching matching = requestedMatching(applicant);
-        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
-
-        matchingService.reject(MATCHING_ID, OWNER_ID);
-
-        assertThat(applicant.hasRole(UserRole.FARMER)).isFalse();
+        assertThat(matchingService.apply(FARMER_ID, applyRequest()).getStatus())
+                .isEqualTo(MatchingStatus.REQUESTED);
     }
 
     // ── 픽스처 ────────────────────────────────────────────────────────────────
 
-    private User newUser(String email, String nickname, long id) {
+    private User newUser(long id) {
         User user = User.builder()
-                .email(email)
+                .email("farmer@example.com")
                 .password("hashed")
-                .nickname(nickname)
+                .nickname("도심농부")
                 .build();
         setField(user, "id", id);
         return user;
     }
 
-    // JPA 프록시(entityManager.getReference) 자리를 대신하는 Space — id만 있으면 충분하다.
+    // JPA 프록시(entityManager.getReference) 자리를 대신하는 Space — id/owner만 있으면 충분하다.
     private Space spaceStub() {
+        User owner = User.builder()
+                .email("owner@example.com")
+                .password("hashed")
+                .nickname("공간주")
+                .build();
+        setField(owner, "id", OWNER_ID);
+
         Space space = Space.builder()
-                .owner(newUser("owner@example.com", "공간주", OWNER_ID))
+                .owner(owner)
                 .title("빈 상가")
                 .build();
         setField(space, "id", SPACE_ID);
         return space;
     }
 
-    private Matching requestedMatching(User applicant) {
+    private Matching requestedMatching() {
         Matching matching = Matching.builder()
                 .space(spaceStub())
-                .farmer(applicant)
+                .farmer(newUser(FARMER_ID))
                 .message("여기서 상추를 키우고 싶습니다.")
-                .type(MatchingType.PROFIT)
+                .type(MatchingType.HOBBY)
                 .build();
         setField(matching, "id", MATCHING_ID);
         setField(matching, "createdAt", LocalDateTime.now());
@@ -142,7 +168,7 @@ class MatchingServiceRoleTest {
         try {
             return new ObjectMapper().readValue(
                     """
-                    { "spaceId": %d, "type": "PROFIT", "message": "여기서 상추를 키우고 싶습니다." }
+                    { "spaceId": %d, "type": "HOBBY", "message": "여기서 상추를 키우고 싶습니다." }
                     """.formatted(SPACE_ID),
                     MatchingApplyRequest.class
             );
