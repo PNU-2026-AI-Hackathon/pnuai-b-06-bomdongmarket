@@ -1,6 +1,7 @@
 package com.farmbroker.farmbroker.profit.kamis;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
@@ -42,10 +43,15 @@ public class KamisPriceClient {
     private final ObjectMapper objectMapper;
     private final KamisProperties properties;
 
-    public KamisPriceClient(ObjectMapper objectMapper, KamisProperties properties) {
+    public KamisPriceClient(RestClient.Builder builder, ObjectMapper objectMapper, KamisProperties properties) {
         this.objectMapper = objectMapper;
         this.properties = properties;
-        this.restClient = RestClient.builder().build();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofMillis(properties.connectTimeoutMs()));
+        // read timeout은 읽기가 정체된 시간 제한이라 요청 하나의 전체 시간 상한은 아니다.
+        // 그래도 이게 없으면 상대가 연결만 붙잡고 응답하지 않을 때 fetchLatest의 fallback까지 가지 못한다.
+        factory.setReadTimeout(Duration.ofMillis(properties.readTimeoutMs()));
+        this.restClient = builder.requestFactory(factory).build();
     }
 
     // 조사 기록 한 건에서 우리가 쓰는 값만 추린 것.

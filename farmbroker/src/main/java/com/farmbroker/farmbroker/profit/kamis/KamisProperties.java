@@ -24,7 +24,10 @@ public record KamisProperties(
         int lookbackDays,
         boolean enabled,
         // 서버 기본 시간대가 달라도 스케줄·조회일·수집시각이 같은 날짜 기준을 쓰게 한다.
-        String timezone
+        String timezone,
+        // 외부 API가 응답하지 않을 때 수집 스레드를 계속 붙잡지 않도록 연결과 읽기 정체를 제한한다.
+        int connectTimeoutMs,
+        int readTimeoutMs
 ) {
     public KamisProperties {
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -37,12 +40,14 @@ public record KamisProperties(
         if (timezone == null || timezone.isBlank()) timezone = "Asia/Seoul";
         // 잘못된 존 이름은 기동 시점에 바로 드러나야 한다 — 새벽 배치에서 처음 터지면 찾기 어렵다.
         ZoneId.of(timezone);
+        if (connectTimeoutMs <= 0) connectTimeoutMs = 3000;
+        if (readTimeoutMs <= 0) readTimeoutMs = 5000;
     }
 
     // 기존 생성 경로도 환경 설정과 같은 기본값으로 동작하도록 위임한다.
     public KamisProperties(String serviceKey, String baseUrl, String saleType, String region, String grade,
                            int freshnessDays, int lookbackDays, boolean enabled) {
-        this(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled, "Asia/Seoul");
+        this(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled, "Asia/Seoul", 3000, 5000);
     }
 
     public boolean usable() {
