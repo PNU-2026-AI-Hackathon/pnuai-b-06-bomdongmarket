@@ -28,6 +28,7 @@ import {
   unitPriceHint,
 } from '@/pages/market/constants/saleUnits';
 import { useMyWorkplaces } from '@/pages/market/hooks/useMyWorkplaces';
+import { deleteImage } from '@/services/fileService';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
 import type { ProductEventInput } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
@@ -61,6 +62,7 @@ export function ProductFormPage() {
   const farmingPlaces = workplaces.filter((place) => place.source === 'farming');
   const [spaceId, setSpaceId] = useState<number | null>(null);
   const [events, setEvents] = useState<ProductEventInput[]>([]);
+  const [discardedUrls, setDiscardedUrls] = useState<string[]>([]);
   const [fields, setFields] = useState({
     name: '',
     category: productCategories[0] as string,
@@ -158,14 +160,15 @@ export function ProductFormPage() {
     setIsSaving(true);
     setError(null);
 
+    const imageUrl = fields.imageUrl.trim();
     const payload = {
       name: fields.name,
       category: fields.category,
       price: Number(fields.price),
       unit: composeUnit(fields.unitAmount, fields.unitType),
       stock: Number(fields.stock),
-      // 비우면 목록·상세가 기본 이미지를 사용합니다.
-      imageUrl: fields.imageUrl.trim() || null,
+      // 수정에서 사진을 비울 때는 null이 '변경 없음'으로 해석되지 않도록 제거 의사를 따로 보냅니다.
+      ...(imageUrl ? { imageUrl } : isEdit ? { removeImageUrl: true } : { imageUrl: null }),
       description: fields.description.trim() || null,
       harvestDate: fields.harvestDate,
       productionLocation: fields.productionLocation,
@@ -181,6 +184,13 @@ export function ProductFormPage() {
       const result = isEdit
         ? await updateProduct(Number(productId), payload)
         : await createProduct(payload);
+      // 저장된 사진은 되돌린 선택일 수 있으므로 삭제 대상에서 빼고, 저장 성공 뒤에만 정리합니다.
+      const urlsToDelete = [...new Set(discardedUrls)].filter(
+        (url) => url !== result.imageUrl,
+      );
+      await Promise.all(
+        urlsToDelete.map((url) => deleteImage(url).catch(() => undefined)),
+      );
       navigate(ROUTES.productDetail(result.productId));
     } catch (caught) {
       setError(
@@ -390,6 +400,7 @@ export function ProductFormPage() {
         >
           <ProductImageUploader
             onChange={(imageUrl) => setField('imageUrl', imageUrl)}
+            onDiscard={(url) => setDiscardedUrls((prev) => [...prev, url])}
             value={fields.imageUrl}
           />
         </FormSection>

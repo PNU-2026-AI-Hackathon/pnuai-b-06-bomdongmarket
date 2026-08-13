@@ -18,7 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // 장바구니와 결제.
 // 실제 결제(PG)는 연동하지 않는다 — 사업자 등록이 필요해 데모 범위 밖이다.
@@ -93,7 +95,7 @@ public class OrderService {
     // 한 줄이라도 재고가 모자라면 전체를 되돌린다(부분 결제는 만들지 않는다).
     @Transactional
     public OrderResponse checkout(Long userId) {
-        List<CartItem> cartItems = cartItemRepository.findByUserIdOrderByCreatedAtAsc(userId);
+        List<CartItem> cartItems = cartItemRepository.findByUserIdForUpdate(userId);
         if (cartItems.isEmpty()) {
             throw new BusinessException(ErrorCode.CART_EMPTY);
         }
@@ -102,9 +104,21 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         Order order = new Order(buyer);
 
-        for (CartItem cartItem : cartItems) {
-            Product product = productRepository.findForUpdate(cartItem.getProduct().getId())
+        // 서로 다른 장바구니도 같은 상품들을 주문할 수 있어 잠금 순서를 고정해야 교착을 피할 수 있다.
+        List<Long> productIds = cartItems.stream()
+                .map(cartItem -> cartItem.getProduct().getId())
+                .distinct()
+                .sorted()
+                .toList();
+        Map<Long, Product> productsById = new HashMap<>();
+        for (Long productId : productIds) {
+            Product product = productRepository.findForUpdate(productId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+            productsById.put(productId, product);
+        }
+
+        for (CartItem cartItem : cartItems) {
+            Product product = productsById.get(cartItem.getProduct().getId());
             if (product.getStatus() != com.farmbroker.farmbroker.product.domain.ProductStatus.ON_SALE) {
                 throw new BusinessException(ErrorCode.PRODUCT_NOT_ON_SALE);
             }

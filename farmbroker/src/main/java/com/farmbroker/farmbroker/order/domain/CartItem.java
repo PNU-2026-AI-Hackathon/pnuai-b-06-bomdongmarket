@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "cart_items",
+        indexes = @Index(name = "idx_cart_item_user_id", columnList = "user_id"),
         uniqueConstraints = @UniqueConstraint(name = "uk_cart_user_product", columnNames = {"user_id", "product_id"})
 )
 @Getter

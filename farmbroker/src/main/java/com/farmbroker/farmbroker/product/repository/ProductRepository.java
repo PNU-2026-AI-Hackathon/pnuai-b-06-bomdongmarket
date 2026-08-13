@@ -18,8 +18,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 공개 상세 조회 — 삭제된 상품은 404 처리 대상
     Optional<Product> findByIdAndDeletedFalse(Long id);
 
-    // 결제 확정 전용 — 재고를 읽고 줄이는 사이 다른 주문이 끼어들면 재고가 음수가 될 수 있어
-    // 행을 잠근 뒤 검사·차감한다. 조회 경로에서는 쓰지 않는다.
+    // 재고 변경 전용 — 상품이 영속성 컨텍스트에 선로딩되지 않은 경로에서 행을 잠근 뒤 검사·차감해야
+    // 최신 재고를 기준으로 갱신할 수 있다. 조회 경로에서는 쓰지 않는다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Product p where p.id = :id and p.deleted = false")
     Optional<Product> findForUpdate(@Param("id") Long id);

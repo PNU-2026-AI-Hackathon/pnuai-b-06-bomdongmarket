@@ -16,6 +16,7 @@ import com.farmbroker.farmbroker.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,8 +28,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 // 장바구니·결제의 핵심 규칙을 검증한다.
 // DB 없이 돌도록 레포지토리는 목으로 대체한다(이 프로젝트는 H2 없이 MySQL만 쓴다).
@@ -76,7 +80,7 @@ class OrderServiceTest {
     @DisplayName("결제하면 담은 수량만큼 재고가 줄어든다")
     void checkout_reduces_stock() {
         Product product = product(1L, 4300, 10);
-        given(cartItemRepository.findByUserIdOrderByCreatedAtAsc(1L))
+        given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(product, 3)));
         given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(1L)).willReturn(Optional.of(product));
@@ -86,13 +90,15 @@ class OrderServiceTest {
         assertThat(product.getStock()).isEqualTo(7);
         assertThat(product.getStatus()).isEqualTo(ProductStatus.ON_SALE);
         assertThat(response.getTotalPrice()).isEqualTo(12_900);
+        verify(cartItemRepository).findByUserIdForUpdate(1L);
+        verify(cartItemRepository, never()).findByUserIdOrderByCreatedAtAsc(anyLong());
     }
 
     @Test
     @DisplayName("재고를 모두 사면 판매 마감으로 바뀌어 공개 목록에서 빠진다")
     void checkout_closes_product_when_stock_hits_zero() {
         Product product = product(1L, 4300, 3);
-        given(cartItemRepository.findByUserIdOrderByCreatedAtAsc(1L))
+        given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(product, 3)));
         given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(1L)).willReturn(Optional.of(product));
@@ -108,7 +114,7 @@ class OrderServiceTest {
     @DisplayName("재고보다 많이 결제하려 하면 막고 재고를 건드리지 않는다")
     void checkout_rejects_when_stock_is_short() {
         Product product = product(1L, 4300, 2);
-        given(cartItemRepository.findByUserIdOrderByCreatedAtAsc(1L))
+        given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(product, 5)));
         given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(1L)).willReturn(Optional.of(product));
@@ -122,11 +128,32 @@ class OrderServiceTest {
     @Test
     @DisplayName("빈 장바구니로는 결제할 수 없다")
     void checkout_rejects_empty_cart() {
-        given(cartItemRepository.findByUserIdOrderByCreatedAtAsc(1L)).willReturn(List.of());
+        given(cartItemRepository.findByUserIdForUpdate(1L)).willReturn(List.of());
 
         assertThatThrownBy(() -> orderService.checkout(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CART_EMPTY);
+    }
+
+    @Test
+    @DisplayName("결제 전 상품 잠금을 상품 ID 오름차순으로 획득한다")
+    void checkout_locks_products_in_id_order() {
+        Product later = product(20L, 4300, 10);
+        Product earlier = product(10L, 2500, 10);
+        given(cartItemRepository.findByUserIdForUpdate(1L))
+                .willReturn(List.of(cartItem(later, 1), cartItem(earlier, 1)));
+        given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(earlier));
+        given(productRepository.findForUpdate(20L)).willReturn(Optional.of(later));
+
+        OrderResponse response = orderService.checkout(1L);
+
+        InOrder lockOrder = inOrder(productRepository);
+        lockOrder.verify(productRepository).findForUpdate(10L);
+        lockOrder.verify(productRepository).findForUpdate(20L);
+        assertThat(response.getItems())
+                .extracting(OrderResponse.OrderLine::getProductId)
+                .containsExactly(20L, 10L);
     }
 
     @Test

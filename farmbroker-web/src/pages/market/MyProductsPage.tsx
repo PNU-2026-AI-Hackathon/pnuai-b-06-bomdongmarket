@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ProductImage } from '@/pages/market/components/ProductImage';
 import { ROUTES } from '@/constants/routes';
-import { deleteProduct, getMyProducts } from '@/services/marketService';
+import { deleteProduct, getMyProducts, updateProduct } from '@/services/marketService';
 import type { MarketItem } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -24,6 +24,7 @@ export function MyProductsPage() {
   const [items, setItems] = useState<MarketItem[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [resumingId, setResumingId] = useState<number | null>(null);
   // 삭제는 화면에서 되돌릴 수 없어(서버는 소프트 삭제지만 복구 화면이 없다) 한 번 더 확인받습니다.
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,19 @@ export function MyProductsPage() {
       setError(caught instanceof Error ? caught.message : '상품 삭제에 실패했습니다.');
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleResume(productId: number) {
+    setResumingId(productId);
+    setError(null);
+    try {
+      await updateProduct(productId, { status: 'ON_SALE' });
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '판매 재개에 실패했습니다.');
+    } finally {
+      setResumingId(null);
     }
   }
 
@@ -158,6 +172,17 @@ export function MyProductsPage() {
                       <Pencil className="h-4 w-4" aria-hidden />
                       수정
                     </Link>
+                    {item.status === 'CLOSED' && item.stock > 0 ? (
+                      <Button
+                        disabled={resumingId === item.productId}
+                        onClick={() => handleResume(item.productId)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <RotateCcw className="h-4 w-4" aria-hidden />
+                        {resumingId === item.productId ? '재개 중...' : '판매 재개'}
+                      </Button>
+                    ) : null}
                     <Button
                       onClick={() => setConfirmingId(item.productId)}
                       size="sm"

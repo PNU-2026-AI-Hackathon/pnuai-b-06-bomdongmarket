@@ -15,6 +15,7 @@ import java.util.List;
 // 문자열 필드는 null이면 '변경 없음'이지만, 값을 보낼 때는 빈/공백 문자열을 허용하지 않는다(@NullOrNotBlank).
 // events가 오면 기존 이력을 전량 교체한다(비어 있는 배열이면 이력 전부 삭제).
 // status는 'ON_SALE' / 'CLOSED' 문자열.
+// removeImageUrl=true는 기존 대표 사진을 명시적으로 비우며 imageUrl과 함께 보낼 수 없다.
 @Getter
 @NoArgsConstructor
 public class ProductUpdateRequest {
@@ -38,6 +39,8 @@ public class ProductUpdateRequest {
     @NullOrNotBlank(message = "이미지 URL은 공백일 수 없습니다.")
     @Size(max = 500, message = "이미지 URL은 500자 이하여야 합니다.")
     private String imageUrl;
+
+    private Boolean removeImageUrl;
 
     private String description;
 

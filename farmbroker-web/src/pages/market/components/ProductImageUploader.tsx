@@ -5,7 +5,6 @@ import { RemoteImage } from '@/components/common/RemoteImage';
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_SIZE_BYTES,
-  deleteImage,
   isAcceptedImage,
   uploadImages,
 } from '@/services/fileService';
@@ -14,6 +13,7 @@ import { formatNumber } from '@/utils/format';
 interface ProductImageUploaderProps {
   value: string;
   onChange: (imageUrl: string) => void;
+  onDiscard: (url: string) => void;
 }
 
 const MAX_IMAGE_SIZE_MB = MAX_IMAGE_SIZE_BYTES / 1024 / 1024;
@@ -21,7 +21,7 @@ const MAX_IMAGE_SIZE_MB = MAX_IMAGE_SIZE_BYTES / 1024 / 1024;
 // 상품 대표 사진을 로컬 파일에서 바로 올립니다.
 // 공간 등록(SpaceImageUploader)과 같은 fileService를 쓰지만, 상품은 imageUrl이 한 장이라
 // 여러 장 배열 대신 단일 문자열을 주고받고 새 파일을 고르면 이전 사진을 교체합니다.
-export function ProductImageUploader({ value, onChange }: ProductImageUploaderProps) {
+export function ProductImageUploader({ value, onChange, onDiscard }: ProductImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -41,9 +41,7 @@ export function ProductImageUploader({ value, onChange }: ProductImageUploaderPr
     setError(null);
     try {
       const [uploaded] = await uploadImages([file]);
-      // 교체할 때 이전 사진이 서버에 고아로 남지 않도록 함께 지웁니다.
-      // 삭제가 실패해도 새 사진은 이미 올라갔으므로 등록 자체를 막지는 않습니다.
-      if (value) await deleteImage(value).catch(() => undefined);
+      if (value) onDiscard(value);
       onChange(uploaded.url);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '사진을 올리지 못했습니다.');
@@ -66,11 +64,10 @@ export function ProductImageUploader({ value, onChange }: ProductImageUploaderPr
     if (file) void upload(file);
   }
 
-  async function handleRemove() {
-    const removed = value;
+  function handleRemove() {
+    if (value) onDiscard(value);
     onChange('');
     setError(null);
-    await deleteImage(removed).catch(() => undefined);
   }
 
   return (
@@ -95,7 +92,7 @@ export function ProductImageUploader({ value, onChange }: ProductImageUploaderPr
           <button
             aria-label="대표 사진 삭제"
             className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/50 text-white transition duration-ui hover:bg-ink-900/70"
-            onClick={() => void handleRemove()}
+            onClick={handleRemove}
             type="button"
           >
             <X className="h-5 w-5" aria-hidden />

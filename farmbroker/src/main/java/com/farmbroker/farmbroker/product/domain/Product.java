@@ -58,7 +58,7 @@ public class Product {
     @Column(nullable = false, length = 20)
     private String unit;
 
-    // 재고 — 주문/결제가 없으므로 정보성 값이다(구매로 차감되지 않는다).
+    // 재고 — 결제 확정 시 차감되며 0이 되면 판매 마감으로 전환된다.
     @Column(nullable = false)
     private Integer stock;
 
@@ -161,6 +161,10 @@ public class Product {
 
     public void softDelete() {
         this.deleted = true;
+    }
+
+    public void clearImageUrl() {
+        this.imageUrl = null;
     }
 
     // 결제 확정 시 재고를 줄인다. 재고가 0이 되면 더 팔 수 없으므로 판매 마감으로 바꾼다

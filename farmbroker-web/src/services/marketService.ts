@@ -5,6 +5,11 @@ import { mockDelay } from '@/mocks/handlers';
 import { mockMarketItems } from '@/mocks/mockMarketItems';
 import type { MarketItem, ProductInput } from '@/types/api';
 
+export type ProductUpdateInput = Partial<ProductInput> & {
+  removeImageUrl?: boolean;
+  status?: 'ON_SALE' | 'CLOSED';
+};
+
 // 로컬마켓 상품 API.
 // 조회(GET /products, /products/{id})에 이어 판매자용 등록·수정·삭제·내 상품 조회를 연결한다.
 // 백엔드 계약: 인증 사용자 누구나 등록, category는 한글 라벨, '작업장에서 가져오기'는 GET /spaces/my 로 프리필.
@@ -158,15 +163,31 @@ export async function createProduct(input: ProductInput): Promise<MarketItem> {
 
 export async function updateProduct(
   productId: number,
-  input: ProductInput,
+  input: ProductUpdateInput,
 ): Promise<MarketItem> {
   if (USE_MOCKS) {
     await mockDelay();
     const index = mockStore.findIndex((product) => product.productId === productId);
     if (index === -1) throw new Error('상품을 찾을 수 없습니다');
-    mockStore[index] = toMockProduct(input, productId);
+    const current = mockStore[index]!;
+    const { events, removeImageUrl, ...patch } = input;
+    const updated: MarketItem = {
+      ...current,
+      ...patch,
+      imageUrl: removeImageUrl ? null : (input.imageUrl ?? current.imageUrl),
+      traceabilityEvents: events
+        ? events.map((event, eventIndex) => ({
+            eventId: eventIndex + 1,
+            stage: event.stage,
+            description: event.description ?? null,
+            occurredAt: event.occurredAt,
+            sortOrder: event.sortOrder ?? eventIndex,
+          }))
+        : current.traceabilityEvents,
+    };
+    mockStore[index] = updated;
     persistMockStore();
-    return mockStore[index];
+    return updated;
   }
 
   const response = await apiRequest<MarketItem>(ENDPOINTS.products.detail(productId), {
