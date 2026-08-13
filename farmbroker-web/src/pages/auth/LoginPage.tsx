@@ -8,6 +8,7 @@ import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { APP_INFO } from '@/constants/appInfo';
 import { ROUTES } from '@/constants/routes';
 import { useLoginForm } from '@/pages/auth/hooks/useLoginForm';
 
@@ -45,7 +46,7 @@ export function LoginPage() {
           align="center"
           description="계정 정보를 입력하면 확인된 권한으로 서비스를 이용할 수 있습니다."
           eyebrow="Welcome back"
-          title="봄동마켓 로그인"
+          title={`${APP_INFO.name} 로그인`}
         />
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">
@@ -103,7 +104,7 @@ export function LoginPage() {
             </Button>
           </form>
           <p className="mt-5 text-center text-sm text-slate-600">
-            봄동마켓이 처음이신가요?{' '}
+            {APP_INFO.name}가 처음이신가요?{' '}
             <Link
               className="rounded-sm font-bold text-leaf-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 focus-visible:ring-offset-2"
               to={ROUTES.signup}

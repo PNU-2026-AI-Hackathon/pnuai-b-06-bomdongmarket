@@ -32,3 +32,5 @@ export function Badge({ children, className, tone = 'green', ...props }: BadgePr
     </span>
   );
 }
+
+export type { BadgeTone };

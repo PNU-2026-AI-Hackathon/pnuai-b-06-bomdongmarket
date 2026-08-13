@@ -3,6 +3,7 @@ import type { FocusEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { buttonStyles } from '@/components/common/buttonStyles';
+import { APP_INFO } from '@/constants/appInfo';
 import { campaignSlides } from '@/pages/home/constants/homeContent';
 import { useAutoCarousel } from '@/pages/home/hooks/useAutoCarousel';
 
@@ -27,7 +28,7 @@ export function CampaignCarousel() {
 
   return (
     <section
-      aria-label="봄동마켓 캠페인"
+      aria-label={`${APP_INFO.name} 캠페인`}
       aria-roledescription="carousel"
       className="relative overflow-hidden bg-ink-900 text-white"
       onBlurCapture={handleBlur}

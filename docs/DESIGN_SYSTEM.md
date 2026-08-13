@@ -1,8 +1,20 @@
-# 봄동마켓 디자인 시스템
+# FarmBroker 디자인 시스템
 
 ## 기반 원칙
 
-봄동마켓은 도심 스마트팜의 순환과 신뢰를 표현하는 농업형 서비스다. 기존 코드의 짙은 `leaf` CTA, 따뜻한 `soil` 강조, 보조 정보의 `skyfarm`, 높은 가독성의 `ink`, 옅은 녹색·베이지 배경 그라데이션을 브랜드 기반으로 유지한다.
+FarmBroker는 도심 스마트팜의 순환과 신뢰를 표현하는 농업형 서비스다. 기존 코드의 짙은 `leaf` CTA, 따뜻한 `soil` 강조, 보조 정보의 `skyfarm`, 높은 가독성의 `ink`, 옅은 녹색·베이지 배경 그라데이션을 브랜드 기반으로 유지한다.
+
+## 브랜드 자산
+
+| 자산        | 경로                                                | 용도                              |
+| ----------- | --------------------------------------------------- | --------------------------------- |
+| 심벌        | `farmbroker-web/public/brand/farmbroker-symbol.png` | 파비콘, 좁은 헤더, 아이콘형 노출  |
+| 가로형 로고 | `farmbroker-web/public/brand/farmbroker-lockup.svg` | 문서, 소개 자료, 넓은 브랜드 영역 |
+
+- 제품명 표기는 공백 없는 `FarmBroker`로 통일한다.
+- 심벌은 투명 배경 PNG 원본을 사용하고 비율을 바꾸거나 별도의 조명·배경 효과를 다시 적용하지 않는다.
+- 가로형 로고는 같은 디렉터리의 심벌 PNG를 참조하므로 배포하거나 복사할 때 두 파일을 함께 유지한다.
+- 앱 안에서 제품명을 텍스트로 조합할 때는 `APP_INFO.name`을 사용한다.
 
 이 문서는 새 시각 취향을 추가하는 명세가 아니다. `tailwind.config.ts`, `src/styles/index.css`, 공통 컴포넌트, 12개 현재 화면에서 반복되는 규칙을 이름 붙인 현재 상태의 계약이다. primitive 팔레트는 호환성을 위해 유지하되 신규 공통 UI와 마이그레이션 화면은 semantic token을 우선한다.
 
@@ -130,12 +142,31 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - 반응형: 모바일 세로 배치, 기본 `sm` 이상에서 제목과 action을 양끝 정렬한다. 긴 목록 제목은 `actionBreakpoint="lg"`로 충돌을 피한다.
 - 접근성: 내부 title은 h1이다. 한 페이지에서 한 번만 사용한다.
 
+### ConfirmDialog
+
+- 목적: 되돌리기 어려운 action 직전에 한 번 더 의사를 확인한다. 알림·폼·상세 표시용 modal이 아니다.
+- slot: `title`(질문 문장), 선택 `description`(결과와 복구 경로), `confirmLabel`, 선택 `cancelLabel`(기본 `닫기`)
+- tone: 기본 `default`. 신청 취소처럼 되돌릴 수 없는 결과에는 `danger`를 써서 확인 버튼을 `Button variant="danger"`로 바꾼다.
+- 상태: `isPending` 동안 확인·닫기 버튼과 Escape를 모두 막아 요청이 뜬 채로 닫히지 않게 한다.
+- 열림 상태는 컴포넌트가 갖지 않는다. 호출부가 `useDisclosure`로 들고 `isOpen`/`onCancel`을 내려준다.
+- 접근성: `role="dialog"` + `aria-modal`, `title`/`description`을 `aria-labelledby`/`aria-describedby`로 연결한다. 열릴 때 확인 버튼으로 포커스를 옮기고, Escape와 backdrop 클릭은 취소로 처리한다. 열려 있는 동안 body 스크롤을 잠근다.
+- 확인 팝업이 필요한지 먼저 판단한다. 되돌리기 쉬운 action에 습관적으로 붙이면 사용자가 팝업을 읽지 않고 넘기게 된다.
+
 ### LoadingState, EmptyState, ErrorState
 
 - `LoadingState`: `role="status"`와 현재 작업을 설명하는 문구를 제공한다. spinner는 장식으로 숨긴다.
 - `EmptyState`: 무엇이 비어 있는지와 필터 조정 등 다음 행동을 함께 쓴다.
 - `ErrorState`: `role="alert"` 성격의 오류 문구와 가능한 경우 다시 시도 action을 제공한다.
 - 상태 컴포넌트를 동시에 둘 이상 렌더링하지 않는다.
+
+### 외부 검색으로 채우는 필드 (AddressField, SpaceLocationMap)
+
+- 목적: 외부 데이터로만 값이 확정되는 입력. 첫 사례는 공간 등록의 주소(카카오 우편번호 API)다.
+- 구성: 검색으로만 채우는 `readOnly` Input + 검색 Button + 검색 결과에 없는 나머지를 받는 보조 Input + 결과 미리보기.
+- 정렬: 검색 Button은 Input의 label 높이(`mt-7`)만큼 내려 입력칸과 윗변을 맞춘다. `items-end`는 helper/error 높이에 따라 흔들려 쓰지 않는다.
+- 검증: `readOnly` 필드는 브라우저 `required`가 걸리지 않으므로 제출 시점에 상위 폼이 직접 막고 `errorMessage`로 이유를 밝힌다.
+- 미리보기: 결과 확인용 지도·이미지는 필드 바로 아래에 두고, 값이 없으면 렌더하지 않는다. 외부 SDK 키가 없거나 로드에 실패해도 안내 문구로 대체하고 폼 자체는 끝까지 동작해야 한다.
+- 접근성: 지도 캔버스는 `aria-hidden`으로 숨기고 같은 정보를 텍스트로 함께 제공한다. 로딩은 `LoadingState`(`role="status"`), 실패는 `role="alert"` 문구와 다시 시도 Button으로 알린다.
 
 ## 사용 규칙
 
@@ -165,6 +196,7 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 | Input                                          | 규격화         | 생성 ID와 공통 field style 적용         |
 | Select                                         | 신규 규격      | `/spaces`에서 시험                      |
 | Textarea                                       | 신규 규격      | 등록 메모·URL·매칭 메시지에 적용        |
+| ConfirmDialog                                  | 신규 규격      | 매칭 신청·신청 취소 확인에 적용         |
 | PageHeader                                     | 확장 적용      | 목록·폼·인증 정렬과 action breakpoint   |
 | LoadingState                                   | 규격화         | spinner를 보조기술에서 숨김             |
 | 공간 목록 `/spaces`                            | 시험 적용 완료 | 대표 화면                               |

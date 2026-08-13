@@ -21,9 +21,13 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
     // 내가 farmer로서 신청한 목록 — 공간 정보는 getSummariesByIds(공간 계약) 배치로 별도 조회
     List<Matching> findAllByFarmerIdOrderByCreatedAtDesc(Long farmerId);
 
-    // 내가 owner인 공간들에 들어온 신청 목록
+    // 특정 공간에 대한 내 신청만 — 신청 상세 화면(/spaces/{id}/apply)이 전체 목록을 받지 않도록
+    List<Matching> findAllByFarmerIdAndSpaceIdOrderByCreatedAtDesc(Long farmerId, Long spaceId);
+
+    // 내가 owner인 공간들에 들어온 신청 목록.
+    // 소유자가 치운 건은 제외한다 — 목록과 대시보드 '받은 신청' 수가 이 쿼리 하나로 함께 맞춰진다.
     @Query("SELECT m FROM Matching m JOIN FETCH m.space s JOIN FETCH m.farmer " +
-            "WHERE s.owner.id = :ownerId ORDER BY m.createdAt DESC")
+            "WHERE s.owner.id = :ownerId AND m.ownerDismissedAt IS NULL ORDER BY m.createdAt DESC")
     List<Matching> findAllReceivedByOwnerId(@Param("ownerId") Long ownerId);
 
     // 수락 트랜잭션 마지막 단계: 같은 공간의 나머지 REQUESTED 신청을 벌크로 자동 거절.

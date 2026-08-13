@@ -25,10 +25,16 @@ export const ENDPOINTS = {
   },
   matchings: {
     create: '/matchings',
-    myRequests: '/matchings/my-requests',
+    // spaceId를 주면 해당 공간에 보낸 내 신청만 — 신청 상세 화면이 목록 전체를 받지 않도록.
+    myRequests: (spaceId?: number) =>
+      spaceId === undefined
+        ? '/matchings/my-requests'
+        : `/matchings/my-requests?spaceId=${spaceId}`,
     received: '/matchings/received',
     accept: (matchingId: number | string) => `/matchings/${matchingId}/accept`,
     reject: (matchingId: number | string) => `/matchings/${matchingId}/reject`,
+    cancel: (matchingId: number | string) => `/matchings/${matchingId}/cancel`,
+    dismiss: (matchingId: number | string) => `/matchings/${matchingId}/dismiss`,
   },
   crops: {
     list: '/crops',

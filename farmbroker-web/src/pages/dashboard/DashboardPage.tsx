@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
 import { hasRole } from '@/auth/roles';
+import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -10,8 +11,13 @@ import { ROUTES } from '@/constants/routes';
 import { ContractCard } from '@/pages/dashboard/components/ContractCard';
 import { MatchingRequestCard } from '@/pages/dashboard/components/MatchingRequestCard';
 import { MetricCard } from '@/pages/dashboard/components/MetricCard';
-import { SentMatchingResults } from '@/pages/dashboard/components/SentMatchingResults';
 import { useDashboard } from '@/pages/dashboard/hooks/useDashboard';
+import type { DashboardMetricId } from '@/types/api';
+
+// 요약 카드에서 같은 페이지의 상세 섹션으로 내려가는 앵커입니다.
+// 대상은 아래 각 section의 heading id이며, 없는 지표(등록 공간)는 링크로 만들지 않습니다.
+const RECEIVED_ANCHOR = '#received-matchings-title';
+const SENT_ANCHOR = '#my-applications-title';
 
 // 로그인 이후의 홈 대시보드로, 소유자 관점의 요약과 신청 검토 흐름을 제공합니다.
 export function DashboardPage() {
@@ -19,7 +25,6 @@ export function DashboardPage() {
   const {
     metrics,
     matchings,
-    sentMatchings,
     contracts,
     status,
     error,
@@ -27,9 +32,14 @@ export function DashboardPage() {
     updatingMatchingId,
     reload,
     respondToMatching,
+    dismissMatching,
   } = useDashboard();
   const isOwner = hasRole(user, 'OWNER');
-  const isFarmer = hasRole(user, 'FARMER');
+  // 받은 신청 섹션은 OWNER에게만 렌더되므로, 그 외에는 갈 곳 없는 링크를 만들지 않습니다.
+  const metricAnchors: Partial<Record<DashboardMetricId, string>> = {
+    received: isOwner ? RECEIVED_ANCHOR : undefined,
+    sent: SENT_ANCHOR,
+  };
 
   return (
     <PageContainer>
@@ -82,7 +92,11 @@ export function DashboardPage() {
         <>
           <section className="mt-6 grid gap-4 md:grid-cols-3" aria-label="요약 카드">
             {metrics.map((metric) => (
-              <MetricCard key={metric.label} metric={metric} />
+              <MetricCard
+                href={metricAnchors[metric.id]}
+                key={metric.id}
+                metric={metric}
+              />
             ))}
           </section>
 
@@ -108,61 +122,48 @@ export function DashboardPage() {
             </div>
           </section>
 
-          {isFarmer ? (
-            <section className="mt-8" aria-labelledby="sent-matchings-title">
-              <h2 id="sent-matchings-title" className="text-2xl font-black text-ink-900">
-                농장 매칭 신청
+          {isOwner ? (
+            <section className="mt-8" aria-labelledby="received-matchings-title">
+              <h2
+                id="received-matchings-title"
+                className="text-2xl font-black text-ink-900"
+              >
+                받은 매칭 신청
               </h2>
-              <div className="mt-4">
-                <SentMatchingResults matchings={sentMatchings} />
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                {matchings.map((request) => (
+                  <MatchingRequestCard
+                    isUpdating={updatingMatchingId === request.matchingId}
+                    key={request.matchingId}
+                    onAccept={() => void respondToMatching(request.matchingId, 'accept')}
+                    onDismiss={() => void dismissMatching(request.matchingId)}
+                    onReject={() => void respondToMatching(request.matchingId, 'reject')}
+                    request={request}
+                  />
+                ))}
               </div>
             </section>
           ) : null}
-          {isOwner ? (
-            <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-              <section aria-labelledby="received-matchings-title">
-                <h2
-                  id="received-matchings-title"
-                  className="text-2xl font-black text-ink-900"
-                >
-                  받은 매칭 신청
-                </h2>
-                <div className="mt-4 grid gap-4">
-                  {matchings.map((request) => (
-                    <MatchingRequestCard
-                      isUpdating={updatingMatchingId === request.matchingId}
-                      key={request.matchingId}
-                      onAccept={() =>
-                        void respondToMatching(request.matchingId, 'accept')
-                      }
-                      onReject={() =>
-                        void respondToMatching(request.matchingId, 'reject')
-                      }
-                      request={request}
-                    />
-                  ))}
-                </div>
-              </section>
-              <section aria-labelledby="contract-preview-title">
-                <div className="flex items-center justify-between gap-3">
-                  <h2
-                    id="contract-preview-title"
-                    className="text-2xl font-black text-ink-900"
-                  >
-                    계약
-                  </h2>
-                  <Link className="text-sm font-bold text-leaf-700" to={ROUTES.contracts}>
-                    전체 보기
-                  </Link>
-                </div>
-                <div className="mt-4 grid gap-4">
-                  {contracts.slice(0, 2).map((contract) => (
-                    <ContractCard contract={contract} key={contract.contractId} />
-                  ))}
-                </div>
-              </section>
+
+          {/* 신청은 역할과 무관하게 누구나 보낼 수 있으므로 이 섹션은 항상 보여줍니다.
+              여기가 보낸 신청을 볼 수 있는 유일한 목록이라 일부만 잘라 보여주지 않습니다. */}
+          <section className="mt-8" aria-labelledby="my-applications-title">
+            <h2 id="my-applications-title" className="text-2xl font-black text-ink-900">
+              내 신청
+            </h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {contracts.length === 0 ? (
+                <EmptyState
+                  description="관심 있는 공간의 상세 화면에서 매칭 상담을 신청해보세요."
+                  title="보낸 매칭 신청이 없습니다"
+                />
+              ) : (
+                contracts.map((contract) => (
+                  <ContractCard contract={contract} key={contract.contractId} />
+                ))
+              )}
             </div>
-          ) : null}
+          </section>
         </>
       ) : null}
     </PageContainer>

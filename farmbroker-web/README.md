@@ -1,6 +1,6 @@
-# Bomdong Market Web
+# FarmBroker Web
 
-React + TypeScript + Vite frontend for the Bomdong Market hackathon demo. The app translates the mobile-first wireframe into a responsive web experience for space owners, urban farmers, and local consumers.
+React + TypeScript + Vite frontend for the FarmBroker hackathon demo. The app translates the mobile-first wireframe into a responsive web experience for space owners, urban farmers, and local consumers.
 
 ## Implemented Screens
 
@@ -42,6 +42,12 @@ src/
 - Authentication/user, spaces, crops, AI recommendations, and matchings use the Spring API at `http://localhost:8080/api` by default.
 - Market/product data remain mocked because those endpoints are not present in the current Swagger document. Contract cards are derived from matching responses for the same reason.
 - Copy `.env.example` to `.env` to change `VITE_API_BASE_URL` or set `VITE_USE_MOCKS=true` for an offline UI demo.
+
+### Kakao Address Search And Map
+
+- Space registration fills the address only from the Kakao postcode popup, so typos and non-existent addresses cannot be submitted. The postcode script needs no key.
+- The map preview under the address field needs a Kakao Developers **JavaScript key** in `VITE_KAKAO_MAP_APP_KEY`, with the running origin (for example `http://localhost:5173`) registered under 플랫폼 > Web.
+- Without the key the address search and the whole registration flow still work; only the map area falls back to a short notice.
 
 ```bash
 cp .env.example .env
