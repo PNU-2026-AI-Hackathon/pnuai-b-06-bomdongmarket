@@ -2,6 +2,8 @@ package com.farmbroker.farmbroker.profit.kamis;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.ZoneId;
+
 // KAMIS(공공데이터포털 일별 도·소매 가격정보) 수집 설정.
 // 어떤 값을 대표 시세로 삼을지는 협의 중이라(#66) 코드에 박지 않고 설정으로 뺀다.
 @ConfigurationProperties(prefix = "kamis")
@@ -20,7 +22,9 @@ public record KamisProperties(
         int freshnessDays,
         // 한 번 수집할 때 거슬러 올라가 볼 일수. 주말·공휴일에는 조사가 없어 여유를 둔다.
         int lookbackDays,
-        boolean enabled
+        boolean enabled,
+        // 서버 기본 시간대가 달라도 스케줄·조회일·수집시각이 같은 날짜 기준을 쓰게 한다.
+        String timezone
 ) {
     public KamisProperties {
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -30,9 +34,22 @@ public record KamisProperties(
         if (grade == null || grade.isBlank()) grade = "상품";
         if (freshnessDays <= 0) freshnessDays = 7;
         if (lookbackDays <= 0) lookbackDays = 14;
+        if (timezone == null || timezone.isBlank()) timezone = "Asia/Seoul";
+        // 잘못된 존 이름은 기동 시점에 바로 드러나야 한다 — 새벽 배치에서 처음 터지면 찾기 어렵다.
+        ZoneId.of(timezone);
+    }
+
+    // 기존 생성 경로도 환경 설정과 같은 기본값으로 동작하도록 위임한다.
+    public KamisProperties(String serviceKey, String baseUrl, String saleType, String region, String grade,
+                           int freshnessDays, int lookbackDays, boolean enabled) {
+        this(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled, "Asia/Seoul");
     }
 
     public boolean usable() {
         return enabled && serviceKey != null && !serviceKey.isBlank();
+    }
+
+    public ZoneId zone() {
+        return ZoneId.of(timezone);
     }
 }

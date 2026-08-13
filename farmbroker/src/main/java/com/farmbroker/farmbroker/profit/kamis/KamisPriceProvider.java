@@ -35,6 +35,6 @@ public class KamisPriceProvider implements MarketPriceProvider {
     }
 
     private boolean isStale(LocalDate surveyedOn) {
-        return surveyedOn.isBefore(LocalDate.now().minusDays(properties.freshnessDays()));
+        return surveyedOn.isBefore(LocalDate.now(properties.zone()).minusDays(properties.freshnessDays()));
     }
 }

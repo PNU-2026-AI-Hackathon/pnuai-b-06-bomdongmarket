@@ -48,6 +48,8 @@ gemini:
 kamis:
   service-key: "${KAMIS_SERVICE_KEY:}"
   base-url: "${KAMIS_BASE_URL:https://apis.data.go.kr/B552845/perDay/price}"
+  # 스케줄·조회일·수집시각이 서버 기본 시간대에 흔들리지 않도록 명시한다.
+  timezone: "${KAMIS_TIMEZONE:Asia/Seoul}"
   # 01 소매 / 02 중도매. 소매가는 유통마진이 붙어 재배자가 넘기는 값과 다르다.
   sale-type: "${KAMIS_SALE_TYPE:02}"
   # 시군구명. 비우면 전국 — 지역을 좁히면 하루 1건만 잡히는 작물이 있다.

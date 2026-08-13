@@ -27,9 +27,11 @@ public class KamisPriceCollector {
 
     // 매일 새벽 4시. KAMIS 조사 결과가 전날 오후에 올라오므로 그 이후 시간대로 둔다.
     // 주기를 설정으로 뺀 이유 — 배포 후 수집이 실제로 도는지 확인하려면 4시까지 기다릴 수 없다.
-    @Scheduled(cron = "${kamis.cron:0 0 4 * * *}")
+    @Scheduled(cron = "${kamis.cron:0 0 4 * * *}", zone = "${kamis.timezone:Asia/Seoul}")
     public void collectDaily() {
-        collect(LocalDate.now());
+        // zone 지정만으로는 부족하다 — 04:00 KST는 UTC로 전날 19:00이라
+        // LocalDate.now()가 하루 전을 돌려주고 조회 상한이 밀린다.
+        collect(LocalDate.now(properties.zone()));
     }
 
     @Transactional
@@ -58,7 +60,7 @@ public class KamisPriceCollector {
     }
 
     private void save(String cropName, KamisPriceClient.DailyPrice price) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(properties.zone());
         snapshotRepository.findByCropName(cropName)
                 .ifPresentOrElse(
                         snapshot -> snapshot.refresh(
