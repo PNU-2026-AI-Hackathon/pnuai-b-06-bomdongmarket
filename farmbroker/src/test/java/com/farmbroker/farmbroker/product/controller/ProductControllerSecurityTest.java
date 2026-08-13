@@ -5,6 +5,7 @@ import com.farmbroker.farmbroker.security.AuthCookieProvider;
 import com.farmbroker.farmbroker.security.JwtAuthenticationFilter;
 import com.farmbroker.farmbroker.security.JwtTokenProvider;
 import com.farmbroker.farmbroker.security.SecurityConfig;
+import com.farmbroker.farmbroker.user.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class ProductControllerSecurityTest {
 
     @MockitoBean
     private ProductService productService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("상품 목록은 비로그인으로 조회할 수 있다")
@@ -93,6 +97,7 @@ class ProductControllerSecurityTest {
     @DisplayName("인증 쿠키가 있으면 상품을 등록할 수 있다(201)")
     void createWithCookieSucceeds() throws Exception {
         given(productService.create(any(), any())).willReturn(null);
+        given(userRepository.existsByIdAndWithdrawnAtIsNull(1L)).willReturn(true);
         String token = jwtTokenProvider.generateToken(1L);
 
         mockMvc.perform(post("/products")

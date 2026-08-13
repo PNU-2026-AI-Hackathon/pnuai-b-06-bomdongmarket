@@ -42,6 +42,7 @@ public enum ErrorCode {
     MATCHING_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 신청입니다."),
     MATCHING_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 매칭에 대한 권한이 없습니다."),
     MATCHING_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 매칭 신청입니다."),
+    MATCHING_NOT_PROCESSED(HttpStatus.CONFLICT, "아직 응답하지 않은 매칭 신청입니다."),
     MATCHING_DUPLICATED(HttpStatus.CONFLICT, "이미 신청한 공간입니다."),
     MATCHING_SELF_APPLY(HttpStatus.BAD_REQUEST, "본인 소유 공간에는 신청할 수 없습니다."),
 

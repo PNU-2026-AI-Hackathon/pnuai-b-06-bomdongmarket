@@ -1,6 +1,7 @@
 package com.farmbroker.farmbroker.matching.service;
 
 import com.farmbroker.farmbroker.matching.domain.Matching;
+import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.matching.repository.MatchingParticipantProjection;
@@ -133,6 +134,7 @@ class MatchingServiceRoleTest {
                 .space(spaceStub())
                 .farmer(applicant)
                 .message("여기서 상추를 키우고 싶습니다.")
+                .type(MatchingType.PROFIT)
                 .build();
         setField(matching, "id", MATCHING_ID);
         setField(matching, "createdAt", LocalDateTime.now());
@@ -163,7 +165,7 @@ class MatchingServiceRoleTest {
         try {
             return new ObjectMapper().readValue(
                     """
-                    { "spaceId": %d, "message": "여기서 상추를 키우고 싶습니다." }
+                    { "spaceId": %d, "type": "PROFIT", "message": "여기서 상추를 키우고 싶습니다." }
                     """.formatted(SPACE_ID),
                     MatchingApplyRequest.class
             );

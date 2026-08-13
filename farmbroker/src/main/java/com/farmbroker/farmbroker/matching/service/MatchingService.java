@@ -70,6 +70,7 @@ public class MatchingService {
                 .space(entityManager.getReference(Space.class, space.getId()))
                 .farmer(farmer)
                 .message(request.getMessage())
+                .type(request.getType())
                 .build();
         matchingRepository.save(matching);
 
@@ -79,8 +80,11 @@ public class MatchingService {
     // 내가 farmer로서 신청한 목록. 공간 정보(제목/대표이미지/월세/소유자 닉네임)는
     // 매칭 건마다 단건 조회하면 N+1이 발생하므로 getSummariesByIds 배치 호출 1번으로 채운다.
     // 삭제된 공간도 Summary가 반환되므로(백엔드 2 계약) 이력에 그대로 노출된다.
-    public List<MyMatchingResponse> getMyRequests(Long userId) {
-        List<Matching> matchings = matchingRepository.findAllByFarmerIdOrderByCreatedAtDesc(userId);
+    // spaceId를 주면 해당 공간 건만 — 신청 상세 화면이 목록 전체를 받아 걸러내지 않도록 한다.
+    public List<MyMatchingResponse> getMyRequests(Long userId, Long spaceId) {
+        List<Matching> matchings = spaceId == null
+                ? matchingRepository.findAllByFarmerIdOrderByCreatedAtDesc(userId)
+                : matchingRepository.findAllByFarmerIdAndSpaceIdOrderByCreatedAtDesc(userId, spaceId);
         if (matchings.isEmpty()) {
             return List.of();
         }
@@ -104,8 +108,8 @@ public class MatchingService {
                 .toList();
     }
 
-    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 나머지 REQUESTED 자동 REJECTED
-    // ④ 신청자에게 FARMER 역할 부여.
+    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 신청자에게 FARMER 역할 부여
+    // ④ 나머지 REQUESTED 자동 REJECTED.
     // 공간 상태 전환은 백엔드 2 제공 markMatched()로만 수행(직접 UPDATE 금지) —
     // 내부에서 AVAILABLE·미삭제를 검증해 위반 시 SPACE_NOT_AVAILABLE(409)을 던지고 수락 전체가 롤백된다.
     @Transactional
@@ -114,10 +118,16 @@ public class MatchingService {
 
         matching.accept();
         spaceContractAdapter.markMatched(matching.getSpace().getId());
+
+        // 재배가 확정된 시점에 신청자가 농부가 된다 — 거절(reject)에는 부여하지 않는다.
+        // 반드시 아래 벌크 UPDATE보다 먼저 호출한다: rejectRemainingRequested의 clearAutomatically가
+        // 영속성 컨텍스트를 비우면 아직 초기화되지 않은 farmer LAZY 프록시가 detached 되어
+        // 초기화 시점에 LazyInitializationException이 나고, 예외를 피하더라도 더티 체킹이 유실된다.
+        // 여기서 부여하면 flushAutomatically가 벌크 UPDATE 직전에 이 변경까지 함께 flush한다.
         matching.getFarmer().addRole(UserRole.FARMER);
+
         matchingRepository.rejectRemainingRequested(
                 matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
-
         return MatchingStatusResponse.from(matching);
     }
 
@@ -127,6 +137,41 @@ public class MatchingService {
         Matching matching = getOwnedRequestedMatching(matchingId, userId);
         matching.reject();
         return MatchingStatusResponse.from(matching);
+    }
+
+    // 취소 — 신청자 본인이 아직 응답받지 않은 신청을 거둬들인다.
+    // 공간 상태 롤백은 필요 없다: markMatched는 수락 시점에만 일어나고 취소는 REQUESTED에서만 허용된다.
+    // 행을 지우지 않고 CANCELED로 남기므로 중복 신청 검사(REQUESTED만 확인)를 통과해 재신청이 가능하다.
+    @Transactional
+    public MatchingStatusResponse cancel(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        if (!matching.getFarmer().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
+        if (matching.getStatus() != MatchingStatus.REQUESTED) {
+            throw new BusinessException(ErrorCode.MATCHING_ALREADY_PROCESSED);
+        }
+
+        matching.cancel();
+        return MatchingStatusResponse.from(matching);
+    }
+
+    // 받은 목록에서 감추기 — 소유자가 검토를 마친 건만 대상이다.
+    // 아직 응답하지 않은(REQUESTED) 신청은 수락/거절로 처리해야 하므로 감출 수 없다.
+    // 신청자 목록(my-requests)에는 그대로 남는다 — 소유자 화면에서만 사라진다.
+    @Transactional
+    public void dismissReceived(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        if (!matching.getSpace().getOwner().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
+        if (matching.getStatus() == MatchingStatus.REQUESTED) {
+            throw new BusinessException(ErrorCode.MATCHING_NOT_PROCESSED);
+        }
+
+        matching.dismissByOwner();
     }
 
     // 수락/거절 공통 전제: 매칭 존재 → 공간 owner 본인 → 아직 REQUESTED 상태

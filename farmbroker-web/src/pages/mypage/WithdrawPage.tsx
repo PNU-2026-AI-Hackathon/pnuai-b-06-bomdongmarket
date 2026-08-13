@@ -101,7 +101,7 @@ export function WithdrawPage() {
                       variant: 'outline',
                       className: 'mt-5 w-full sm:w-auto',
                     })}
-                    to={ROUTES.contracts}
+                    to={ROUTES.dashboardApplications}
                   >
                     진행 중인 계약 확인
                   </Link>

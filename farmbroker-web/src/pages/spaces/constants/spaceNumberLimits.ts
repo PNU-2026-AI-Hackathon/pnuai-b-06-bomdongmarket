@@ -10,6 +10,7 @@ export const NUMBER_FIELD_MESSAGES = {
   areaMax: `면적은 ${AREA_MAX.toLocaleString('ko-KR')}㎡ 이하여야 합니다.`,
   rentMin: '월세는 0 이상이어야 합니다.',
   floorRange: `층수는 ${FLOOR_MIN}층(지하) ~ ${FLOOR_MAX}층 사이여야 합니다.`,
+  floorZero: '올바른 숫자를 입력해주세요.',
 } as const;
 
 export interface SpaceNumberInput {
@@ -40,6 +41,10 @@ export function validateSpaceNumbers({
 
   if (!Number.isFinite(floor) || floor < FLOOR_MIN || floor > FLOOR_MAX) {
     errors.floor = NUMBER_FIELD_MESSAGES.floorRange;
+  } else if (floor === 0) {
+    // 건물에 0층은 없다. min/max는 연속 범위만 표현할 수 있어(면적처럼 min으로 막을 수 없다)
+    // 입력 자체는 두고 제출 시점에 여기서 걸러낸다.
+    errors.floor = NUMBER_FIELD_MESSAGES.floorZero;
   }
 
   return errors;
