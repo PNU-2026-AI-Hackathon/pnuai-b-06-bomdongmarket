@@ -20,7 +20,7 @@ describe('인증 후 원래 위치 복귀', () => {
     renderWithProviders(<AppRouter />, { route: '/spaces/new' });
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
 
     await login(user);
@@ -38,7 +38,7 @@ describe('인증 후 원래 위치 복귀', () => {
     await user.click(purchaseButton);
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
 
     await login(user);
@@ -58,7 +58,7 @@ describe('인증 후 원래 위치 복귀', () => {
     await user.click(addToCartButton);
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
 
     await login(user);
@@ -77,8 +77,8 @@ describe('인증 후 원래 위치 복귀', () => {
   });
 
   it.each([
-    { route: '/login', authHeading: '봄동마켓 로그인' },
-    { route: '/signup', authHeading: '봄동마켓 회원가입' },
+    { route: '/login', authHeading: 'FarmBroker 로그인' },
+    { route: '/signup', authHeading: 'FarmBroker 회원가입' },
   ])('저장된 로그인 상태에서 $route 접근 시 홈으로 이동한다', async ({ route, authHeading }) => {
     saveAuthSession({
       userId: 2,

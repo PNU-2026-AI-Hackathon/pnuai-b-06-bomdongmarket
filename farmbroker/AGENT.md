@@ -1,4 +1,4 @@
-# AGENT.md — Farm Broker (봄동마켓) 백엔드
+# AGENT.md — FarmBroker 백엔드
 
 > 이 문서는 AI 에이전트가 **백엔드 모듈(`farmbroker/`)** 에서 작업할 때 따라야 하는 규칙과 컨텍스트입니다.
 > 프론트엔드(`farmbroker-web/**`)는 [`../farmbroker-web/AGENTS.md`](../farmbroker-web/AGENTS.md), 저장소 전반 규칙은 [`../AGENTS.md`](../AGENTS.md)를 따릅니다.
@@ -7,7 +7,7 @@
 
 ## 1. 프로젝트 개요
 
-**봄동마켓 (Farm Broker)** — 도심 공실 소유자·도심 농부·지역 소비자를 연결하는 스마트팜 매칭 플랫폼.
+**FarmBroker** — 도심 공실 소유자·도심 농부·지역 소비자를 연결하는 스마트팜 매칭 플랫폼.
 공실 제공자가 스마트팜 전환 가능한 공간을 등록하면, 도심 농부가 조회 후 **수익 예측·AI 작물 추천**을 확인하고 매칭을 신청하는 흐름.
 
 - **클라이언트: React 웹 SPA** (`farmbroker-web/`, Vite). → **CORS는 백엔드 책임** (아래 8번).
@@ -143,7 +143,7 @@ context-path `/api` 접두 (예: `http://localhost:8080/api/auth/signup`). 컨�
 | auth | `POST /auth/logout` | ✓ |
 | user | `GET /users/me` | ✓ |
 | space | `POST /spaces` / `GET /spaces` / `GET /spaces/my` / `GET /spaces/{id}` / `PATCH /spaces/{id}` / `DELETE /spaces/{id}` | 목록·상세 ✕, 그 외 ✓ |
-| matching | `POST /matchings` / `GET /matchings/my-requests` / `GET /matchings/received` / `PATCH /matchings/{id}/accept` / `PATCH /matchings/{id}/reject` | ✓ |
+| matching | `POST /matchings` / `GET /matchings/my-requests?spaceId=` / `GET /matchings/received` / `PATCH /matchings/{id}/accept` / `PATCH /matchings/{id}/reject` / `PATCH /matchings/{id}/cancel` / `PATCH /matchings/{id}/dismiss` | ✓ |
 | ai | `POST /ai/recommend` | ✓ |
 | crop | `GET /crops` / `GET /crops/{cropId}` | ✕ |
 | product | `GET /products` / `GET /products/{id}` / `GET /products/my` / `POST /products` / `PATCH /products/{id}` / `DELETE /products/{id}` | 목록·상세 ✕, 그 외 ✓ |

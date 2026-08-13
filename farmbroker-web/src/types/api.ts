@@ -4,6 +4,9 @@ export type SpaceStatus = 'AVAILABLE' | 'MATCHED' | 'CLOSED';
 
 export type MatchingStatus = 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | 'CANCELED';
 
+// 농부가 공간을 어떤 목적으로 쓰려는지. 유형 도입 이전 신청은 null로 내려옵니다.
+export type MatchingType = 'PROFIT' | 'HOBBY';
+
 export type CropDifficulty = 'EASY' | 'NORMAL' | 'HARD';
 
 export type LightRequirement = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -225,6 +228,7 @@ export interface AiRecommendationInput {
 
 export interface MatchingApplyInput {
   spaceId: number;
+  type: MatchingType;
   message: string;
 }
 
@@ -249,6 +253,8 @@ export interface MyMatching {
   spaceImageUrl: string | null;
   monthlyRent: number;
   ownerNickname: string;
+  type: MatchingType | null;
+  message: string;
   status: MatchingStatus;
   createdAt: string;
   respondedAt: string | null;
@@ -263,6 +269,7 @@ export interface MatchingRequest {
   ownerNickname?: string;
   farmerId: number;
   farmerNickname: string;
+  type: MatchingType | null;
   message: string;
   status: MatchingStatus;
   createdAt: string;
@@ -369,19 +376,25 @@ export interface Order {
   createdAt: string;
   items: OrderLine[];
 }
+// id는 화면이 지표를 알아보기 위한 안정적인 키입니다 — 라벨 문구가 바뀌어도 연결이 깨지지 않습니다.
+export type DashboardMetricId = 'spaces' | 'received' | 'sent';
 
 export interface DashboardMetric {
+  id: DashboardMetricId;
   label: string;
   value: string;
   helper: string;
   trend: string;
 }
 
+// 대시보드·계약 화면이 쓰는 "내가 보낸 신청" 한 건의 요약.
+// contractId는 매칭 ID와 같고, spaceId는 신청 상세(/spaces/:spaceId/apply) 링크를 만드는 데 씁니다.
 export interface ContractSummary {
   contractId: number;
+  spaceId: number;
   spaceName: string;
   counterparty: string;
-  status: '신청' | '협의' | '검토' | '완료';
+  status: MatchingStatus;
   monthlyRent: number;
-  period: string;
+  type: MatchingType | null;
 }

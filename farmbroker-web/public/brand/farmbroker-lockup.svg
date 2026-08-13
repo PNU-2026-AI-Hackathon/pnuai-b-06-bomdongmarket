@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 790 256" role="img" aria-labelledby="title description">
+  <title id="title">FarmBroker</title>
+  <desc id="description">도시 건물과 두 장의 새싹, 수확을 형상화한 심벌과 FarmBroker 워드마크</desc>
+
+  <image href="./farmbroker-symbol.png" x="0" y="0" width="256" height="256"/>
+
+  <text
+    x="280"
+    y="158"
+    fill="#204937"
+    font-family="Inter, Pretendard, Arial, sans-serif"
+    font-size="92"
+    font-weight="800"
+    letter-spacing="-4"
+  >FarmBroker</text>
+</svg>

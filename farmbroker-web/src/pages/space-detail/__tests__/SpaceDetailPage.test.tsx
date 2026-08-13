@@ -81,34 +81,22 @@ describe('SpaceDetailPage', () => {
     expect(await screen.findByText('배치 제안')).toBeInTheDocument();
   });
 
-  it('농부가 상세 화면에서 매칭을 신청한다', async () => {
-    const user = userEvent.setup();
+  it('농부에게 해당 공간의 신청 화면으로 가는 경로를 제공한다', async () => {
     saveAuthSession({
       userId: 2,
       email: 'farmer@example.com',
       nickname: '도시농부',
       roles: ['FARMER'],
     });
-    vi.mocked(applyMatching).mockResolvedValue({
-      matchingId: 12,
-      spaceId: 1,
-      farmerId: 2,
-      ownerId: 1,
-      message: '상담을 요청드립니다.',
-      status: 'REQUESTED',
-      createdAt: '2026-08-04T00:00:00',
-    });
     renderWithProviders(<SpaceDetailPage />, { route: '/spaces/1' });
 
     await screen.findByRole('heading', { name: /부산대 앞 20평 상가 공실/i });
-    await user.clear(screen.getByLabelText('매칭 신청 메시지'));
-    await user.type(screen.getByLabelText('매칭 신청 메시지'), '상담을 요청드립니다.');
-    await user.click(screen.getByRole('button', { name: '매칭 신청 보내기' }));
 
-    expect(applyMatching).toHaveBeenCalledWith({
-      spaceId: 1,
-      message: '상담을 요청드립니다.',
-    });
-    expect(await screen.findByText(/신청 번호 12/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /매칭 신청하기/i })).toHaveAttribute(
+      'href',
+      '/spaces/1/apply',
+    );
+    // 신청 자체는 신청 화면에서만 일어난다 — 상세 화면은 이동 경로만 제공한다.
+    expect(applyMatching).not.toHaveBeenCalled();
   });
 });

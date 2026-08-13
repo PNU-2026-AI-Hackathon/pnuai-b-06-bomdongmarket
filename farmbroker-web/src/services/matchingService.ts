@@ -33,24 +33,30 @@ export async function applyMatching(
   };
 }
 
-export async function getMyMatchings(): Promise<MyMatching[]> {
+export async function getMyMatchings(spaceId?: number): Promise<MyMatching[]> {
   if (!USE_MOCKS) {
-    const response = await apiRequest<MyMatching[]>(ENDPOINTS.matchings.myRequests);
+    const response = await apiRequest<MyMatching[]>(
+      ENDPOINTS.matchings.myRequests(spaceId),
+    );
     return response.data;
   }
 
   await mockDelay();
-  return mockMatchingRequests.map((request) => ({
-    matchingId: request.matchingId,
-    spaceId: request.spaceId,
-    spaceTitle: request.spaceTitle,
-    spaceImageUrl: request.spaceImageUrl ?? null,
-    monthlyRent: request.monthlyRent ?? 0,
-    ownerNickname: request.ownerNickname ?? '공간 제공자',
-    status: request.status,
-    createdAt: request.createdAt,
-    respondedAt: request.respondedAt,
-  }));
+  return mockMatchingRequests
+    .filter((request) => spaceId === undefined || request.spaceId === spaceId)
+    .map((request) => ({
+      matchingId: request.matchingId,
+      spaceId: request.spaceId,
+      spaceTitle: request.spaceTitle,
+      spaceImageUrl: request.spaceImageUrl ?? null,
+      monthlyRent: request.monthlyRent ?? 0,
+      ownerNickname: request.ownerNickname ?? '공간 제공자',
+      type: request.type,
+      message: request.message,
+      status: request.status,
+      createdAt: request.createdAt,
+      respondedAt: request.respondedAt,
+    }));
 }
 
 export async function getReceivedMatchings(): Promise<MatchingRequest[]> {
@@ -63,24 +69,33 @@ export async function getReceivedMatchings(): Promise<MatchingRequest[]> {
   return mockMatchingRequests;
 }
 
+// 세 상태 전이 모두 PATCH /matchings/{id}/{action} + MatchingStatusResult 응답으로 형태가 같습니다.
+const statusByAction: Record<MatchingAction, MatchingStatus> = {
+  accept: 'ACCEPTED',
+  reject: 'REJECTED',
+  cancel: 'CANCELED',
+};
+
+type MatchingAction = 'accept' | 'reject' | 'cancel';
+
 async function updateMatchingStatus(
   matchingId: number,
-  action: 'accept' | 'reject',
+  action: MatchingAction,
 ): Promise<MatchingStatusResult> {
   if (!USE_MOCKS) {
-    const endpoint =
-      action === 'accept'
-        ? ENDPOINTS.matchings.accept(matchingId)
-        : ENDPOINTS.matchings.reject(matchingId);
-    const response = await apiRequest<MatchingStatusResult>(endpoint, {
-      method: 'PATCH',
-    });
+    const response = await apiRequest<MatchingStatusResult>(
+      ENDPOINTS.matchings[action](matchingId),
+      { method: 'PATCH' },
+    );
     return response.data;
   }
 
   await mockDelay();
-  const status: MatchingStatus = action === 'accept' ? 'ACCEPTED' : 'REJECTED';
-  return { matchingId, status, respondedAt: new Date().toISOString() };
+  return {
+    matchingId,
+    status: statusByAction[action],
+    respondedAt: new Date().toISOString(),
+  };
 }
 
 export function acceptMatching(matchingId: number) {
@@ -89,4 +104,20 @@ export function acceptMatching(matchingId: number) {
 
 export function rejectMatching(matchingId: number) {
   return updateMatchingStatus(matchingId, 'reject');
+}
+
+// 신청자 본인이 아직 응답받지 않은 신청을 거둬들입니다. 취소 후 같은 공간에 재신청할 수 있습니다.
+export function cancelMatching(matchingId: number) {
+  return updateMatchingStatus(matchingId, 'cancel');
+}
+
+// 공간 소유자가 검토를 마친 신청을 받은 목록에서 감춥니다.
+// 상태를 바꾸지 않으므로 updateMatchingStatus와 묶지 않고, 응답 데이터도 없습니다.
+export async function dismissReceivedMatching(matchingId: number): Promise<void> {
+  if (!USE_MOCKS) {
+    await apiRequest<void>(ENDPOINTS.matchings.dismiss(matchingId), { method: 'PATCH' });
+    return;
+  }
+
+  await mockDelay();
 }

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ComponentPropsWithRef, ReactNode } from 'react';
 
 import {
   buttonStyles,
@@ -6,7 +6,9 @@ import {
   type ButtonVariant,
 } from '@/components/common/buttonStyles';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+// React 19에서 ref는 일반 prop이라 forwardRef 없이 그대로 내려보냅니다.
+// (ConfirmDialog가 열릴 때 확인 버튼으로 포커스를 옮기는 데 씁니다.)
+interface ButtonProps extends ComponentPropsWithRef<'button'> {
   children: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
