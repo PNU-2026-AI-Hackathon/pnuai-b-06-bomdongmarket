@@ -1,5 +1,5 @@
 import { ArrowRight, Camera, Ruler } from 'lucide-react';
-import { FormEvent, KeyboardEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, KeyboardEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/common/Button';
@@ -9,11 +9,14 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Textarea } from '@/components/common/Textarea';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
+import { AddressField, type AddressValue } from '@/pages/spaces/components/AddressField';
 import { SpaceImageUploader } from '@/pages/spaces/components/SpaceImageUploader';
+import { SpaceLocationMap } from '@/pages/spaces/components/SpaceLocationMap';
 import {
   AREA_MAX,
   FLOOR_MAX,
   FLOOR_MIN,
+  NUMBER_FIELD_MESSAGES,
   RENT_MIN,
   validateSpaceNumbers,
   type SpaceNumberErrors,
@@ -28,13 +31,31 @@ function blockNegativeKeys(event: KeyboardEvent<HTMLInputElement>) {
   }
 }
 
+// 건물에 0층은 없지만 min/max는 연속 범위만 표현할 수 있어 '0 제외'를 속성으로 못 씁니다.
+// 면적의 min 위반과 똑같이 브라우저 기본 경고 말풍선이 뜨도록 검증 문구를 직접 심습니다.
+// 값이 0이 아니게 되면 반드시 지워야 합니다 — 남겨 두면 그 칸이 영원히 invalid로 남습니다.
+function markZeroFloorInvalid(event: ChangeEvent<HTMLInputElement>) {
+  const input = event.currentTarget;
+  input.setCustomValidity(
+    input.valueAsNumber === 0 ? NUMBER_FIELD_MESSAGES.floorZero : '',
+  );
+}
+
 // 공실 제공자가 API 명세의 필수 공간 필드를 입력하는 모바일 우선 등록 폼입니다.
 // 실제 등록은 다음 단계인 수익 예측 확인 화면에서 확정합니다.
 export function SpaceCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   // 예측 화면에서 수정하러 돌아온 경우 직전 입력값을 그대로 복원합니다.
-  const previous = (location.state as SpaceCreateLocationState | null)?.input;
+  const previousState = location.state as SpaceCreateLocationState | null;
+  const previous = previousState?.input;
+  // 주소는 우편번호 검색으로만 채우므로 FormData 비제어 방식 대신 상태로 들고 있습니다.
+  // 나머지 필드는 기존대로 제출 시점에 FormData로 읽습니다.
+  // input.address는 두 칸을 합친 값이라 그대로 복원하면 칸 분리가 깨집니다. 나눠진 원본을 함께 받습니다.
+  const [address, setAddress] = useState<AddressValue>(
+    previousState?.addressParts ?? { roadAddress: previous?.address ?? '', detail: '' },
+  );
+  const [addressError, setAddressError] = useState<string | null>(null);
   // 사진·도면은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
   const [imageUrls, setImageUrls] = useState<string[]>(previous?.imageUrls ?? []);
   const [floorPlanUrls, setFloorPlanUrls] = useState<string[]>(
@@ -45,6 +66,13 @@ export function SpaceCreatePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // 주소 칸은 검색으로만 채우는 readOnly라 브라우저 required 검증에 기댈 수 없습니다.
+    if (!address.roadAddress) {
+      setAddressError('주소 검색으로 공간 위치를 선택해 주세요.');
+      return;
+    }
+    setAddressError(null);
 
     // 도면은 파일 입력이라 브라우저 required 검증이 걸리지 않아 여기서 직접 막습니다.
     if (floorPlanUrls.length === 0) {
@@ -68,9 +96,11 @@ export function SpaceCreatePage() {
     }
 
     const state: SpaceCreateLocationState = {
+      // 수정하러 돌아왔을 때 두 칸을 그대로 되살리려면 합치기 전 값도 함께 넘겨야 합니다.
+      addressParts: address,
       input: {
         title: String(formData.get('title')),
-        address: String(formData.get('address')),
+        address: [address.roadAddress, address.detail].filter(Boolean).join(' '),
         ...numbers,
         hasWater: formData.get('hasWater') === 'on',
         hasElectricity: formData.get('hasElectricity') === 'on',
@@ -99,21 +129,24 @@ export function SpaceCreatePage() {
             placeholder="예: 부산대 앞 20평 상가 공실"
             required
           />
-          <Input
-            defaultValue={previous?.address}
-            label="공간 위치"
-            name="address"
-            placeholder="예: 부산광역시 금정구 장전동"
-            required
+          <AddressField
+            detail={address.detail}
+            errorMessage={addressError}
+            onChange={(next) => {
+              setAddress(next);
+              if (next.roadAddress) setAddressError(null);
+            }}
+            roadAddress={address.roadAddress}
           />
+          {/* 고른 주소가 실제로 어디인지 등록 전에 눈으로 확인시켜 줍니다. */}
+          <SpaceLocationMap address={address.roadAddress} />
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
               defaultValue={previous?.area}
               errorMessage={numberErrors.area}
-              helperText="㎡ 단위, 0보다 커야 합니다"
-              label="전체 면적"
+              label="전체 면적(㎡)"
               max={AREA_MAX}
-              min={0}
+              min={1}
               name="area"
               onKeyDown={blockNegativeKeys}
               placeholder="예: 66"
@@ -129,6 +162,7 @@ export function SpaceCreatePage() {
               max={FLOOR_MAX}
               min={FLOOR_MIN}
               name="floor"
+              onChange={markZeroFloorInvalid}
               placeholder="예: 2"
               required
               type="number"
@@ -136,8 +170,7 @@ export function SpaceCreatePage() {
             <Input
               defaultValue={previous?.monthlyRent}
               errorMessage={numberErrors.monthlyRent}
-              helperText="원 단위, 0 이상"
-              label="희망 월세"
+              label="희망 월세(원)"
               min={RENT_MIN}
               name="monthlyRent"
               onKeyDown={blockNegativeKeys}
