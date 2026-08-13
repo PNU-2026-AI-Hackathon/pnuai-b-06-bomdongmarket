@@ -47,7 +47,8 @@ public record KamisProperties(
     // 기존 생성 경로도 환경 설정과 같은 기본값으로 동작하도록 위임한다.
     public KamisProperties(String serviceKey, String baseUrl, String saleType, String region, String grade,
                            int freshnessDays, int lookbackDays, boolean enabled) {
-        this(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled, "Asia/Seoul", 3000, 5000);
+        this(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled,
+                "Asia/Seoul", 3000, 5000);
     }
 
     public boolean usable() {

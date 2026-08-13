@@ -4,10 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -22,19 +22,16 @@ public class KamisPriceCollector {
 
     private final KamisPriceClient client;
     private final KamisItemCodes itemCodes;
-    private final MarketPriceSnapshotRepository snapshotRepository;
+    private final KamisSnapshotWriter writer;
     private final KamisProperties properties;
 
     // 매일 새벽 4시. KAMIS 조사 결과가 전날 오후에 올라오므로 그 이후 시간대로 둔다.
     // 주기를 설정으로 뺀 이유 — 배포 후 수집이 실제로 도는지 확인하려면 4시까지 기다릴 수 없다.
     @Scheduled(cron = "${kamis.cron:0 0 4 * * *}", zone = "${kamis.timezone:Asia/Seoul}")
     public void collectDaily() {
-        // zone 지정만으로는 부족하다 — 04:00 KST는 UTC로 전날 19:00이라
-        // LocalDate.now()가 하루 전을 돌려주고 조회 상한이 밀린다.
         collect(LocalDate.now(properties.zone()));
     }
 
-    @Transactional
     public int collect(LocalDate today) {
         if (!properties.usable()) {
             log.info("KAMIS 수집 건너뜀 — 비활성화 상태이거나 서비스 키가 없습니다.");
@@ -43,39 +40,44 @@ public class KamisPriceCollector {
 
         int updated = 0;
         int missing = 0;
-        for (Map.Entry<String, KamisItemCodes.ItemCode> entry : itemCodes.all().entrySet()) {
+        int failed = 0;
+        List<Map.Entry<String, KamisItemCodes.ItemCode>> entries = List.copyOf(itemCodes.all().entrySet());
+        for (int i = 0; i < entries.size(); i++) {
+            Map.Entry<String, KamisItemCodes.ItemCode> entry = entries.get(i);
             Optional<KamisPriceClient.DailyPrice> price = client.fetchLatest(entry.getValue(), today);
             if (price.isEmpty()) {
                 // 제철이 아니면 조사 자체가 없다(예: 8월의 딸기). 실패가 아니라 정상 상황이다.
                 missing++;
-                continue;
+            } else {
+                try {
+                    writer.upsert(
+                            entry.getKey(), price.get(), properties.saleType(), properties.normalizedRegion(),
+                            properties.grade(), LocalDateTime.now(properties.zone()));
+                    updated++;
+                } catch (Exception e) {
+                    // 동시 배치의 유니크 충돌도 이 작물만 롤백한 뒤 다음 작물 수집을 이어 간다.
+                    failed++;
+                    log.warn("KAMIS 스냅샷 저장 실패 (작물 {}): {}", entry.getKey(), e.toString());
+                }
             }
-            save(entry.getKey(), price.get());
-            updated++;
-            sleepBetweenCalls();
+
+            if (i < entries.size() - 1 && !sleepBetweenCalls()) {
+                log.info("KAMIS 시세 수집 중단 — 갱신 {}건, 시세 없음 {}건, 저장 실패 {}건", updated, missing, failed);
+                return updated;
+            }
         }
 
-        log.info("KAMIS 시세 수집 완료 — 갱신 {}건, 시세 없음 {}건", updated, missing);
+        log.info("KAMIS 시세 수집 완료 — 갱신 {}건, 시세 없음 {}건, 저장 실패 {}건", updated, missing, failed);
         return updated;
     }
 
-    private void save(String cropName, KamisPriceClient.DailyPrice price) {
-        LocalDateTime now = LocalDateTime.now(properties.zone());
-        snapshotRepository.findByCropName(cropName)
-                .ifPresentOrElse(
-                        snapshot -> snapshot.refresh(
-                                price.pricePerKgKrw(), price.surveyedOn(), price.sampleCount(), now,
-                                properties.saleType(), properties.normalizedRegion(), properties.grade()),
-                        () -> snapshotRepository.save(new MarketPriceSnapshot(
-                                cropName, price.pricePerKgKrw(), price.surveyedOn(), price.sampleCount(), now,
-                                properties.saleType(), properties.normalizedRegion(), properties.grade())));
-    }
-
-    private void sleepBetweenCalls() {
+    private boolean sleepBetweenCalls() {
         try {
             Thread.sleep(client.callInterval().toMillis());
+            return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return false;
         }
     }
 }
