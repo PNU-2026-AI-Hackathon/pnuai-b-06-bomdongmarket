@@ -48,19 +48,21 @@ class FallbackMarketPriceProviderTest {
 
         assertThat(price.pricePerKgKrw()).isEqualTo(9500);
         assertThat(price.source()).isEqualTo(PriceSource.KAMIS);
-        assertThat(price.stale()).isFalse();
     }
 
+    // 오래된 시세를 계속 쓰는 것보다 검토해 둔 기준단가가 낫다는 팀 결정(#68 리뷰).
     @Test
-    @DisplayName("조사일이 오래됐어도 KAMIS 시세를 쓰되 오래된 값으로 표시한다")
-    void marks_old_kamis_price_as_stale() {
+    @DisplayName("조사일이 오래된 KAMIS 시세는 버리고 백과사전 기준단가로 내려간다")
+    void falls_back_to_seed_when_kamis_price_is_old() {
         given(snapshotRepository.findByCropName("상추"))
                 .willReturn(Optional.of(snapshot(LocalDate.now().minusDays(30))));
+        given(seedPriceProvider.findByCropName("상추"))
+                .willReturn(Optional.of(MarketPrice.seed(9000, LocalDate.of(2026, 7, 4))));
 
         MarketPrice price = provider().findByCropName("상추").orElseThrow();
 
-        assertThat(price.source()).isEqualTo(PriceSource.KAMIS);
-        assertThat(price.stale()).isTrue();
+        assertThat(price.source()).isEqualTo(PriceSource.SEED);
+        assertThat(price.pricePerKgKrw()).isEqualTo(9000);
     }
 
     // 비제철 작물은 조사 자체가 없다(예: 8월의 딸기).

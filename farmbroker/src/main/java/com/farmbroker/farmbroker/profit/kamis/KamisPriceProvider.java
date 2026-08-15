@@ -11,8 +11,9 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 // 수집해 둔 KAMIS 스냅샷을 읽어 단가로 내려준다. 외부 API를 직접 부르지 않는다.
-// 조사일이 오래된 값은 버리지 않고 stale로 표시해 그대로 쓴다 —
-// 값이 널뛰는 것보다 조금 지난 실제 시세가 낫다는 판단이고, 화면이 기준일을 함께 보여 준다.
+// freshnessDays를 넘긴 조사값은 내려주지 않고 빈 값으로 떨어뜨린다 —
+// 호출부(FallbackMarketPriceProvider)가 백과사전 표준 기준단가로 넘어간다.
+// 오래된 시세를 계속 쓰는 것보다 검토해 둔 기준단가가 낫다는 팀 결정(#68 리뷰)이다.
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -29,11 +30,11 @@ public class KamisPriceProvider implements MarketPriceProvider {
         return snapshotRepository.findByCropName(cropName)
                 // 출처를 증명할 기준이 없는 행을 현재 설정으로 추정하면 다른 기준의 시세가 섞여 남는다.
                 .filter(this::matchesCurrentCriteria)
+                .filter(snapshot -> isFresh(snapshot.getSurveyedOn()))
                 .map(snapshot -> new MarketPrice(
                         snapshot.getPricePerKgKrw(),
                         snapshot.getSurveyedOn(),
-                        PriceSource.KAMIS,
-                        isStale(snapshot.getSurveyedOn())));
+                        PriceSource.KAMIS));
     }
 
     private boolean matchesCurrentCriteria(MarketPriceSnapshot snapshot) {
@@ -44,7 +45,7 @@ public class KamisPriceProvider implements MarketPriceProvider {
                 && properties.grade().equals(snapshot.getGrade());
     }
 
-    private boolean isStale(LocalDate surveyedOn) {
-        return surveyedOn.isBefore(LocalDate.now(properties.zone()).minusDays(properties.freshnessDays()));
+    private boolean isFresh(LocalDate surveyedOn) {
+        return !surveyedOn.isBefore(LocalDate.now(properties.zone()).minusDays(properties.freshnessDays()));
     }
 }

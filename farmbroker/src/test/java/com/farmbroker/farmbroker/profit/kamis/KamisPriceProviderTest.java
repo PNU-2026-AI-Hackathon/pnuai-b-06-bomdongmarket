@@ -67,15 +67,31 @@ class KamisPriceProviderTest {
         assertThat(provider().findByCropName("상추")).isPresent();
     }
 
+    // freshnessDays(7)를 넘긴 조사값은 내려주지 않아야 호출부가 백과사전 기준단가로 넘어간다.
+    @Test
+    @DisplayName("조사일이 신선도 기준을 넘긴 스냅샷은 사용하지 않는다")
+    void ignores_snapshot_older_than_freshness_days() {
+        given(snapshotRepository.findByCropName("상추"))
+                .willReturn(Optional.of(snapshot("02", "", "상품",
+                        LocalDate.now(PROPERTIES.zone()).minusDays(30))));
+
+        assertThat(provider().findByCropName("상추")).isEmpty();
+    }
+
     private KamisPriceProvider provider() {
         return new KamisPriceProvider(snapshotRepository, PROPERTIES);
     }
 
     private static MarketPriceSnapshot snapshot(String saleType, String region, String grade) {
+        return snapshot(saleType, region, grade, LocalDate.now(PROPERTIES.zone()).minusDays(1));
+    }
+
+    private static MarketPriceSnapshot snapshot(String saleType, String region, String grade,
+                                                LocalDate surveyedOn) {
         return new MarketPriceSnapshot(
                 "상추",
                 9500,
-                LocalDate.now(PROPERTIES.zone()).minusDays(1),
+                surveyedOn,
                 4,
                 LocalDateTime.now(PROPERTIES.zone()),
                 saleType,
