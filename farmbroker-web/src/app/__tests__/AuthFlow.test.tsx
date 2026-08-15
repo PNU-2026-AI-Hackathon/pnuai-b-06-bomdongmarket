@@ -73,7 +73,9 @@ describe('인증 후 원래 위치 복귀', () => {
   it('로그인 상태에서는 대시보드를 바로 보여준다', async () => {
     renderWithProviders(<AppRouter />, { authenticated: true, route: '/dashboard' });
 
-    expect(await screen.findByText('등록 공간')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '내가 등록한 공간' }),
+    ).toBeInTheDocument();
   });
 
   it.each([

@@ -1,28 +1,4 @@
-import type { ContractSummary, DashboardMetric, MatchingRequest } from '@/types/api';
-
-export const mockDashboardMetrics: DashboardMetric[] = [
-  {
-    id: 'spaces',
-    label: '등록 공간',
-    value: '4',
-    helper: '매칭 가능한 공간 2개',
-    trend: '이번 주 +1',
-  },
-  {
-    id: 'received',
-    label: '받은 신청',
-    value: '12',
-    helper: '응답 대기 5건',
-    trend: '신규 +4',
-  },
-  {
-    id: 'sent',
-    label: '보낸 신청',
-    value: '3',
-    helper: '응답 대기 1건',
-    trend: '',
-  },
-];
+import type { MatchingRequest } from '@/types/api';
 
 export const mockMatchingRequests: MatchingRequest[] = [
   {
@@ -57,35 +33,5 @@ export const mockMatchingRequests: MatchingRequest[] = [
     status: 'ACCEPTED',
     createdAt: '2026-06-30T09:30:00',
     respondedAt: '2026-07-01T10:00:00',
-  },
-];
-
-export const mockContracts: ContractSummary[] = [
-  {
-    contractId: 1,
-    spaceId: 1,
-    spaceName: '장전동 상가 공실',
-    counterparty: '그린스페이스랩',
-    status: 'REQUESTED',
-    monthlyRent: 500000,
-    type: 'PROFIT',
-  },
-  {
-    contractId: 2,
-    spaceId: 2,
-    spaceName: '서면 재배 공간',
-    counterparty: '서면공간주',
-    status: 'ACCEPTED',
-    monthlyRent: 350000,
-    type: 'HOBBY',
-  },
-  {
-    contractId: 3,
-    spaceId: 3,
-    spaceName: '해운대 루프탑 온실',
-    counterparty: '루프앤루츠',
-    status: 'REJECTED',
-    monthlyRent: 920000,
-    type: null,
   },
 ];

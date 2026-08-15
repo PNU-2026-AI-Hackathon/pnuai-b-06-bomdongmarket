@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react';
 import { Badge, type BadgeTone } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import type { MatchingRequest, MatchingStatus } from '@/types/api';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { getMatchingStatusLabel } from '@/utils/labels';
@@ -36,13 +37,12 @@ export function MatchingRequestCard({
   return (
     <Card className="p-4">
       <div className="flex gap-3">
-        {request.spaceImageUrl ? (
-          <img
-            alt=""
-            className="h-20 w-20 shrink-0 rounded-app object-cover"
-            src={request.spaceImageUrl}
-          />
-        ) : null}
+        <RemoteImage
+          alt=""
+          className="h-20 w-20 shrink-0 rounded-app object-cover"
+          decorativeFallback
+          src={request.spaceImageUrl}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTones[request.status]}>

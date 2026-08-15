@@ -1,8 +1,8 @@
-import { FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { ROUTES } from '@/constants/routes';
 import type { BadgeTone } from '@/components/common/Badge';
@@ -25,15 +25,22 @@ const statusTones: Record<MatchingStatus, BadgeTone> = {
 export function ContractCard({ contract }: ContractCardProps) {
   return (
     <Card className="p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex items-start gap-3">
+        <RemoteImage
+          alt=""
+          className="h-20 w-20 shrink-0 rounded-app object-cover"
+          decorativeFallback
+          src={contract.imageUrl}
+        />
+        <div className="min-w-0 flex-1">
           <Badge tone={statusTones[contract.status]}>
             {getMatchingProgressLabel(contract.status)}
           </Badge>
-          <h3 className="mt-3 text-lg font-black text-ink-900">{contract.spaceName}</h3>
+          <h3 className="mt-3 truncate text-lg font-black text-ink-900">
+            {contract.spaceName}
+          </h3>
           <p className="mt-1 text-sm text-slate-600">{contract.counterparty}</p>
         </div>
-        <FileText className="h-6 w-6 text-leaf-700" aria-hidden />
       </div>
       <dl className="mt-4 grid gap-3 sm:grid-cols-2">
         <div>
@@ -44,7 +51,9 @@ export function ContractCard({ contract }: ContractCardProps) {
         </div>
         <div>
           <dt className="text-xs font-semibold text-slate-500">유형</dt>
-          <dd className="font-bold text-ink-900">{getMatchingTypeLabel(contract.type)}</dd>
+          <dd className="font-bold text-ink-900">
+            {getMatchingTypeLabel(contract.type)}
+          </dd>
         </div>
       </dl>
       <Link
