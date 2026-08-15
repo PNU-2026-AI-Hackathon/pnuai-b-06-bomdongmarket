@@ -22,7 +22,7 @@ import static org.mockito.BDDMockito.given;
 class FallbackMarketPriceProviderTest {
 
     private static final KamisProperties PROPERTIES =
-            new KamisProperties("key", null, null, null, null, 7, 14, true);
+            KamisProperties.of("key", null, null, null, null, 7, 14, true);
 
     @Mock
     private MarketPriceSnapshotRepository snapshotRepository;
