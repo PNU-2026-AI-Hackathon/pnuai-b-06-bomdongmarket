@@ -46,6 +46,11 @@ public enum ErrorCode {
     MATCHING_DUPLICATED(HttpStatus.CONFLICT, "이미 신청한 공간입니다."),
     MATCHING_SELF_APPLY(HttpStatus.BAD_REQUEST, "본인 소유 공간에는 신청할 수 없습니다."),
 
+    // ── contract (매칭 1건에 붙는 계약서) ────────────────────────────────────
+    CONTRACT_CLOSED(HttpStatus.CONFLICT, "이미 확정되었거나 취소된 계약입니다."),
+    CONTRACT_TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "월세와 계약기간을 먼저 입력해야 합니다."),
+    CONTRACT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "계약 종료일은 시작일보다 뒤여야 합니다."),
+
     // ── ai (소유: 백엔드 3) ──────────────────────────────────────────────────
     AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다."),
     AI_RESPONSE_INVALID(HttpStatus.BAD_GATEWAY, "AI 응답 처리에 실패했습니다."),
