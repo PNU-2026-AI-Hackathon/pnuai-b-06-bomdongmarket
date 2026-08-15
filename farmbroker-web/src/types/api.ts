@@ -295,6 +295,36 @@ export interface MatchingRequest {
   respondedAt: string | null;
 }
 
+// 매칭 1건에 붙는 계약서. 대시보드의 ContractSummary(매칭 요약의 별칭)와는 다른 화면이라
+// 이름을 ContractDetail로 구분한다.
+export type ContractStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELED';
+
+// 서버가 요청자를 어느 쪽으로 판정했는지. 조건 입력 권한은 이 값 하나로 결정된다.
+export type ContractViewerRole = 'OWNER' | 'FARMER';
+
+export interface ContractDetail {
+  matchingId: number;
+  spaceId: number;
+  // 이름·주소는 입력받지 않고 기존 정보(양측 닉네임, 공간 주소)를 그대로 싣는다.
+  address: string;
+  ownerNickname: string;
+  farmerNickname: string;
+  // 아직 공간 제공자가 조건을 저장하지 않았으면 null이다.
+  monthlyRent: number | null;
+  startDate: string | null; // yyyy-MM-dd
+  endDate: string | null; // yyyy-MM-dd
+  ownerAgreed: boolean;
+  farmerAgreed: boolean;
+  status: ContractStatus;
+  viewerRole: ContractViewerRole;
+}
+
+export interface ContractTermsInput {
+  monthlyRent: number;
+  startDate: string;
+  endDate: string;
+}
+
 // 생산 이력 이벤트(상품 상세에서 내려옴). 등록/수정 시 백엔드에 배열로 함께 전달한다.
 export interface MarketTraceabilityEvent {
   eventId: number;
