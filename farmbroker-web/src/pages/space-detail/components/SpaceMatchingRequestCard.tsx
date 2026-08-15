@@ -111,15 +111,18 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
         ) : null}
 
         <div className="mt-5 grid gap-2">
-          {/* 채팅·계약서는 화면만 먼저 만든 자리로, 아직 연결된 기능이 없습니다. */}
+          {/* 채팅은 화면만 먼저 만든 자리로, 아직 연결된 기능이 없습니다. */}
           <Button className="w-full">
             <MessageCircle className="h-5 w-5" aria-hidden />
             채팅
           </Button>
-          <Button className="w-full" variant="outline">
+          <Link
+            className={buttonStyles({ variant: 'outline', className: 'w-full' })}
+            to={ROUTES.contract(application.matchingId)}
+          >
             <FileText className="h-5 w-5" aria-hidden />
             계약서
-          </Button>
+          </Link>
           {canCancel ? (
             <Button
               className="w-full"
