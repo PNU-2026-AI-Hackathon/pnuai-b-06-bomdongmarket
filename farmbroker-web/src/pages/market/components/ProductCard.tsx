@@ -14,10 +14,11 @@ import { formatCurrency, formatDate } from '@/utils/format';
 
 interface ProductCardProps {
   item: MarketItem;
+  distanceKm?: number | null;
 }
 
 // 마켓 목록의 2열/세로 카드에서 상품 신선도와 구매 액션을 보여줍니다.
-export function ProductCard({ item }: ProductCardProps) {
+export function ProductCard({ item, distanceKm }: ProductCardProps) {
   const requireAuth = useRequireAuth();
   const [state, setState] = useState<'idle' | 'adding' | 'added'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export function ProductCard({ item }: ProductCardProps) {
         <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
           <Route className="h-3.5 w-3.5 text-leaf-700" aria-hidden />
           {/* 마일리지는 지도(Task 3) 전까지 null일 수 있어 있을 때만 노출한다 */}
+          {distanceKm != null ? `중심에서 ${distanceKm.toFixed(1)}km · ` : ''}
           {item.foodMileageKm != null ? `푸드 마일리지 ${item.foodMileageKm}km · ` : ''}수확일{' '}
           {formatDate(item.harvestDate)}
         </p>
