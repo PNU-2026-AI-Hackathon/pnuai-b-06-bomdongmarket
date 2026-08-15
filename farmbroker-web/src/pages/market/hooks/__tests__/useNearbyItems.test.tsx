@@ -10,6 +10,13 @@ vi.mock('@/utils/geocode', async () => {
   return { ...actual, geocodeAddress: (a: string) => geocodeAddress(a) };
 });
 
+// 폴백 지오코딩은 hasKakaoMapKey()가 true일 때만 동작한다. 앱키는 gitignore된 .env에서 오므로
+// CI에는 키가 없어(hasKakaoMapKey=false) 폴백이 스킵된다 — 앰비언트 env에 의존하지 않도록 항상 true로 고정한다.
+vi.mock('@/utils/kakaoSdk', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/kakaoSdk')>('@/utils/kakaoSdk');
+  return { ...actual, hasKakaoMapKey: () => true };
+});
+
 function item(partial: Partial<MarketItem>): MarketItem {
   return {
     productId: 1,
