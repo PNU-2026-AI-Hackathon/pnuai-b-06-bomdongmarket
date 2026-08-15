@@ -9,7 +9,12 @@ import { getRecommendation } from '@/services/spaceService';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { SpaceDetailPage } from '@/pages/space-detail/SpaceDetailPage';
 
-vi.mock('@/services/matchingService', () => ({ applyMatching: vi.fn() }));
+// 상세 화면의 매칭 카드가 내 신청 여부를 조회하므로 조회·취소도 함께 대역을 둔다.
+vi.mock('@/services/matchingService', () => ({
+  applyMatching: vi.fn(),
+  cancelMatching: vi.fn(),
+  getMyMatchings: vi.fn().mockResolvedValue([]),
+}));
 vi.mock('@/services/spaceService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/spaceService')>()),
   getRecommendation: vi.fn(),
@@ -92,7 +97,7 @@ describe('SpaceDetailPage', () => {
 
     await screen.findByRole('heading', { name: /부산대 앞 20평 상가 공실/i });
 
-    expect(screen.getByRole('link', { name: /매칭 신청하기/i })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /매칭 신청하기/i })).toHaveAttribute(
       'href',
       '/spaces/1/apply',
     );
