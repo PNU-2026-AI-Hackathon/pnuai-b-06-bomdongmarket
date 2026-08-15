@@ -7,6 +7,7 @@ import com.farmbroker.farmbroker.chat.dto.ChatMessageListResponse;
 import com.farmbroker.farmbroker.chat.dto.ChatMessageResponse;
 import com.farmbroker.farmbroker.chat.dto.ChatReadResponse;
 import com.farmbroker.farmbroker.chat.repository.ChatMessageRepository;
+import com.farmbroker.farmbroker.chat.repository.ConversationRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ChatMessageService {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final ChatMessageRepository messageRepository;
+    private final ConversationRepository conversationRepository;
     private final ConversationService conversationService;
     private final ChatBlockService blockService;
     private final ChatImageStorage imageStorage;
@@ -37,8 +39,10 @@ public class ChatMessageService {
 
     @Transactional
     public ChatMessageResponse send(Long userId, Long conversationId, String text, MultipartFile image) {
-        Conversation conversation = conversationService.getAuthorized(conversationId, userId);
-        Long otherUserId = conversation.otherParticipantId(userId);
+        ConversationRepository.ConversationParticipants participants = conversationRepository
+                .findParticipantsById(conversationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_CONVERSATION_NOT_FOUND));
+        Long otherUserId = otherParticipantId(participants, userId);
         blockService.validateCanChat(userId, otherUserId);
 
         String normalizedText = normalizeText(text);
@@ -47,22 +51,10 @@ public class ChatMessageService {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
         }
 
+        // 잠금을 쥐기 전에 저장한다 — 최대 5MB 파일 쓰기 동안 대화 행을 붙잡지 않기 위함이다.
         ChatImageStorage.StoredImage storedImage = hasImage ? imageStorage.store(image) : null;
         try {
-            ChatMessage message = messageRepository.saveAndFlush(ChatMessage.builder()
-                    .conversation(conversation)
-                    .senderId(userId)
-                    .type(hasImage ? ChatMessageType.IMAGE : ChatMessageType.TEXT)
-                    .text(normalizedText)
-                    .storedFileName(storedImage == null ? null : storedImage.storedName())
-                    .originalFileName(storedImage == null ? null : storedImage.originalName())
-                    .imageContentType(storedImage == null ? null : storedImage.contentType())
-                    .imageSize(storedImage == null ? null : storedImage.size())
-                    .build());
-            conversation.touchMessage(message.getId(), preview(normalizedText, hasImage),
-                    message.getCreatedAt(), userId);
-            eventPublisher.publishEvent(new ChatMessageCreatedEvent(message.getId()));
-            return ChatMessageResponse.from(message);
+            return saveMessage(userId, conversationId, normalizedText, hasImage, storedImage);
         } catch (RuntimeException e) {
             if (storedImage != null) {
                 imageStorage.deleteQuietly(storedImage.storedName());
@@ -96,7 +88,7 @@ public class ChatMessageService {
 
     @Transactional
     public ChatReadResponse markRead(Long userId, Long conversationId) {
-        Conversation conversation = conversationService.getAuthorized(conversationId, userId);
+        Conversation conversation = getAuthorizedForUpdate(conversationId, userId);
         Long latestMessageId = messageRepository.findTopByConversationIdOrderByIdDesc(conversationId)
                 .map(ChatMessage::getId)
                 .orElse(null);
@@ -139,6 +131,48 @@ public class ChatMessageService {
         int maxTextLength = 200 - prefix.length();
         return prefix + (text.length() <= maxTextLength ? text : text.substring(0, maxTextLength));
     }
+
+    private ChatMessageResponse saveMessage(Long userId, Long conversationId, String normalizedText,
+                                            boolean hasImage,
+                                            ChatImageStorage.StoredImage storedImage) {
+        Conversation conversation = conversationRepository.findByIdForUpdate(conversationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_CONVERSATION_NOT_FOUND));
+        ChatMessage message = messageRepository.saveAndFlush(ChatMessage.builder()
+                .conversation(conversation)
+                .senderId(userId)
+                .type(hasImage ? ChatMessageType.IMAGE : ChatMessageType.TEXT)
+                .text(normalizedText)
+                .storedFileName(storedImage == null ? null : storedImage.storedName())
+                .originalFileName(storedImage == null ? null : storedImage.originalName())
+                .imageContentType(storedImage == null ? null : storedImage.contentType())
+                .imageSize(storedImage == null ? null : storedImage.size())
+                .build());
+        conversation.touchMessage(message.getId(), preview(normalizedText, hasImage),
+                message.getCreatedAt(), userId);
+        eventPublisher.publishEvent(new ChatMessageCreatedEvent(message.getId()));
+        return ChatMessageResponse.from(message);
+    }
+
+    private Long otherParticipantId(ConversationRepository.ConversationParticipants participants,
+                                    Long userId) {
+        if (participants.getParticipant1Id().equals(userId)) {
+            return participants.getParticipant2Id();
+        }
+        if (participants.getParticipant2Id().equals(userId)) {
+            return participants.getParticipant1Id();
+        }
+        throw new BusinessException(ErrorCode.CHAT_FORBIDDEN);
+    }
+
+    private Conversation getAuthorizedForUpdate(Long conversationId, Long userId) {
+        Conversation conversation = conversationRepository.findByIdForUpdate(conversationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_CONVERSATION_NOT_FOUND));
+        if (!conversation.hasParticipant(userId)) {
+            throw new BusinessException(ErrorCode.CHAT_FORBIDDEN);
+        }
+        return conversation;
+    }
+
 
     public record ChatImageResource(Resource resource, String contentType, String originalName) {
     }

@@ -112,8 +112,11 @@ public class Conversation {
     }
 
     public void touchMessage(Long messageId, String preview, LocalDateTime sentAt, Long senderId) {
-        this.lastMessagePreview = preview;
-        this.lastMessageAt = sentAt;
+        // 단조성 보조 방어일 뿐이고 같은 sentAt은 구분하지 못하므로 잠금을 대신하지 않는다.
+        if (lastMessageAt == null || !sentAt.isBefore(lastMessageAt)) {
+            this.lastMessagePreview = preview;
+            this.lastMessageAt = sentAt;
+        }
         markRead(senderId, messageId);
     }
 
