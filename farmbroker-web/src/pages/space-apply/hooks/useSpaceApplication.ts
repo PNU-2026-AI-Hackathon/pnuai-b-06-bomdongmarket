@@ -6,7 +6,8 @@ import type { MatchingType, MyMatching, SpaceDetail } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
 // 취소된 신청은 이력으로만 남고 재신청이 가능하므로 "현재 신청"으로 보지 않습니다.
-function findActiveApplication(matchings: MyMatching[]) {
+// 공간 상세 카드도 같은 기준으로 판정해야 해서 export 합니다.
+export function findActiveApplication(matchings: MyMatching[]) {
   return matchings.find((matching) => matching.status !== 'CANCELED') ?? null;
 }
 
