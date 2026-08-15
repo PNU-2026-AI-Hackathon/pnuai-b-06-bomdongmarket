@@ -1,2 +1,8 @@
 node_modules
 dist
+
+# 개인 로컬 설정이 이미지에 섞여 들어가지 않도록 제외한다.
+# 컨테이너 빌드에 필요한 VITE_* 값은 Dockerfile의 build arg로 받는다.
+.env
+.env.*
+!.env.example

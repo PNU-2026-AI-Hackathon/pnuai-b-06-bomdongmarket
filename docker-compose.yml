@@ -43,7 +43,13 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./farmbroker-web
+    build:
+      context: ./farmbroker-web
+      args:
+        # Vite는 빌드 시점에 값을 번들에 박으므로 런타임 environment로는 전달되지 않는다.
+        # compose가 .env에서 읽은 값을 그대로 build arg로 넘긴다.
+        # 키를 바꾸면 docker compose up --build 로 이미지를 다시 만들어야 반영된다.
+        VITE_KAKAO_MAP_APP_KEY: ${VITE_KAKAO_MAP_APP_KEY:-}
     container_name: farmbroker-web
     ports:
       # CORS 허용 Origin(http://localhost:5173)과 맞추기 위해 5173으로 매핑
