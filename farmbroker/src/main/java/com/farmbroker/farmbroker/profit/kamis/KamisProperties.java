@@ -45,9 +45,11 @@ public record KamisProperties(
     }
 
     // 기존 생성 경로도 환경 설정과 같은 기본값으로 동작하도록 위임한다.
-    public KamisProperties(String serviceKey, String baseUrl, String saleType, String region, String grade,
-                           int freshnessDays, int lookbackDays, boolean enabled) {
-        this(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled,
+    // 생성자를 하나 더 두면 Spring이 바인딩용 생성자를 못 고르고 setter 바인딩으로 넘어가
+    // record에 없는 기본 생성자를 찾다가 기동이 깨진다. 그래서 정적 팩토리로 둔다.
+    public static KamisProperties of(String serviceKey, String baseUrl, String saleType, String region, String grade,
+                                     int freshnessDays, int lookbackDays, boolean enabled) {
+        return new KamisProperties(serviceKey, baseUrl, saleType, region, grade, freshnessDays, lookbackDays, enabled,
                 "Asia/Seoul", 3000, 5000);
     }
 
