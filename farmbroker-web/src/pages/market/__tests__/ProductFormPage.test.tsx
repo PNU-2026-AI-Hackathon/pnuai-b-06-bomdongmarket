@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { saveAuthSession } from '@/auth/session';
 import { ProductFormPage } from '@/pages/market/ProductFormPage';
 import { deleteImage } from '@/services/fileService';
-import { getMarketItem, updateProduct } from '@/services/marketService';
+import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { MarketItem } from '@/types/api';
 
@@ -23,6 +23,11 @@ vi.mock('@/services/marketService', () => ({
 vi.mock('@/services/fileService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/fileService')>();
   return { ...actual, deleteImage: vi.fn() };
+});
+
+vi.mock('@/utils/geocode', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/geocode')>('@/utils/geocode');
+  return { ...actual, geocodeAddress: vi.fn().mockResolvedValue({ lat: 35.18, lng: 129.076 }) };
 });
 
 const existingProduct: MarketItem = {
@@ -107,5 +112,36 @@ describe('ProductFormPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('상품 수정에 실패했습니다.');
     expect(deleteImage).not.toHaveBeenCalled();
+  });
+
+  it('등록 시 생산지 주소를 지오코딩해 좌표를 함께 전송한다', async () => {
+    vi.mocked(createProduct).mockResolvedValue({ ...existingProduct, productId: 20 });
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/new" />
+      </Routes>,
+      {
+        authenticated: true,
+        route: '/market/new',
+      },
+    );
+
+    await screen.findByRole('heading', { name: '상품 등록' });
+
+    await user.type(screen.getByLabelText('상품명'), '버터헤드 상추');
+    await user.type(screen.getByLabelText('한 번에 파는 양'), '200');
+    await user.type(screen.getByLabelText('가격(원)'), '4300');
+    await user.type(screen.getByLabelText('재고 수량'), '24');
+    await user.type(screen.getByLabelText('수확일'), '2026-08-08');
+    await user.type(screen.getByLabelText('생산 위치'), '장전 스마트팜');
+    await user.type(screen.getByLabelText('생산지 주소'), '부산광역시 금정구 장전동 30');
+
+    await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
+
+    await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
+    const payload = vi.mocked(createProduct).mock.calls[0][0];
+    expect(payload).toMatchObject({ latitude: 35.18, longitude: 129.076 });
   });
 });

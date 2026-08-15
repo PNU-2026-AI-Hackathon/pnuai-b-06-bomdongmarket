@@ -117,8 +117,8 @@ function toMockProduct(input: ProductInput, productId: number): MarketItem {
     sellerNickname: '그린스페이스랩',
     description: input.description ?? null,
     address: input.address ?? null,
-    latitude: null,
-    longitude: null,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
     spaceId: input.spaceId ?? null,
     createdAt: new Date().toISOString(),
     traceabilityEvents: (input.events ?? []).map((event, index) => ({
