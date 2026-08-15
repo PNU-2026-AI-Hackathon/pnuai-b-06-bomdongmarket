@@ -1,6 +1,8 @@
 # Claude 관련 문서
 CLAUDE.md
 .claude
+skills-lock.json
+.agents
 
 # Environment Variable
 .env
