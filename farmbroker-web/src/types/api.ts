@@ -322,12 +322,13 @@ export interface MarketItem {
   // 판매 상태(ON_SALE/CLOSED)는 목록·상세 양쪽에 내려온다.
   // 공개 목록은 ON_SALE·재고>0만 나오지만 판매자 본인 목록(GET /products/my)은 마감·품절도 포함한다.
   status?: string;
-  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
-  sellerNickname?: string;
-  description?: string | null;
+  // 주소·위경도는 지도 검색을 위해 목록·상세 양쪽에 내려온다(등록 시 저장, 없으면 프론트가 폴백 지오코딩).
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  // 아래는 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  sellerNickname?: string;
+  description?: string | null;
   spaceId?: number | null;
   createdAt?: string;
   traceabilityEvents?: MarketTraceabilityEvent[];

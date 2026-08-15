@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import type { MarketItem } from '@/types/api';
 import { type Coords, geocodeAddress, haversineKm } from '@/utils/geocode';
+import { hasKakaoMapKey } from '@/utils/kakaoSdk';
 
 export interface MapItem {
   item: MarketItem;
@@ -34,12 +35,16 @@ export function useNearbyItems(
   const [resolved, setResolved] = useState<Map<number, Coords>>(new Map());
 
   useEffect(() => {
+    // 앱키가 없으면 지오코딩 자체가 실패(reject)하므로 폴백을 시도하지 않는다.
+    if (!hasKakaoMapKey()) return;
+
     let cancelled = false;
     const missing = items.filter((it) => directCoords(it) === null && it.address);
 
     void Promise.all(
       missing.map(async (it) => {
-        const coords = await geocodeAddress(it.address as string);
+        // 개별 실패가 Promise.all 전체를 무너뜨리지 않도록 항목마다 삼킨다.
+        const coords = await geocodeAddress(it.address as string).catch(() => null);
         return coords ? ([it.productId, coords] as const) : null;
       }),
     ).then((entries) => {

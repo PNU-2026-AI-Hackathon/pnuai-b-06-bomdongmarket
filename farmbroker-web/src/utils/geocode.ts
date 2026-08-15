@@ -37,8 +37,9 @@ export async function geocodeAddress(address: string): Promise<Coords | null> {
   const maps = await loadKakaoMaps();
   return new Promise<Coords | null>((resolve) => {
     new maps.services.Geocoder().addressSearch(key, (results, status) => {
-      const found = results[0];
-      if (status !== maps.services.Status.OK || !found) {
+      // 상태를 먼저 본다 — 실패(ERROR)에는 results가 비어 있거나 undefined일 수 있다.
+      const found = status === maps.services.Status.OK ? results?.[0] : undefined;
+      if (!found) {
         resolve(null);
         return;
       }
