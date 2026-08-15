@@ -16,6 +16,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -51,14 +53,20 @@ public class ChatMessageService {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
         }
 
-        // 잠금을 쥐기 전에 저장한다 — 최대 5MB 파일 쓰기 동안 대화 행을 붙잡지 않기 위함이다.
         ChatImageStorage.StoredImage storedImage = hasImage ? imageStorage.store(image) : null;
+        if (storedImage == null) {
+            return saveMessage(userId, conversationId, normalizedText, false, null);
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            registerRollbackCleanup(storedImage.storedName());
+            return saveMessage(userId, conversationId, normalizedText, true, storedImage);
+        }
+
+        // 프록시 밖에서 직접 호출돼 동기화가 없으면 실패 즉시 파일을 정리한다.
         try {
-            return saveMessage(userId, conversationId, normalizedText, hasImage, storedImage);
+            return saveMessage(userId, conversationId, normalizedText, true, storedImage);
         } catch (RuntimeException e) {
-            if (storedImage != null) {
-                imageStorage.deleteQuietly(storedImage.storedName());
-            }
+            imageStorage.deleteQuietly(storedImage.storedName());
             throw e;
         }
     }
@@ -173,6 +181,17 @@ public class ChatMessageService {
         return conversation;
     }
 
+    private void registerRollbackCleanup(String storedName) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                    // 프로세스 강제 종료나 삭제 자체 실패까지 막지는 못해 고아 파일이 남을 수 있다.
+                    imageStorage.deleteQuietly(storedName);
+                }
+            }
+        });
+    }
 
     public record ChatImageResource(Resource resource, String contentType, String originalName) {
     }

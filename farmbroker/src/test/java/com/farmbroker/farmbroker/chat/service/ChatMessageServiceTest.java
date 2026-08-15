@@ -18,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -179,8 +181,51 @@ class ChatMessageServiceTest {
         assertEquals(101L, conversation.lastReadMessageIdFor(USER_ID));
     }
 
+    @Test
+    void rollbackCompletionDeletesStoredImage() throws Exception {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            sendImageWithSynchronization();
 
+            TransactionSynchronization synchronization =
+                    TransactionSynchronizationManager.getSynchronizations().getFirst();
+            synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
 
+            verify(imageStorage).deleteQuietly("stored.png");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void committedCompletionKeepsStoredImage() throws Exception {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            sendImageWithSynchronization();
+
+            TransactionSynchronization synchronization =
+                    TransactionSynchronizationManager.getSynchronizations().getFirst();
+            synchronization.afterCompletion(TransactionSynchronization.STATUS_COMMITTED);
+
+            verify(imageStorage, never()).deleteQuietly(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void failureWithoutTransactionSynchronizationDeletesImageImmediately() throws Exception {
+        MockMultipartFile image = image();
+        stubParticipants();
+        given(imageStorage.store(image)).willReturn(storedImage());
+        given(conversationRepository.findByIdForUpdate(CONVERSATION_ID))
+                .willThrow(new RuntimeException("database unavailable"));
+
+        assertThrows(RuntimeException.class,
+                () -> service.send(USER_ID, CONVERSATION_ID, null, image));
+
+        verify(imageStorage).deleteQuietly("stored.png");
+    }
 
     private void sendImageWithSynchronization() throws Exception {
         Conversation conversation = conversation();
