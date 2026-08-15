@@ -3,6 +3,7 @@ export const ROUTES = {
   login: '/login',
   signup: '/signup',
   dashboard: '/dashboard',
+  dashboardApplications: '/dashboard#my-applications-title',
   spaces: '/spaces',
   newSpace: '/spaces/new',
   newSpacePrediction: '/spaces/new/prediction',
@@ -18,4 +19,6 @@ export const ROUTES = {
   productDetail: (productId: number | string) => `/market/${productId}`,
   editProduct: (productId: number | string) => `/market/${productId}/edit`,
   myPage: '/mypage',
+  myPageProfile: '/mypage/profile',
+  myPageWithdraw: '/mypage/withdraw',
 } as const;

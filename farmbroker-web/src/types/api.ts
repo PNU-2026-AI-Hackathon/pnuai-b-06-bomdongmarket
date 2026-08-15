@@ -33,6 +33,25 @@ export interface User {
   roles: UserRole[];
 }
 
+export interface UserUpdateInput {
+  nickname: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export type WithdrawalBlockReason = 'ACTIVE_CONTRACT_EXISTS';
+
+export interface WithdrawalEligibility {
+  withdrawable: boolean;
+  activeContractCount: number;
+  reason: WithdrawalBlockReason | null;
+}
+
+export interface UserWithdrawalInput {
+  currentPassword: string;
+  agreement: true;
+}
+
 export interface LoginInput {
   email: string;
   password: string;

@@ -54,7 +54,7 @@ public class AuthService {
 
     public LoginResult login(LoginRequest request) {
         // 이메일로 유저 조회 — 없거나 비밀번호 불일치 시 동일하게 401 반환 (사용자 존재 여부 노출 방지)
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailAndWithdrawnAtIsNull(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {

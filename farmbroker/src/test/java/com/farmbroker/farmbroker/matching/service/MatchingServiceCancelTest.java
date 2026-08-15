@@ -104,8 +104,10 @@ class MatchingServiceCancelTest {
     void canReapplyAfterCancel() {
         // 중복 검사는 REQUESTED 건만 보므로, 취소로 CANCELED가 된 뒤에는 통과해야 한다.
         User applicant = newUser(FARMER_ID);
-        given(userRepository.findById(FARMER_ID)).willReturn(Optional.of(applicant));
+        given(userRepository.findActiveByIdForUpdate(FARMER_ID)).willReturn(Optional.of(applicant));
+        given(userRepository.findActiveByIdForUpdate(OWNER_ID)).willReturn(Optional.of(newUser(OWNER_ID)));
         given(spaceContractAdapter.getSummaryById(SPACE_ID)).willReturn(availableSpaceSummary());
+        given(spaceContractAdapter.getSummaryByIdForUpdate(SPACE_ID)).willReturn(availableSpaceSummary());
         given(matchingRepository.existsBySpaceIdAndFarmerIdAndStatus(
                 SPACE_ID, FARMER_ID, MatchingStatus.REQUESTED)).willReturn(false);
         given(entityManager.getReference(any(), anyLong())).willReturn(spaceStub());

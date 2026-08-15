@@ -75,7 +75,7 @@ class SpaceServiceRoleTest {
     @DisplayName("OWNER 역할이 없어도 공간을 등록할 수 있다")
     void createDoesNotRequireOwnerRole() {
         User user = newConsumer();
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user));
         given(spaceRepository.save(any(Space.class))).willAnswer(inv -> inv.getArgument(0));
 
         spaceService.create(1L, createRequest());
@@ -87,7 +87,7 @@ class SpaceServiceRoleTest {
     @DisplayName("공간 등록에 성공하면 OWNER 역할이 더해지고 기존 역할은 유지된다")
     void createGrantsOwnerRoleKeepingExistingOnes() {
         User user = newConsumer();
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user));
         given(spaceRepository.save(any(Space.class))).willAnswer(inv -> inv.getArgument(0));
 
         spaceService.create(1L, createRequest());

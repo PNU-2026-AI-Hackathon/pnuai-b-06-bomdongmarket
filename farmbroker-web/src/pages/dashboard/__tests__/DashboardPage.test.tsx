@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import { saveAuthSession } from '@/auth/session';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
-import { MyPage } from '@/pages/dashboard/MyPage';
 
 describe('Dashboard pages', () => {
   function signIn(roles: Array<'OWNER' | 'FARMER' | 'CONSUMER'>) {
@@ -46,14 +45,6 @@ describe('Dashboard pages', () => {
     await user.click((await screen.findAllByRole('button', { name: '수락' }))[0]);
 
     expect(await screen.findByText('수락됨')).toBeInTheDocument();
-  });
-
-  it('마이페이지 프로필 메뉴를 렌더링한다', () => {
-    signIn(['OWNER']);
-    renderWithProviders(<MyPage />);
-
-    expect(screen.getByText('그린스페이스랩')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /고객센터/i })).toBeInTheDocument();
   });
 
   it('여러 역할을 가진 사용자는 소유자와 신청자의 대시보드 흐름을 모두 본다', async () => {

@@ -4,6 +4,7 @@ import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
+import com.farmbroker.farmbroker.matching.repository.MatchingParticipantProjection;
 import com.farmbroker.farmbroker.matching.support.SpaceContractAdapter;
 import com.farmbroker.farmbroker.matching.support.SpaceSummary;
 import com.farmbroker.farmbroker.space.domain.Space;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 
 // 매칭의 역할 정책을 검증한다.
 // 신청은 역할을 요구하지 않고(요구하면 농부가 될 방법이 없어진다),
@@ -60,11 +62,19 @@ class MatchingServiceRoleTest {
     @DisplayName("FARMER 역할이 없어도 매칭을 신청할 수 있다")
     void applyDoesNotRequireFarmerRole() {
         User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
-        given(userRepository.findById(FARMER_ID)).willReturn(Optional.of(applicant));
+        given(userRepository.findActiveByIdForUpdate(FARMER_ID)).willReturn(Optional.of(applicant));
         given(spaceContractAdapter.getSummaryById(SPACE_ID)).willReturn(availableSpaceSummary());
+        given(userRepository.findActiveByIdForUpdate(OWNER_ID)).willReturn(Optional.of(newUser("owner@example.com", "공간주", OWNER_ID)));
+        given(spaceContractAdapter.getSummaryByIdForUpdate(SPACE_ID)).willReturn(availableSpaceSummary());
         given(entityManager.getReference(any(), anyLong())).willReturn(spaceStub());
 
         matchingService.apply(FARMER_ID, applyRequest());
+
+        var order = inOrder(userRepository, spaceContractAdapter);
+        order.verify(spaceContractAdapter).getSummaryById(SPACE_ID);
+        order.verify(userRepository).findActiveByIdForUpdate(FARMER_ID);
+        order.verify(userRepository).findActiveByIdForUpdate(OWNER_ID);
+        order.verify(spaceContractAdapter).getSummaryByIdForUpdate(SPACE_ID);
 
         // 신청만으로는 아직 농부가 아니다 — 수락되어야 부여된다.
         assertThat(applicant.hasRole(UserRole.FARMER)).isFalse();
@@ -75,7 +85,8 @@ class MatchingServiceRoleTest {
     void acceptGrantsFarmerRoleToApplicant() {
         User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
         Matching matching = requestedMatching(applicant);
-        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
+        givenSecuredRequestedMatching(matching);
+        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
 
         matchingService.accept(MATCHING_ID, OWNER_ID);
 
@@ -88,7 +99,8 @@ class MatchingServiceRoleTest {
     void rejectDoesNotGrantFarmerRole() {
         User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
         Matching matching = requestedMatching(applicant);
-        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching));
+        givenSecuredRequestedMatching(matching);
+        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
 
         matchingService.reject(MATCHING_ID, OWNER_ID);
 
@@ -127,6 +139,17 @@ class MatchingServiceRoleTest {
         setField(matching, "id", MATCHING_ID);
         setField(matching, "createdAt", LocalDateTime.now());
         return matching;
+    }
+
+    private void givenSecuredRequestedMatching(Matching matching) {
+        MatchingParticipantProjection participants = org.mockito.Mockito.mock(MatchingParticipantProjection.class);
+        given(participants.getFarmerId()).willReturn(FARMER_ID);
+        given(participants.getOwnerId()).willReturn(OWNER_ID);
+        given(participants.getSpaceId()).willReturn(SPACE_ID);
+        given(matchingRepository.findParticipantsById(MATCHING_ID)).willReturn(Optional.of(participants));
+        given(userRepository.findActiveByIdForUpdate(FARMER_ID)).willReturn(Optional.of(matching.getFarmer()));
+        given(userRepository.findActiveByIdForUpdate(OWNER_ID)).willReturn(Optional.of(newUser("owner@example.com", "공간주", OWNER_ID)));
+        given(spaceContractAdapter.getSummaryByIdForUpdate(SPACE_ID)).willReturn(availableSpaceSummary());
     }
 
     private SpaceSummary availableSpaceSummary() {

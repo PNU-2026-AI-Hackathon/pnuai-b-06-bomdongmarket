@@ -6,6 +6,7 @@ import { AuthContext } from '@/auth/authContext';
 import {
   AUTH_SESSION_CHANGED_EVENT,
   clearAuthSession,
+  clearStoredUser,
   getStoredUser,
   saveAuthSession,
   updateStoredUser,
@@ -15,7 +16,16 @@ import {
   login as requestLogin,
   logout as requestLogout,
 } from '@/services/authService';
-import type { LoginInput, User } from '@/types/api';
+import {
+  updateCurrentUser as requestUpdateCurrentUser,
+  withdrawCurrentUser as requestWithdrawCurrentUser,
+} from '@/services/userService';
+import type {
+  LoginInput,
+  User,
+  UserUpdateInput,
+  UserWithdrawalInput,
+} from '@/types/api';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -93,9 +103,18 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
             throw error;
           }
         }
-        clearAuthSession();
+        clearStoredUser();
         setUser(null);
         setIsAuthenticated(false);
+      },
+      updateUser: async (input: UserUpdateInput) => {
+        const updatedUser = await requestUpdateCurrentUser(input);
+        updateStoredUser(updatedUser);
+        setUser(updatedUser);
+        return updatedUser;
+      },
+      withdraw: async (input: UserWithdrawalInput) => {
+        await requestWithdrawCurrentUser(input);
       },
     }),
     [isAuthenticated, user],

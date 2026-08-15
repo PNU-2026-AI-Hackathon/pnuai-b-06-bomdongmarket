@@ -1,9 +1,11 @@
 package com.farmbroker.farmbroker.space.repository;
 
 import com.farmbroker.farmbroker.space.domain.Space;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,8 +20,16 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
     // 공개 상세 조회 — 삭제된 공간은 404 처리 대상
     Optional<Space> findByIdAndDeletedFalse(Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Space s WHERE s.id = :spaceId")
+    Optional<Space> findByIdForUpdate(@Param("spaceId") Long spaceId);
+
     // 내가 등록한 공간 — status 무관 전부, 삭제 제외, 최신순
     List<Space> findByOwnerIdAndDeletedFalseOrderByCreatedAtDesc(Long ownerId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Space s WHERE s.owner.id = :ownerId AND s.deleted = false ORDER BY s.createdAt DESC")
+    List<Space> findActiveByOwnerIdForUpdate(@Param("ownerId") Long ownerId);
 
     // 공개 목록 검색 — deleted=false && status=AVAILABLE 고정, 필터는 null이면 미적용 (명세 2.2).
     // keyword는 제목 또는 주소 부분 일치. 정렬은 Pageable의 Sort로 주입한다 (latest/area/rent 매핑은 서비스 책임)

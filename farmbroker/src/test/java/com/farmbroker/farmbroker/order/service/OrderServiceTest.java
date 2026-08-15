@@ -82,7 +82,7 @@ class OrderServiceTest {
         Product product = product(1L, 4300, 10);
         given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(product, 3)));
-        given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(1L)).willReturn(Optional.of(product));
 
         OrderResponse response = orderService.checkout(1L);
@@ -100,7 +100,7 @@ class OrderServiceTest {
         Product product = product(1L, 4300, 3);
         given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(product, 3)));
-        given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(1L)).willReturn(Optional.of(product));
 
         orderService.checkout(1L);
@@ -116,7 +116,7 @@ class OrderServiceTest {
         Product product = product(1L, 4300, 2);
         given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(product, 5)));
-        given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(1L)).willReturn(Optional.of(product));
 
         assertThatThrownBy(() -> orderService.checkout(1L))
@@ -128,6 +128,7 @@ class OrderServiceTest {
     @Test
     @DisplayName("빈 장바구니로는 결제할 수 없다")
     void checkout_rejects_empty_cart() {
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(cartItemRepository.findByUserIdForUpdate(1L)).willReturn(List.of());
 
         assertThatThrownBy(() -> orderService.checkout(1L))
@@ -142,7 +143,7 @@ class OrderServiceTest {
         Product earlier = product(10L, 2500, 10);
         given(cartItemRepository.findByUserIdForUpdate(1L))
                 .willReturn(List.of(cartItem(later, 1), cartItem(earlier, 1)));
-        given(userRepository.findById(1L)).willReturn(Optional.of(user(1L)));
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findForUpdate(10L)).willReturn(Optional.of(earlier));
         given(productRepository.findForUpdate(20L)).willReturn(Optional.of(later));
 
@@ -161,6 +162,7 @@ class OrderServiceTest {
     void adding_same_product_merges_quantity() {
         Product product = product(1L, 4300, 10);
         CartItem existing = cartItem(product, 2);
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(product));
         given(cartItemRepository.findByUserIdAndProductId(1L, 1L)).willReturn(Optional.of(existing));
         given(cartItemRepository.findByUserIdOrderByCreatedAtAsc(1L)).willReturn(List.of(existing));
@@ -174,6 +176,7 @@ class OrderServiceTest {
     @DisplayName("판매 마감된 상품은 담을 수 없다")
     void cannot_add_closed_product() {
         Product product = product(1L, 4300, 0);
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(user(1L)));
         given(productRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(product));
 
         assertThatThrownBy(() -> orderService.addToCart(1L, request(1L, 1)))

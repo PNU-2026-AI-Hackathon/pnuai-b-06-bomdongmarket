@@ -5,16 +5,17 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
-import { DashboardPage, MyPage } from '@/pages/dashboard';
+import { DashboardPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
 import {
+  CartPage,
   MarketPage,
   MyProductsPage,
-  ProductDetailPage,
-  CartPage,
   OrderCompletePage,
+  ProductDetailPage,
   ProductFormPage,
 } from '@/pages/market';
+import { MyPage, ProfileEditPage, WithdrawPage } from '@/pages/mypage';
 import { SpaceApplyPage } from '@/pages/space-apply';
 import { SpaceDetailPage } from '@/pages/space-detail';
 import { SpaceCreatePage, SpacePredictionPage, SpacesPage } from '@/pages/spaces';
@@ -41,6 +42,8 @@ export function AppRouter() {
           {/* 정적 세그먼트가 우선 매칭되므로 /spaces/new와 충돌하지 않습니다. */}
           <Route element={<SpaceApplyPage />} path="/spaces/:spaceId/apply" />
           <Route element={<MyPage />} path={ROUTES.myPage} />
+          <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
+          <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
           {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
           <Route element={<CartPage />} path={ROUTES.cart} />
           <Route element={<OrderCompletePage />} path={ROUTES.orderComplete} />

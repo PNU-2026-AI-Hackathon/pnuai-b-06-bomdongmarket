@@ -50,8 +50,7 @@ public class ProductService {
     // 상품 등록 — FARMER 역할 보유자만. sellerId는 항상 인증 컨텍스트의 userId를 쓴다.
     @Transactional
     public ProductDetailResponse create(Long userId, ProductCreateRequest request) {
-        User seller = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User seller = getActiveUserForUpdate(userId);
         if (!seller.hasRole(UserRole.FARMER)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_ROLE);
         }
@@ -117,6 +116,7 @@ public class ProductService {
     // 상품 부분수정 — 등록자 본인만. events가 오면 이력을 전량 교체한다.
     @Transactional
     public ProductDetailResponse update(Long userId, Long productId, ProductUpdateRequest request) {
+        getActiveUserForUpdate(userId);
         Product product = productRepository.findForUpdate(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         validateOwner(product, userId);
@@ -157,6 +157,7 @@ public class ProductService {
     // 상품 삭제 — Soft Delete. 등록자 본인만.
     @Transactional
     public ProductDeleteResponse delete(Long userId, Long productId) {
+        getActiveUserForUpdate(userId);
         Product product = productRepository.findByIdAndDeletedFalse(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         validateOwner(product, userId);
@@ -170,6 +171,11 @@ public class ProductService {
         if (!product.getSeller().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.NOT_PRODUCT_OWNER);
         }
+    }
+
+    private User getActiveUserForUpdate(Long userId) {
+        return userRepository.findActiveByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     // 등록/수정용 카테고리 파싱 — 유효하지 않으면 400.

@@ -4,6 +4,7 @@ import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.file.domain.UploadedFile;
 import com.farmbroker.farmbroker.file.repository.UploadedFileRepository;
+import com.farmbroker.farmbroker.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,11 +47,14 @@ public class FileStorageService {
 
     private final Path uploadDir;
     private final UploadedFileRepository uploadedFileRepository;
+    private final UserRepository userRepository;
 
     public FileStorageService(@Value("${file.upload-dir}") String uploadDir,
-                              UploadedFileRepository uploadedFileRepository) {
+                              UploadedFileRepository uploadedFileRepository,
+                              UserRepository userRepository) {
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.uploadedFileRepository = uploadedFileRepository;
+        this.userRepository = userRepository;
     }
 
     @PostConstruct
@@ -66,6 +70,9 @@ public class FileStorageService {
     // 업로더를 함께 기록해 두어야 나중에 삭제 권한을 판단할 수 있다.
     @Transactional
     public String store(MultipartFile file, Long uploaderId) {
+        if (userRepository.findActiveByIdForUpdate(uploaderId).isEmpty()) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.FILE_EMPTY);
         }

@@ -27,6 +27,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 내가 등록한 상품 — 상태 무관 전부, 삭제 제외, 최신순
     List<Product> findBySellerIdAndDeletedFalseOrderByCreatedAtDesc(Long sellerId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Product p where p.seller.id = :sellerId and p.deleted = false order by p.id")
+    List<Product> findActiveBySellerIdForUpdate(@Param("sellerId") Long sellerId);
+
+    boolean existsByImageUrlEndingWithAndDeletedFalse(String imageUrlSuffix);
+
     // 공개 목록 검색 — deleted=false && status=ON_SALE && stock>0 고정(판매 마감·품절은 목록에서 제외),
     // keyword는 상품명 또는 생산위치 부분일치, category는 null이면 미적용(전체).
     // 판매자 본인 목록(getMy)은 이 조건을 타지 않으므로 마감/품절 상품도 그대로 보인다.

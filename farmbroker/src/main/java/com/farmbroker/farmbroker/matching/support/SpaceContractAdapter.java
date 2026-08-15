@@ -39,6 +39,18 @@ public class SpaceContractAdapter {
         return SpaceSummary.of(space, thumbnailUrl);
     }
 
+    // 신청 생성 시 owner 활성 여부를 잠근 뒤 호출한다. 해당 순서(owner → space)는 owner 탈퇴의 잠금 순서와 맞춘다.
+    @Transactional
+    public SpaceSummary getSummaryByIdForUpdate(Long spaceId) {
+        Space space = spaceRepository.findByIdForUpdate(spaceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SPACE_NOT_FOUND));
+        String thumbnailUrl = spaceImageRepository.findBySpaceIdOrderBySortOrderAsc(spaceId).stream()
+                .findFirst()
+                .map(SpaceImage::getImageUrl)
+                .orElse(null);
+        return SpaceSummary.of(space, thumbnailUrl);
+    }
+
     // 배치 요약 — 매칭 목록 조회의 N+1 방지용. 대표 이미지도 IN 쿼리 1번으로 채운다
     public List<SpaceSummary> getSummariesByIds(List<Long> spaceIds) {
         if (spaceIds.isEmpty()) {

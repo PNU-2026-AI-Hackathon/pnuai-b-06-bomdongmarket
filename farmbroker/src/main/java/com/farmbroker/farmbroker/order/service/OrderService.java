@@ -43,6 +43,7 @@ public class OrderService {
     // 같은 상품을 다시 담으면 줄을 늘리지 않고 수량을 더한다.
     @Transactional
     public CartResponse addToCart(Long userId, CartItemRequest request) {
+        User user = getActiveUserForUpdate(userId);
         Product product = productRepository.findByIdAndDeletedFalse(request.getProductId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         if (!product.isPurchasable()) {
@@ -60,8 +61,6 @@ public class OrderService {
         if (existing != null) {
             existing.addQuantity(request.getQuantity());
         } else {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
             cartItemRepository.save(CartItem.builder()
                     .user(user)
                     .product(product)
@@ -73,6 +72,7 @@ public class OrderService {
 
     @Transactional
     public CartResponse changeQuantity(Long userId, Long productId, int quantity) {
+        getActiveUserForUpdate(userId);
         CartItem item = cartItemRepository.findByUserIdAndProductId(userId, productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND));
         if (quantity > item.getProduct().getStock()) {
@@ -84,6 +84,7 @@ public class OrderService {
 
     @Transactional
     public CartResponse removeFromCart(Long userId, Long productId) {
+        getActiveUserForUpdate(userId);
         CartItem item = cartItemRepository.findByUserIdAndProductId(userId, productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND));
         cartItemRepository.delete(item);
@@ -95,13 +96,12 @@ public class OrderService {
     // 한 줄이라도 재고가 모자라면 전체를 되돌린다(부분 결제는 만들지 않는다).
     @Transactional
     public OrderResponse checkout(Long userId) {
+        User buyer = getActiveUserForUpdate(userId);
         List<CartItem> cartItems = cartItemRepository.findByUserIdForUpdate(userId);
         if (cartItems.isEmpty()) {
             throw new BusinessException(ErrorCode.CART_EMPTY);
         }
 
-        User buyer = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         Order order = new Order(buyer);
 
         // 서로 다른 장바구니도 같은 상품들을 주문할 수 있어 잠금 순서를 고정해야 교착을 피할 수 있다.
@@ -130,5 +130,10 @@ public class OrderService {
         orderRepository.save(order);
         cartItemRepository.deleteByUserId(userId);
         return OrderResponse.from(order);
+    }
+
+    private User getActiveUserForUpdate(Long userId) {
+        return userRepository.findActiveByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 }
