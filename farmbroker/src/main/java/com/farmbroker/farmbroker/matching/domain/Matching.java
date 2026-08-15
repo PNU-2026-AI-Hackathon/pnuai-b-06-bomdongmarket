@@ -129,6 +129,7 @@ public class Matching {
     }
 
     // 이미 동의했으면 시각을 유지한다 — 같은 버튼을 두 번 눌러도 결과가 같다.
+    // 계약 확정에 따르는 매칭 상태 전이는 공간·역할 변경까지 함께 일어나야 해서 서비스가 수행한다.
     public void agreeContractAsOwner() {
         if (this.ownerAgreedAt == null) {
             this.ownerAgreedAt = LocalDateTime.now();

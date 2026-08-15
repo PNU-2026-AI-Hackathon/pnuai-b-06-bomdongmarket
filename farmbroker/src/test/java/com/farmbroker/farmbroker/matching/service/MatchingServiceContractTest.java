@@ -4,13 +4,18 @@ import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.ContractStatus;
 import com.farmbroker.farmbroker.matching.domain.Matching;
+import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import com.farmbroker.farmbroker.matching.dto.ContractResponse;
 import com.farmbroker.farmbroker.matching.dto.ContractTermsRequest;
+import com.farmbroker.farmbroker.matching.repository.MatchingParticipantProjection;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.matching.support.SpaceContractAdapter;
+import com.farmbroker.farmbroker.matching.support.SpaceSummary;
 import com.farmbroker.farmbroker.space.domain.Space;
+import com.farmbroker.farmbroker.space.domain.SpaceStatus;
 import com.farmbroker.farmbroker.user.domain.User;
+import com.farmbroker.farmbroker.user.domain.UserRole;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,7 +32,12 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 // 계약서(매칭에 붙는 월세·계약기간·양측 동의)의 권한과 상태 전이를 검증한다.
 // 지켜야 할 규칙: 조건 입력은 공간 제공자만, 확정은 양측 모두 동의해야, 취소는 한쪽만 눌러도 된다.
@@ -55,6 +65,43 @@ class MatchingServiceContractTest {
 
     @InjectMocks
     private MatchingService matchingService;
+
+    // 계약서 쓰기 경로는 수락과 같은 순서(사용자 → 공간 → 매칭)로 잠근 뒤 매칭을 읽는다.
+    private void givenLockedMatching(Matching matching) {
+        given(matchingRepository.findParticipantsById(MATCHING_ID))
+                .willReturn(Optional.of(participants()));
+        given(userRepository.findActiveByIdForUpdate(FARMER_ID))
+                .willReturn(Optional.of(matching.getFarmer()));
+        given(userRepository.findActiveByIdForUpdate(OWNER_ID))
+                .willReturn(Optional.of(matching.getSpace().getOwner()));
+        given(spaceContractAdapter.getSummaryByIdForUpdate(SPACE_ID))
+                .willReturn(SpaceSummary.builder()
+                        .id(SPACE_ID)
+                        .ownerId(OWNER_ID)
+                        .status(SpaceStatus.AVAILABLE)
+                        .deleted(false)
+                        .build());
+        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
+    }
+
+    private MatchingParticipantProjection participants() {
+        return new MatchingParticipantProjection() {
+            @Override
+            public Long getFarmerId() {
+                return FARMER_ID;
+            }
+
+            @Override
+            public Long getOwnerId() {
+                return OWNER_ID;
+            }
+
+            @Override
+            public Long getSpaceId() {
+                return SPACE_ID;
+            }
+        };
+    }
 
     @Test
     @DisplayName("계약서 조회는 양측 닉네임과 공간 주소를 그대로 싣고 요청자 쪽을 알려준다")
@@ -84,7 +131,7 @@ class MatchingServiceContractTest {
     @DisplayName("신청자는 계약 조건을 저장할 수 없다")
     void updateTermsByFarmerIsForbidden() {
         Matching matching = matching();
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
+        givenLockedMatching(matching);
 
         assertThatThrownBy(() -> matchingService.updateContractTerms(MATCHING_ID, FARMER_ID, terms(500_000)))
                 .isInstanceOf(BusinessException.class)
@@ -95,7 +142,7 @@ class MatchingServiceContractTest {
     @Test
     @DisplayName("종료일이 시작일보다 앞서면 저장할 수 없다")
     void updateTermsWithInvalidPeriodIsRejected() {
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching()));
+        givenLockedMatching(matching());
         ContractTermsRequest reversed = termsJson("""
                 { "monthlyRent": 500000, "startDate": "2026-12-31", "endDate": "2026-09-01" }
                 """);
@@ -109,7 +156,7 @@ class MatchingServiceContractTest {
     @DisplayName("조건을 다시 저장하면 이미 받은 동의가 초기화된다")
     void updateTermsResetsAgreements() {
         Matching matching = matching();
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
+        givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
         matchingService.agreeContract(MATCHING_ID, FARMER_ID);
         assertThat(matching.getFarmerAgreedAt()).isNotNull();
@@ -125,7 +172,7 @@ class MatchingServiceContractTest {
     @Test
     @DisplayName("조건을 입력하지 않으면 계약에 동의할 수 없다")
     void agreeWithoutTermsIsRejected() {
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching()));
+        givenLockedMatching(matching());
 
         assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, OWNER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -133,23 +180,52 @@ class MatchingServiceContractTest {
     }
 
     @Test
-    @DisplayName("양측이 모두 동의해야 계약이 확정된다")
+    @DisplayName("양측이 모두 동의해야 계약이 확정되고, 확정 시 매칭도 ACCEPTED가 된다")
     void contractIsConfirmedOnlyWhenBothAgree() {
         Matching matching = matching();
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
+        givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
 
         ContractResponse afterOwner = matchingService.agreeContract(MATCHING_ID, OWNER_ID);
         assertThat(afterOwner.getStatus()).isEqualTo(ContractStatus.DRAFT);
+        // 한쪽만 동의한 단계에서는 매칭이 아직 신청 상태 그대로여야 한다.
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REQUESTED);
 
         ContractResponse afterFarmer = matchingService.agreeContract(MATCHING_ID, FARMER_ID);
         assertThat(afterFarmer.getStatus()).isEqualTo(ContractStatus.CONFIRMED);
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
+        assertThat(matching.getRespondedAt()).isNotNull();
+        // 확정은 소유자의 수락과 똑같은 후속 처리를 일으켜야 한다.
+        assertThat(matching.getFarmer().getRoles()).contains(UserRole.FARMER);
+        then(spaceContractAdapter).should().markMatched(SPACE_ID);
+        then(matchingRepository).should()
+                .rejectRemainingRequested(eq(SPACE_ID), eq(MATCHING_ID), any(LocalDateTime.class));
+        // 확정 응답은 벌크 UPDATE 전에 조립되므로 LAZY 필드가 그대로 담겨 있어야 한다.
+        assertThat(afterFarmer.getOwnerNickname()).isEqualTo("공간주");
+        assertThat(afterFarmer.getAddress()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("소유자가 이미 수락한 매칭이면 확정 시 후속 처리를 다시 하지 않는다")
+    void alreadyAcceptedMatchingSkipsAcceptanceSideEffects() {
+        // 수락/거절 flow로 이미 공간이 MATCHED가 된 상태다 — 다시 markMatched를 부르면 409가 난다.
+        Matching matching = matching();
+        matching.accept();
+        givenLockedMatching(matching);
+        matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
+        matchingService.agreeContract(MATCHING_ID, OWNER_ID);
+
+        ContractResponse response = matchingService.agreeContract(MATCHING_ID, FARMER_ID);
+
+        assertThat(response.getStatus()).isEqualTo(ContractStatus.CONFIRMED);
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
+        then(spaceContractAdapter).should(never()).markMatched(anyLong());
     }
 
     @Test
     @DisplayName("확정된 계약은 조건을 바꾸거나 취소할 수 없다")
     void confirmedContractIsClosed() {
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching()));
+        givenLockedMatching(matching());
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
         matchingService.agreeContract(MATCHING_ID, OWNER_ID);
         matchingService.agreeContract(MATCHING_ID, FARMER_ID);
@@ -163,16 +239,18 @@ class MatchingServiceContractTest {
     }
 
     @Test
-    @DisplayName("한 쪽만 취소해도 계약이 취소되고 이후 동의할 수 없다")
+    @DisplayName("한 쪽만 취소해도 계약이 취소되고 매칭은 REJECTED가 된다")
     void cancelByOneSideClosesContract() {
         Matching matching = matching();
-        given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
+        givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
         matchingService.agreeContract(MATCHING_ID, OWNER_ID);
 
         ContractResponse response = matchingService.cancelContract(MATCHING_ID, FARMER_ID);
 
         assertThat(response.getStatus()).isEqualTo(ContractStatus.CANCELED);
+        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REJECTED);
+        assertThat(matching.getRespondedAt()).isNotNull();
         assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, FARMER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_CLOSED);

@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -50,9 +50,20 @@ describe('ContractPage', () => {
   it('이름과 주소는 입력받지 않고 기존 정보를 그대로 보여준다', async () => {
     renderPage();
 
-    expect(await screen.findByText('옥상건물주')).toBeInTheDocument();
-    expect(screen.getByText('도심농부')).toBeInTheDocument();
+    // 닉네임은 계약 당사자 카드와 동의 현황 카드 양쪽에 나옵니다.
+    expect(await screen.findAllByText('옥상건물주')).toHaveLength(2);
+    expect(screen.getAllByText('도심농부')).toHaveLength(2);
     expect(screen.getByText('부산광역시 금정구 부산대학로 63번길 2')).toBeInTheDocument();
+  });
+
+  it('동의 현황은 역할 이름 대신 각자의 닉네임으로 보여준다', async () => {
+    renderPage({ ownerAgreed: true, ...savedTerms });
+
+    const agreements = (await screen.findByText('동의 현황')).parentElement as HTMLElement;
+    expect(within(agreements).getByText('옥상건물주')).toBeInTheDocument();
+    expect(within(agreements).getByText('도심농부')).toBeInTheDocument();
+    expect(within(agreements).queryByText('공간 제공자')).not.toBeInTheDocument();
+    expect(within(agreements).queryByText('도심 농부')).not.toBeInTheDocument();
   });
 
   it('도심 농부는 조건을 수정할 수 없고 저장 버튼도 없다', async () => {
@@ -131,5 +142,21 @@ describe('ContractPage', () => {
     );
 
     expect(await screen.findByText('이 계약은 취소되었습니다.')).toBeInTheDocument();
+    // 더 기다릴 동의가 없으므로 '동의 대기'는 남지 않습니다.
+    expect(screen.queryByText('동의 대기')).not.toBeInTheDocument();
+    expect(screen.getAllByText('계약 취소')).toHaveLength(2);
+  });
+
+  it('한 쪽이 이미 동의한 계약이 취소되면 동의 완료는 남고 대기만 취소로 바뀐다', async () => {
+    renderPage({
+      viewerRole: 'FARMER',
+      ownerAgreed: true,
+      status: 'CANCELED',
+      ...savedTerms,
+    });
+
+    expect(await screen.findByText('동의 완료')).toBeInTheDocument();
+    expect(screen.getByText('계약 취소')).toBeInTheDocument();
+    expect(screen.queryByText('동의 대기')).not.toBeInTheDocument();
   });
 });

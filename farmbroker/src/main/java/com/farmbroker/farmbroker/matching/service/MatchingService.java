@@ -118,7 +118,14 @@ public class MatchingService {
     @Transactional
     public MatchingStatusResponse accept(Long matchingId, Long userId) {
         Matching matching = getOwnedRequestedMatching(matchingId, userId);
+        applyAcceptance(matching);
+        return MatchingStatusResponse.from(matching);
+    }
 
+    // 수락 확정 시 함께 일어나야 하는 일들. 소유자의 수락 버튼과 계약 확정이 같은 결과를 내도록
+    // 한 곳에 모아둔다 — 한쪽에만 추가하면 두 경로의 결과가 갈라진다.
+    // 호출 전 참여자·공간·매칭이 모두 잠겨 있어야 한다.
+    private void applyAcceptance(Matching matching) {
         matching.accept();
         spaceContractAdapter.markMatched(matching.getSpace().getId());
 
@@ -131,7 +138,6 @@ public class MatchingService {
 
         matchingRepository.rejectRemainingRequested(
                 matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
-        return MatchingStatusResponse.from(matching);
     }
 
     // 거절 — 매칭 상태만 변경하고 공간 상태는 건드리지 않는다
@@ -204,6 +210,7 @@ public class MatchingService {
 
     // 계약 동의 — 양측이 모두 동의해야 확정(CONFIRMED)된다.
     // 조건이 비어 있으면 무엇에 동의하는지 알 수 없으므로 막는다.
+    // 확정되면 매칭도 수락된 것으로 보고 수락과 똑같은 후속 처리를 수행한다.
     @Transactional
     public ContractResponse agreeContract(Long matchingId, Long userId) {
         Matching matching = getDraftContract(matchingId, userId);
@@ -217,20 +224,37 @@ public class MatchingService {
         } else {
             matching.agreeContractAsFarmer();
         }
-        return ContractResponse.of(matching, isOwner);
+
+        // 응답을 먼저 조립한다 — applyAcceptance의 벌크 UPDATE가 영속성 컨텍스트를 비우면
+        // 그 뒤에는 space·farmer LAZY 프록시에서 닉네임·주소를 읽을 수 없다.
+        ContractResponse response = ContractResponse.of(matching, isOwner);
+        if (matching.getContractStatus() == ContractStatus.CONFIRMED
+                && matching.getStatus() == MatchingStatus.REQUESTED) {
+            // 이미 수락된 매칭이면 후속 처리가 끝나 있다. 다시 부르면 markMatched가 409를 던진다.
+            applyAcceptance(matching);
+        }
+        return response;
     }
 
     // 계약 취소 — 둘 중 한 명만 눌러도 취소된다. 되돌릴 수 없다.
+    // 거절은 상태 전이 외에 따르는 후속 처리가 없다(공간 상태는 수락 시점에만 바뀐다).
     @Transactional
     public ContractResponse cancelContract(Long matchingId, Long userId) {
         Matching matching = getDraftContract(matchingId, userId);
         matching.cancelContract();
+        matching.reject();
         return ContractResponse.of(matching, isContractOwner(matching, userId));
     }
 
     // 계약서 쓰기 공통 전제: 매칭 존재 → 당사자 본인 → 아직 DRAFT 상태.
     // 양측이 동시에 '계약'을 눌러도 확정 판정이 어긋나지 않도록 행을 잠그고 읽는다.
+    // 확정되면 사용자 역할과 공간 상태까지 바뀌므로 수락과 같은 순서(사용자 → 공간 → 매칭)로 잠근다 —
+    // 순서가 어긋나면 탈퇴·수락 트랜잭션과 교착 상태에 빠진다.
     private Matching getDraftContract(Long matchingId, Long userId) {
+        MatchingParticipantProjection participants = matchingRepository.findParticipantsById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        lockActiveParticipantPair(participants.getOwnerId(), participants.getFarmerId());
+        spaceContractAdapter.getSummaryByIdForUpdate(participants.getSpaceId());
         Matching matching = matchingRepository.findByIdForUpdate(matchingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
         requireContractParticipant(matching, userId);

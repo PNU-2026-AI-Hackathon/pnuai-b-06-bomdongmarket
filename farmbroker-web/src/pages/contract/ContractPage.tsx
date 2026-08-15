@@ -228,19 +228,40 @@ function AgreementCard({ contract }: { contract: ContractDetail }) {
     <Card padding="lg">
       <h2 className="text-xl font-black text-content">동의 현황</h2>
       <ul className="mt-4 grid gap-3 text-body-sm">
-        <AgreementRow agreed={contract.ownerAgreed} label="공간 제공자" />
-        <AgreementRow agreed={contract.farmerAgreed} label="도심 농부" />
+        <AgreementRow
+          agreed={contract.ownerAgreed}
+          canceled={contract.status === 'CANCELED'}
+          label={contract.ownerNickname}
+        />
+        <AgreementRow
+          agreed={contract.farmerAgreed}
+          canceled={contract.status === 'CANCELED'}
+          label={contract.farmerNickname}
+        />
       </ul>
     </Card>
   );
 }
 
+interface AgreementRowProps {
+  agreed: boolean;
+  canceled: boolean;
+  label: string;
+}
+
 // 색만으로 상태를 구분하지 않도록 배지 안에 문구를 함께 넣습니다.
-function AgreementRow({ agreed, label }: { agreed: boolean; label: string }) {
+// 취소된 계약에서는 더 기다릴 동의가 없으므로 '동의 대기' 대신 취소를 알립니다.
+function AgreementRow({ agreed, canceled, label }: AgreementRowProps) {
+  const badge = agreed
+    ? { tone: 'green' as const, text: '동의 완료' }
+    : canceled
+      ? { tone: 'red' as const, text: '계약 취소' }
+      : { tone: 'slate' as const, text: '동의 대기' };
+
   return (
     <li className="flex items-center justify-between gap-4">
       <span className="text-content-muted">{label}</span>
-      <Badge tone={agreed ? 'green' : 'slate'}>{agreed ? '동의 완료' : '동의 대기'}</Badge>
+      <Badge tone={badge.tone}>{badge.text}</Badge>
     </li>
   );
 }
