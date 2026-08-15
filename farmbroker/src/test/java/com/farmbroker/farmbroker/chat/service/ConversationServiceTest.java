@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ class ConversationServiceTest {
     private static final long SPACE_ID = 30L;
 
     @Mock ConversationRepository conversationRepository;
+    @Mock ConversationWriter conversationWriter;
     @Mock ChatMessageRepository messageRepository;
     @Mock UserRepository userRepository;
     @Mock ChatContextResolver contextResolver;
@@ -45,7 +47,7 @@ class ConversationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ConversationService(conversationRepository, messageRepository,
+        service = new ConversationService(conversationRepository, conversationWriter, messageRepository,
                 userRepository, contextResolver, blockService);
     }
 
@@ -54,9 +56,10 @@ class ConversationServiceTest {
         Conversation conversation = conversation();
         given(userRepository.existsById(USER_ID)).willReturn(true);
         given(contextResolver.resolve("SPACE", SPACE_ID)).willReturn(target(OWNER_ID));
-        given(conversationRepository.findByContextTypeAndContextIdAndParticipant1IdAndParticipant2Id(
-                ChatContextType.SPACE, SPACE_ID, USER_ID, OWNER_ID)).willReturn(Optional.empty());
-        given(conversationRepository.save(any(Conversation.class))).willReturn(conversation);
+        given(conversationWriter.find(ChatContextType.SPACE, SPACE_ID, USER_ID, OWNER_ID))
+                .willReturn(Optional.empty());
+        given(conversationWriter.create(ChatContextType.SPACE, SPACE_ID, "도심 공실", null, USER_ID, OWNER_ID))
+                .willReturn(conversation);
         given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(user(OWNER_ID)));
         given(messageRepository.countUnread(1L, 0L, USER_ID)).willReturn(0L);
 
@@ -72,13 +75,32 @@ class ConversationServiceTest {
         Conversation existing = conversation();
         given(userRepository.existsById(USER_ID)).willReturn(true);
         given(contextResolver.resolve("SPACE", SPACE_ID)).willReturn(target(OWNER_ID));
-        given(conversationRepository.findByContextTypeAndContextIdAndParticipant1IdAndParticipant2Id(
-                ChatContextType.SPACE, SPACE_ID, USER_ID, OWNER_ID)).willReturn(Optional.of(existing));
+        given(conversationWriter.find(ChatContextType.SPACE, SPACE_ID, USER_ID, OWNER_ID))
+                .willReturn(Optional.of(existing));
         given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(user(OWNER_ID)));
 
         service.createOrGet(USER_ID, request());
 
-        verify(conversationRepository, never()).save(any());
+        verify(conversationWriter, never()).create(any(), any(), any(), any(), any(), any());
+    }
+
+    // 같은 방을 거의 동시에 만들면 한쪽은 유니크 제약에 걸린다.
+    // 그때 500이 아니라 상대가 만든 방을 그대로 돌려줘야 한다.
+    @Test
+    void reusesConversationCommittedByConcurrentCreator() throws Exception {
+        Conversation committedByRival = conversation();
+        given(userRepository.existsById(USER_ID)).willReturn(true);
+        given(contextResolver.resolve("SPACE", SPACE_ID)).willReturn(target(OWNER_ID));
+        given(conversationWriter.find(ChatContextType.SPACE, SPACE_ID, USER_ID, OWNER_ID))
+                .willReturn(Optional.empty())
+                .willReturn(Optional.of(committedByRival));
+        given(conversationWriter.create(ChatContextType.SPACE, SPACE_ID, "도심 공실", null, USER_ID, OWNER_ID))
+                .willThrow(new DataIntegrityViolationException("uk_chat_conversation"));
+        given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(user(OWNER_ID)));
+
+        ConversationResponse response = service.createOrGet(USER_ID, request());
+
+        assertEquals(1L, response.getConversationId());
     }
 
     @Test

@@ -11,10 +11,14 @@ import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,12 +28,16 @@ public class ConversationService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final ConversationRepository conversationRepository;
+    private final ConversationWriter conversationWriter;
     private final ChatMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ChatContextResolver contextResolver;
     private final ChatBlockService blockService;
 
-    @Transactional
+    // 조회-없으면-삽입 구조라 한 트랜잭션으로 묶으면 안 된다.
+    // 삽입이 유니크 제약에 걸린 뒤 같은 트랜잭션에서 다시 찾아도 REPEATABLE READ 스냅샷 때문에
+    // 경쟁자가 커밋한 행이 보이지 않는다. 그래서 단계마다 트랜잭션을 끊는다.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ConversationResponse createOrGet(Long userId, ConversationCreateRequest request) {
         if (!userRepository.existsById(userId)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -43,18 +51,21 @@ public class ConversationService {
 
         Long participant1Id = Math.min(userId, target.ownerId());
         Long participant2Id = Math.max(userId, target.ownerId());
-        Conversation conversation = conversationRepository
-                .findByContextTypeAndContextIdAndParticipant1IdAndParticipant2Id(
-                        target.type(), target.id(), participant1Id, participant2Id)
-                .orElseGet(() -> conversationRepository.save(Conversation.builder()
-                        .contextType(target.type())
-                        .contextId(target.id())
-                        .contextTitle(target.title())
-                        .contextImageUrl(target.imageUrl())
-                        .participant1Id(participant1Id)
-                        .participant2Id(participant2Id)
-                        .build()));
-        return toResponse(conversation, userId);
+        Optional<Conversation> found = conversationWriter.find(
+                target.type(), target.id(), participant1Id, participant2Id);
+        if (found.isEmpty()) {
+            try {
+                return toResponse(conversationWriter.create(
+                        target.type(), target.id(), target.title(), target.imageUrl(),
+                        participant1Id, participant2Id), userId);
+            } catch (DataIntegrityViolationException e) {
+                // 거의 동시에 상대도 같은 방을 만들었다. 새 트랜잭션이라 이번엔 커밋된 행이 보인다.
+                found = conversationWriter.find(
+                        target.type(), target.id(), participant1Id, participant2Id);
+            }
+        }
+        return toResponse(found.orElseThrow(
+                () -> new BusinessException(ErrorCode.CHAT_CONVERSATION_NOT_FOUND)), userId);
     }
 
     public ConversationListResponse getConversations(Long userId, int page, int size) {
