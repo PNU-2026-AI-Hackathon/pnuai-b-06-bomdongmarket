@@ -1,24 +1,32 @@
 package com.farmbroker.farmbroker.chat.service;
 
 import com.farmbroker.farmbroker.chat.domain.Conversation;
+import com.farmbroker.farmbroker.chat.domain.UserBlock;
 import com.farmbroker.farmbroker.chat.dto.ConversationCreateRequest;
 import com.farmbroker.farmbroker.chat.dto.ConversationListResponse;
 import com.farmbroker.farmbroker.chat.dto.ConversationResponse;
 import com.farmbroker.farmbroker.chat.repository.ChatMessageRepository;
 import com.farmbroker.farmbroker.chat.repository.ConversationRepository;
+import com.farmbroker.farmbroker.chat.repository.UserBlockRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,13 +38,12 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final ConversationWriter conversationWriter;
     private final ChatMessageRepository messageRepository;
+    private final UserBlockRepository userBlockRepository;
     private final UserRepository userRepository;
     private final ChatContextResolver contextResolver;
     private final ChatBlockService blockService;
 
-    // 조회-없으면-삽입 구조라 한 트랜잭션으로 묶으면 안 된다.
-    // 삽입이 유니크 제약에 걸린 뒤 같은 트랜잭션에서 다시 찾아도 REPEATABLE READ 스냅샷 때문에
-    // 경쟁자가 커밋한 행이 보이지 않는다. 그래서 단계마다 트랜잭션을 끊는다.
+    // 한 트랜잭션에서 재조회하면 REPEATABLE READ 스냅샷 때문에 경쟁자가 넣은 행이 보이지 않는다.
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ConversationResponse createOrGet(Long userId, ConversationCreateRequest request) {
         if (!userRepository.existsById(userId)) {
@@ -59,7 +66,7 @@ public class ConversationService {
                         target.type(), target.id(), target.title(), target.imageUrl(),
                         participant1Id, participant2Id), userId);
             } catch (DataIntegrityViolationException e) {
-                // 거의 동시에 상대도 같은 방을 만들었다. 새 트랜잭션이라 이번엔 커밋된 행이 보인다.
+                // 거의 동시에 상대도 같은 방을 만들었으므로 새 트랜잭션에서 커밋된 방을 다시 찾는다.
                 found = conversationWriter.find(
                         target.type(), target.id(), participant1Id, participant2Id);
             }
@@ -76,9 +83,7 @@ public class ConversationService {
         Page<Conversation> result = conversationRepository.findAllForUser(
                 userId, PageRequest.of(page, pageSize));
         return ConversationListResponse.builder()
-                .conversations(result.getContent().stream()
-                        .map(conversation -> toResponse(conversation, userId))
-                        .toList())
+                .conversations(toResponses(result.getContent(), userId))
                 .page(page)
                 .size(pageSize)
                 .hasNext(result.hasNext())
@@ -100,15 +105,60 @@ public class ConversationService {
 
     public long unreadCount(Conversation conversation, Long userId) {
         Long lastReadId = conversation.lastReadMessageIdFor(userId);
-        return messageRepository.countUnread(conversation.getId(), lastReadId == null ? 0L : lastReadId, userId);
+        return messageRepository.countUnread(
+                conversation.getId(), lastReadId == null ? 0L : lastReadId, userId);
     }
 
     private ConversationResponse toResponse(Conversation conversation, Long userId) {
-        Long otherUserId = conversation.otherParticipantId(userId);
-        if (otherUserId == null) {
-            throw new BusinessException(ErrorCode.CHAT_FORBIDDEN);
+        return toResponses(List.of(conversation), userId).getFirst();
+    }
+
+    private List<ConversationResponse> toResponses(List<Conversation> conversations, Long userId) {
+        if (conversations.isEmpty()) {
+            return List.of();
         }
-        User otherUser = userRepository.findById(otherUserId)
+
+        Map<Long, Long> otherUserIdsByConversation = new HashMap<>();
+        for (Conversation conversation : conversations) {
+            Long otherUserId = conversation.otherParticipantId(userId);
+            if (otherUserId == null) {
+                throw new BusinessException(ErrorCode.CHAT_FORBIDDEN);
+            }
+            otherUserIdsByConversation.put(conversation.getId(), otherUserId);
+        }
+
+        Set<Long> otherUserIds = new HashSet<>(otherUserIdsByConversation.values());
+        Map<Long, User> otherUsersById = new HashMap<>();
+        userRepository.findAllById(otherUserIds)
+                .forEach(user -> otherUsersById.put(user.getId(), user));
+
+        Set<Long> conversationIds = conversations.stream()
+                .map(Conversation::getId)
+                .collect(Collectors.toSet());
+        Map<Long, Long> unreadCounts = messageRepository
+                .countUnreadByConversationIds(conversationIds, userId).stream()
+                .collect(Collectors.toMap(
+                        ChatMessageRepository.ConversationUnreadCount::getConversationId,
+                        ChatMessageRepository.ConversationUnreadCount::getUnreadCount));
+
+        Set<Long> blockedUserIds = userBlockRepository.findBlocksBetween(userId, otherUserIds).stream()
+                .map(block -> otherUserId(block, userId))
+                .collect(Collectors.toSet());
+
+        return conversations.stream()
+                .map(conversation -> toResponse(conversation, otherUserIdsByConversation,
+                        otherUsersById, unreadCounts, blockedUserIds))
+                .toList();
+    }
+
+    private ConversationResponse toResponse(
+            Conversation conversation,
+            Map<Long, Long> otherUserIdsByConversation,
+            Map<Long, User> otherUsersById,
+            Map<Long, Long> unreadCounts,
+            Set<Long> blockedUserIds) {
+        Long otherUserId = otherUserIdsByConversation.get(conversation.getId());
+        User otherUser = Optional.ofNullable(otherUsersById.get(otherUserId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         return ConversationResponse.builder()
                 .conversationId(conversation.getId())
@@ -120,8 +170,12 @@ public class ConversationService {
                 .otherUserNickname(otherUser.getNickname())
                 .lastMessagePreview(conversation.getLastMessagePreview())
                 .lastMessageAt(conversation.getLastMessageAt())
-                .unreadCount(unreadCount(conversation, userId))
-                .blocked(blockService.isBlockedEitherDirection(userId, otherUserId))
+                .unreadCount(unreadCounts.getOrDefault(conversation.getId(), 0L))
+                .blocked(blockedUserIds.contains(otherUserId))
                 .build();
+    }
+
+    private Long otherUserId(UserBlock block, Long userId) {
+        return block.getBlockerId().equals(userId) ? block.getBlockedId() : block.getBlockerId();
     }
 }
