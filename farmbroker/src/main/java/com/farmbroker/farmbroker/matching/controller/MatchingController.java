@@ -1,6 +1,8 @@
 package com.farmbroker.farmbroker.matching.controller;
 
 import com.farmbroker.farmbroker.common.response.ApiResponse;
+import com.farmbroker.farmbroker.matching.dto.ContractResponse;
+import com.farmbroker.farmbroker.matching.dto.ContractTermsRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyResponse;
 import com.farmbroker.farmbroker.matching.dto.MatchingStatusResponse;
@@ -95,5 +97,51 @@ public class MatchingController {
                                                       @AuthenticationPrincipal Long userId) {
         MatchingStatusResponse response = matchingService.cancel(matchingId, userId);
         return ApiResponse.success("매칭 신청을 취소했습니다.", response);
+    }
+
+    // ── 계약서 ───────────────────────────────────────────────────────────────
+    // 조건 저장에 PUT을 쓰지 않는 이유: SecurityConfig의 CORS allowedMethods가
+    // GET/POST/PATCH/DELETE/OPTIONS라 PUT을 쓰려면 공유 설정을 건드려야 한다.
+    // 네 엔드포인트 모두 갱신된 계약서 전체를 반환해 프론트가 재조회하지 않게 한다.
+
+    // GET /api/matchings/{matchingId}/contract — 계약서 조회 (당사자 둘만)
+    @Operation(summary = "계약서 조회 (매칭 당사자 전용)",
+            description = "양측 닉네임·공간 주소와 입력된 계약 조건, 동의 현황을 함께 반환한다. viewerRole로 요청자가 어느 쪽인지 알려준다.")
+    @GetMapping("/{matchingId}/contract")
+    public ApiResponse<ContractResponse> getContract(@PathVariable Long matchingId,
+                                                     @AuthenticationPrincipal Long userId) {
+        ContractResponse response = matchingService.getContract(matchingId, userId);
+        return ApiResponse.success("계약서 조회에 성공했습니다.", response);
+    }
+
+    // PATCH /api/matchings/{matchingId}/contract — 계약 조건 저장 (공간 owner 전용)
+    @Operation(summary = "계약 조건 저장 (공간 owner 전용)",
+            description = "월세와 계약기간을 저장한다. 조건이 바뀌면 이미 받은 양측 동의는 초기화된다.")
+    @PatchMapping("/{matchingId}/contract")
+    public ApiResponse<ContractResponse> updateContractTerms(@PathVariable Long matchingId,
+                                                             @RequestBody @Valid ContractTermsRequest request,
+                                                             @AuthenticationPrincipal Long userId) {
+        ContractResponse response = matchingService.updateContractTerms(matchingId, userId, request);
+        return ApiResponse.success("계약 조건을 저장했습니다.", response);
+    }
+
+    // PATCH /api/matchings/{matchingId}/contract/agree — 계약 동의 (당사자 둘 다)
+    @Operation(summary = "계약 동의 (매칭 당사자 전용)",
+            description = "양측이 모두 동의하면 계약이 확정된다. 조건이 비어 있으면 동의할 수 없다.")
+    @PatchMapping("/{matchingId}/contract/agree")
+    public ApiResponse<ContractResponse> agreeContract(@PathVariable Long matchingId,
+                                                       @AuthenticationPrincipal Long userId) {
+        ContractResponse response = matchingService.agreeContract(matchingId, userId);
+        return ApiResponse.success("계약에 동의했습니다.", response);
+    }
+
+    // PATCH /api/matchings/{matchingId}/contract/cancel — 계약 취소 (당사자 둘 다)
+    @Operation(summary = "계약 취소 (매칭 당사자 전용)",
+            description = "둘 중 한 명만 취소해도 계약이 취소되며 되돌릴 수 없다.")
+    @PatchMapping("/{matchingId}/contract/cancel")
+    public ApiResponse<ContractResponse> cancelContract(@PathVariable Long matchingId,
+                                                        @AuthenticationPrincipal Long userId) {
+        ContractResponse response = matchingService.cancelContract(matchingId, userId);
+        return ApiResponse.success("계약을 취소했습니다.", response);
     }
 }

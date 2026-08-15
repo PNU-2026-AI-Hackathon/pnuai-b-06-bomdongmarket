@@ -2,8 +2,11 @@ package com.farmbroker.farmbroker.matching.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.domain.ContractStatus;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
+import com.farmbroker.farmbroker.matching.dto.ContractResponse;
+import com.farmbroker.farmbroker.matching.dto.ContractTermsRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyResponse;
 import com.farmbroker.farmbroker.matching.dto.MatchingStatusResponse;
@@ -172,6 +175,83 @@ public class MatchingService {
         }
 
         matching.dismissByOwner();
+    }
+
+    // ── 계약서 ───────────────────────────────────────────────────────────────
+    // 매칭 1건에 계약서 1건이 붙는다. 매칭 상태(REQUESTED/ACCEPTED/...)는 보지 않는다 —
+    // 계약 확정 여부는 계약서의 양측 동의로만 판정한다.
+
+    public ContractResponse getContract(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findById(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        return ContractResponse.of(matching, isContractOwner(matching, userId));
+    }
+
+    // 조건 입력은 공간 제공자만 가능하다. 저장하면 양측 동의가 함께 초기화된다(Matching.updateContractTerms).
+    @Transactional
+    public ContractResponse updateContractTerms(Long matchingId, Long userId, ContractTermsRequest request) {
+        Matching matching = getDraftContract(matchingId, userId);
+        if (!isContractOwner(matching, userId)) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            throw new BusinessException(ErrorCode.CONTRACT_INVALID_PERIOD);
+        }
+
+        matching.updateContractTerms(request.getMonthlyRent(), request.getStartDate(), request.getEndDate());
+        return ContractResponse.of(matching, true);
+    }
+
+    // 계약 동의 — 양측이 모두 동의해야 확정(CONFIRMED)된다.
+    // 조건이 비어 있으면 무엇에 동의하는지 알 수 없으므로 막는다.
+    @Transactional
+    public ContractResponse agreeContract(Long matchingId, Long userId) {
+        Matching matching = getDraftContract(matchingId, userId);
+        if (!matching.hasContractTerms()) {
+            throw new BusinessException(ErrorCode.CONTRACT_TERMS_REQUIRED);
+        }
+
+        boolean isOwner = isContractOwner(matching, userId);
+        if (isOwner) {
+            matching.agreeContractAsOwner();
+        } else {
+            matching.agreeContractAsFarmer();
+        }
+        return ContractResponse.of(matching, isOwner);
+    }
+
+    // 계약 취소 — 둘 중 한 명만 눌러도 취소된다. 되돌릴 수 없다.
+    @Transactional
+    public ContractResponse cancelContract(Long matchingId, Long userId) {
+        Matching matching = getDraftContract(matchingId, userId);
+        matching.cancelContract();
+        return ContractResponse.of(matching, isContractOwner(matching, userId));
+    }
+
+    // 계약서 쓰기 공통 전제: 매칭 존재 → 당사자 본인 → 아직 DRAFT 상태.
+    // 양측이 동시에 '계약'을 눌러도 확정 판정이 어긋나지 않도록 행을 잠그고 읽는다.
+    private Matching getDraftContract(Long matchingId, Long userId) {
+        Matching matching = matchingRepository.findByIdForUpdate(matchingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
+        requireContractParticipant(matching, userId);
+        if (matching.getContractStatus() != ContractStatus.DRAFT) {
+            throw new BusinessException(ErrorCode.CONTRACT_CLOSED);
+        }
+        return matching;
+    }
+
+    private boolean isContractOwner(Matching matching, Long userId) {
+        requireContractParticipant(matching, userId);
+        return matching.getSpace().getOwner().getId().equals(userId);
+    }
+
+    // 계약서는 당사자 둘만 볼 수 있다 — 월세·기간은 제3자에게 공개할 정보가 아니다.
+    private void requireContractParticipant(Matching matching, Long userId) {
+        boolean isOwner = matching.getSpace().getOwner().getId().equals(userId);
+        boolean isFarmer = matching.getFarmer().getId().equals(userId);
+        if (!isOwner && !isFarmer) {
+            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        }
     }
 
     // 수락/거절 공통 전제: 매칭 존재 → 공간 owner 본인 → 아직 REQUESTED 상태
