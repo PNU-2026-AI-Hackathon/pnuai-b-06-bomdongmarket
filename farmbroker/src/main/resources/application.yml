@@ -42,3 +42,24 @@ gemini:
   api-key: "${GEMINI_API_KEY:}"
   model: "${GEMINI_MODEL:gemini-2.5-flash}"
   base-url: "${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}"
+
+# KAMIS(공공데이터포털 일별 도·소매 가격정보) 시세 수집.
+# 대표값을 어떻게 고를지는 협의 중이라(#66) 코드에 박지 않고 여기서 조정한다.
+kamis:
+  service-key: "${KAMIS_SERVICE_KEY:}"
+  base-url: "${KAMIS_BASE_URL:https://apis.data.go.kr/B552845/perDay/price}"
+  # 스케줄·조회일·수집시각이 서버 기본 시간대에 흔들리지 않도록 명시한다.
+  timezone: "${KAMIS_TIMEZONE:Asia/Seoul}"
+  connect-timeout-ms: ${KAMIS_CONNECT_TIMEOUT_MS:3000}
+  read-timeout-ms: ${KAMIS_READ_TIMEOUT_MS:5000}
+  # 01 소매 / 02 중도매. 소매가는 유통마진이 붙어 재배자가 넘기는 값과 다르다.
+  sale-type: "${KAMIS_SALE_TYPE:02}"
+  # 시군구명. 비우면 전국 — 지역을 좁히면 하루 1건만 잡히는 작물이 있다.
+  region: "${KAMIS_REGION:}"
+  grade: "${KAMIS_GRADE:상품}"
+  freshness-days: ${KAMIS_FRESHNESS_DAYS:7}
+  lookback-days: ${KAMIS_LOOKBACK_DAYS:14}
+  # 키가 없으면 어차피 동작하지 않으므로 기본은 켜 두고 키 유무로 판단한다.
+  enabled: ${KAMIS_ENABLED:true}
+  # 수집 주기. 기본은 매일 04:00.
+  cron: "${KAMIS_CRON:0 0 4 * * *}"

@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.file.service;
 
 import com.farmbroker.farmbroker.file.domain.UploadedFile;
 import com.farmbroker.farmbroker.file.repository.UploadedFileRepository;
+import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.space.repository.SpaceFloorPlanRepository;
 import com.farmbroker.farmbroker.space.repository.SpaceImageRepository;
 import com.farmbroker.farmbroker.user.service.UserWithdrawnEvent;
@@ -22,7 +23,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 // 파일 시스템은 DB 트랜잭션에 참여할 수 없으므로, 탈퇴 커밋 이후에만 best-effort로 정리한다.
-// 전역 공간 이미지/도면 문자열 참조를 먼저 확인해 이력에서 사용 중인 파일은 절대 지우지 않는다.
+// 전역 공간 이미지/도면과 활성 상품의 문자열 참조를 먼저 확인해 사용 중인 파일은 절대 지우지 않는다.
 @Service
 @Slf4j
 public class WithdrawalFileCleanupService {
@@ -31,17 +32,20 @@ public class WithdrawalFileCleanupService {
     private final UploadedFileRepository uploadedFileRepository;
     private final SpaceImageRepository spaceImageRepository;
     private final SpaceFloorPlanRepository spaceFloorPlanRepository;
+    private final ProductRepository productRepository;
     private final TransactionTemplate cleanupTransaction;
 
     public WithdrawalFileCleanupService(@Value("${file.upload-dir}") String uploadDir,
                                         UploadedFileRepository uploadedFileRepository,
                                         SpaceImageRepository spaceImageRepository,
                                         SpaceFloorPlanRepository spaceFloorPlanRepository,
+                                        ProductRepository productRepository,
                                         PlatformTransactionManager transactionManager) {
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.uploadedFileRepository = uploadedFileRepository;
         this.spaceImageRepository = spaceImageRepository;
         this.spaceFloorPlanRepository = spaceFloorPlanRepository;
+        this.productRepository = productRepository;
         this.cleanupTransaction = new TransactionTemplate(transactionManager);
         this.cleanupTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -61,7 +65,8 @@ public class WithdrawalFileCleanupService {
         referencedUrls.addAll(spaceFloorPlanRepository.findAllImageUrls());
 
         for (UploadedFile uploaded : uploadedFileRepository.findAllByUploaderId(userId)) {
-            if (isReferenced(referencedUrls, uploaded.getStoredName())) {
+            if (isReferenced(referencedUrls, uploaded.getStoredName())
+                    || productRepository.existsByImageUrlEndingWithAndDeletedFalse(fileUrl(uploaded.getStoredName()))) {
                 continue;
             }
             Path file = uploadDir.resolve(uploaded.getStoredName()).normalize();
@@ -80,6 +85,10 @@ public class WithdrawalFileCleanupService {
     }
 
     private boolean isReferenced(Set<String> urls, String storedName) {
-        return urls.stream().anyMatch(url -> url != null && url.endsWith("/files/" + storedName));
+        return urls.stream().anyMatch(url -> url != null && url.endsWith(fileUrl(storedName)));
+    }
+
+    private String fileUrl(String storedName) {
+        return "/files/" + storedName;
     }
 }

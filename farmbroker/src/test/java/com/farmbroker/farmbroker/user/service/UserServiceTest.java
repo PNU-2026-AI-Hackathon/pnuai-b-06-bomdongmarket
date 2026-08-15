@@ -4,6 +4,8 @@ import com.farmbroker.farmbroker.ai.repository.AiRecommendationRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
+import com.farmbroker.farmbroker.order.repository.CartItemRepository;
+import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.space.repository.SpaceRepository;
 import com.farmbroker.farmbroker.user.domain.User;
@@ -42,6 +44,8 @@ class UserServiceTest {
     @Mock private MatchingRepository matchingRepository;
     @Mock private SpaceRepository spaceRepository;
     @Mock private AiRecommendationRepository aiRecommendationRepository;
+    @Mock private CartItemRepository cartItemRepository;
+    @Mock private ProductRepository productRepository;
     @Mock private EntityManager entityManager;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ApplicationEventPublisher eventPublisher;
@@ -102,7 +106,7 @@ class UserServiceTest {
     }
 
     @Test
-    void withdraws_after_cleaning_requested_matchings_spaces_and_own_recommendations() throws Exception {
+    void withdraws_after_cleaning_matchings_spaces_cart_products_and_own_recommendations() throws Exception {
         User user = activeUser();
         Space space = Space.builder().owner(user).title("공실").build();
         given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
@@ -129,11 +133,14 @@ class UserServiceTest {
         verify(matchingRepository).cancelRequestedByFarmerId(anyLong(), any());
         verify(matchingRepository).rejectRequestedBySpaceOwnerId(anyLong(), any());
         verify(aiRecommendationRepository).deleteAll(List.of());
+        verify(cartItemRepository).deleteByUserId(USER_ID);
+        verify(productRepository).findActiveBySellerIdForUpdate(USER_ID);
     }
 
     private UserService service() {
         return new UserService(userRepository, matchingRepository, spaceRepository,
-                aiRecommendationRepository, entityManager, passwordEncoder, eventPublisher);
+                aiRecommendationRepository, cartItemRepository, productRepository,
+                entityManager, passwordEncoder, eventPublisher);
     }
 
     private User activeUser() {

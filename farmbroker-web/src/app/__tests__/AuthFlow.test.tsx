@@ -30,11 +30,11 @@ describe('인증 후 원래 위치 복귀', () => {
     ).toBeInTheDocument();
   });
 
-  it('비로그인 구매 요청을 로그인으로 보내고 상품 상세로 복귀시킨다', async () => {
+  it('비로그인 담기 요청을 로그인으로 보내고 상품 상세로 복귀시킨다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<AppRouter />, { route: '/market/1' });
 
-    const purchaseButton = await screen.findByRole('button', { name: /구매하기/i });
+    const purchaseButton = await screen.findByRole('button', { name: /장바구니에 담기/i });
     await user.click(purchaseButton);
 
     expect(

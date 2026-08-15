@@ -52,11 +52,15 @@ describe('MyPage 계정 설정', () => {
     expect(screen.queryByText('소비자')).not.toBeInTheDocument();
   });
 
-  it('계정 설정 링크만 제공하고 활동 지표와 업무 메뉴를 표시하지 않는다', () => {
+  it('소비자에게 장바구니와 계정 설정 링크를 제공한다', () => {
     signInWithRoles(['CONSUMER']);
 
     renderWithProviders(<MyPage />);
 
+    expect(screen.getByRole('link', { name: /장바구니/ })).toHaveAttribute(
+      'href',
+      '/market/cart',
+    );
     expect(screen.getByRole('link', { name: /계정 정보 수정/ })).toHaveAttribute(
       'href',
       '/mypage/profile',
@@ -65,17 +69,32 @@ describe('MyPage 계정 설정', () => {
       'href',
       '/mypage/withdraw',
     );
+    expect(screen.queryByRole('link', { name: /판매 상품 관리/ })).not.toBeInTheDocument();
     ['내 공간', '내 구매 내역', '정산 요약', '계약 내역', '고객센터'].forEach(
       (label) => expect(screen.queryByText(label)).not.toBeInTheDocument(),
     );
     expect(screen.queryByText('120만원')).not.toBeInTheDocument();
   });
 
-  it('키보드만으로 계정 설정과 로그아웃을 순서대로 탐색할 수 있다', async () => {
+  it('농부에게 판매 상품 관리 진입점을 제공한다', () => {
+    signInWithRoles(['FARMER', 'CONSUMER']);
+
+    renderWithProviders(<MyPage />);
+
+    expect(screen.getByRole('link', { name: /판매 상품 관리/ })).toHaveAttribute(
+      'href',
+      '/market/my',
+    );
+  });
+
+  it('키보드만으로 서비스 이용과 계정 설정을 순서대로 탐색할 수 있다', async () => {
     const user = userEvent.setup();
     signInWithRoles(['CONSUMER']);
 
     renderWithProviders(<MyPage />);
+
+    await user.tab();
+    expect(screen.getByRole('link', { name: /장바구니/ })).toHaveFocus();
 
     await user.tab();
     expect(screen.getByRole('link', { name: /계정 정보 수정/ })).toHaveFocus();

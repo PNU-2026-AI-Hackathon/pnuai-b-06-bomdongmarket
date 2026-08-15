@@ -1,6 +1,6 @@
 import { ArrowLeft, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useRequireAuth } from '@/auth/useRequireAuth';
 import { Badge } from '@/components/common/Badge';
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
+import { addToCart } from '@/services/cartService';
 import { getMarketItem } from '@/services/marketService';
 import type { MarketItem } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
@@ -21,10 +22,13 @@ import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTr
 // 상품 상세와 생산 이력, 수량 선택, 구매 CTA를 제공하는 마켓 상세 화면입니다.
 export function ProductDetailPage() {
   const requireAuth = useRequireAuth();
+  const navigate = useNavigate();
   const { productId } = useParams();
   const [item, setItem] = useState<MarketItem | null>(null);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -44,6 +48,21 @@ export function ProductDetailPage() {
 
   // 마감(CLOSED)·품절(stock 0) 상품은 목록에서 빠지지만 직접 URL로 들어올 수 있어 구매를 막는다.
   const isSoldOut = item != null && (item.status === 'CLOSED' || item.stock <= 0);
+
+  // 담고 나면 바로 장바구니로 보냅니다 — 결제까지 이어지는 흐름이 한 번에 보이도록.
+  function handleAddToCart() {
+    if (!item) return;
+    requireAuth(() => {
+      setIsAdding(true);
+      setCartError(null);
+      addToCart(item.productId, quantity)
+        .then(() => navigate(ROUTES.cart))
+        .catch((caught: unknown) => {
+          setCartError(caught instanceof Error ? caught.message : '장바구니에 담지 못했습니다.');
+        })
+        .finally(() => setIsAdding(false));
+    });
+  }
 
   return (
     <PageContainer narrow>
@@ -124,12 +143,21 @@ export function ProductDetailPage() {
             </div>
             <Button
               className="mt-5 w-full"
-              disabled={isSoldOut}
-              onClick={() => requireAuth()}
+              disabled={isSoldOut || isAdding}
+              onClick={handleAddToCart}
             >
               <ShoppingBag className="h-5 w-5" aria-hidden />
-              {isSoldOut ? '판매 마감된 상품입니다' : `${formatCurrency(item.price * quantity)} 구매하기`}
+              {isSoldOut
+                ? '판매 마감된 상품입니다'
+                : isAdding
+                  ? '담는 중...'
+                  : `${formatCurrency(item.price * quantity)} 장바구니에 담기`}
             </Button>
+            {cartError ? (
+              <p className="mt-2 text-sm font-semibold text-feedback-danger" role="alert">
+                {cartError}
+              </p>
+            ) : null}
           </Card>
 
           {/* 마일리지는 지도(Task 3) 전까지 null일 수 있어 있을 때만 카드를 노출한다 */}

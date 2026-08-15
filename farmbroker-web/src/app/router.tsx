@@ -7,7 +7,14 @@ import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
 import { DashboardPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
-import { MarketPage, ProductDetailPage } from '@/pages/market';
+import {
+  CartPage,
+  MarketPage,
+  MyProductsPage,
+  OrderCompletePage,
+  ProductDetailPage,
+  ProductFormPage,
+} from '@/pages/market';
 import { MyPage, ProfileEditPage, WithdrawPage } from '@/pages/mypage';
 import { SpaceApplyPage } from '@/pages/space-apply';
 import { SpaceDetailPage } from '@/pages/space-detail';
@@ -37,6 +44,12 @@ export function AppRouter() {
           <Route element={<MyPage />} path={ROUTES.myPage} />
           <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
           <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
+          {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
+          <Route element={<CartPage />} path={ROUTES.cart} />
+          <Route element={<OrderCompletePage />} path={ROUTES.orderComplete} />
+          <Route element={<MyProductsPage />} path={ROUTES.myProducts} />
+          <Route element={<ProductFormPage />} path={ROUTES.newProduct} />
+          <Route element={<ProductFormPage />} path="/market/:productId/edit" />
         </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />
       </Route>

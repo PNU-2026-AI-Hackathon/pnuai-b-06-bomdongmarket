@@ -55,6 +55,9 @@ describe('WithdrawPage', () => {
     renderWithProviders(<WithdrawPage />);
 
     expect(screen.getByRole('status')).toHaveTextContent('탈퇴 가능 여부를 확인하는 중');
+    expect(screen.getByText('대기 중인 매칭 신청, 등록 공간, 장바구니는 정리됩니다.')).toBeInTheDocument();
+    expect(screen.getByText('판매 중인 상품은 마켓에서 비공개 처리됩니다.')).toBeInTheDocument();
+    expect(screen.getByText(/구매 이력은 정산을 위해 비식별화된 계정/)).toBeInTheDocument();
   });
 
   it('진행 중인 계약이 있으면 탈퇴 폼 대신 계약 이동 링크를 제공한다', async () => {

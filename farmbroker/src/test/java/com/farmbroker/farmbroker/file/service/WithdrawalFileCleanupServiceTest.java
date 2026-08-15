@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.file.service;
 
 import com.farmbroker.farmbroker.file.domain.UploadedFile;
 import com.farmbroker.farmbroker.file.repository.UploadedFileRepository;
+import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.space.repository.SpaceFloorPlanRepository;
 import com.farmbroker.farmbroker.space.repository.SpaceImageRepository;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class WithdrawalFileCleanupServiceTest {
     @Mock UploadedFileRepository uploadedFileRepository;
     @Mock SpaceImageRepository spaceImageRepository;
     @Mock SpaceFloorPlanRepository spaceFloorPlanRepository;
+    @Mock ProductRepository productRepository;
     @Mock PlatformTransactionManager transactionManager;
 
     @Test
@@ -63,6 +65,22 @@ class WithdrawalFileCleanupServiceTest {
     }
 
     @Test
+    void preserves_file_when_an_active_product_references_it() throws IOException {
+        String storedName = "d".repeat(32) + ".jpg";
+        Files.write(tempDir.resolve(storedName), new byte[] {1});
+        given(uploadedFileRepository.findAllByUploaderId(USER_ID)).willReturn(List.of(uploaded(storedName)));
+        given(spaceImageRepository.findAllImageUrls()).willReturn(List.of());
+        given(spaceFloorPlanRepository.findAllImageUrls()).willReturn(List.of());
+        given(productRepository.existsByImageUrlEndingWithAndDeletedFalse("/files/" + storedName))
+                .willReturn(true);
+
+        service(tempDir).cleanupUnreferencedByUploader(USER_ID);
+
+        assertThat(Files.exists(tempDir.resolve(storedName))).isTrue();
+        verify(uploadedFileRepository, never()).delete(any());
+    }
+
+    @Test
     void preserves_metadata_when_physical_deletion_fails_for_retry() throws IOException {
         String storedName = "c".repeat(32) + ".jpg";
         Path nonDirectory = tempDir.resolve("not-a-directory");
@@ -79,7 +97,7 @@ class WithdrawalFileCleanupServiceTest {
 
     private WithdrawalFileCleanupService service(Path uploadDir) {
         return new WithdrawalFileCleanupService(uploadDir.toString(), uploadedFileRepository,
-                spaceImageRepository, spaceFloorPlanRepository, transactionManager);
+                spaceImageRepository, spaceFloorPlanRepository, productRepository, transactionManager);
     }
 
     private UploadedFile uploaded(String storedName) {

@@ -28,12 +28,29 @@ const accountMenuItems = [
   },
 ] as const;
 
+const serviceMenuItems = [
+  {
+    label: '장바구니',
+    description: '담아 둔 상품을 확인하고 결제를 진행합니다.',
+    to: ROUTES.cart,
+  },
+  {
+    label: '판매 상품 관리',
+    description: '등록한 상품과 판매 상태를 관리합니다.',
+    to: ROUTES.myProducts,
+    farmerOnly: true,
+  },
+] as const;
+
 export function MyPage() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const roles = sortRoles(user?.roles);
+  const visibleServiceMenuItems = serviceMenuItems.filter(
+    (item) => !('farmerOnly' in item) || roles.includes('FARMER'),
+  );
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -54,7 +71,7 @@ export function MyPage() {
   return (
     <PageContainer narrow>
       <PageHeader
-        description="계정 정보와 보유 역할을 확인하고 로그인 설정을 관리하세요."
+        description="계정 정보와 보유 역할, 장바구니와 판매 활동을 한곳에서 확인하세요."
         eyebrow="Account"
         title="마이페이지"
       />
@@ -83,6 +100,29 @@ export function MyPage() {
           </div>
         </section>
       </Card>
+
+      <section aria-labelledby="service-activity-title" className="mt-6">
+        <h2 className="text-lg font-bold text-content" id="service-activity-title">
+          서비스 이용
+        </h2>
+        <div className="mt-3 grid gap-2">
+          {visibleServiceMenuItems.map((item) => (
+            <Link
+              className="flex min-h-14 items-center justify-between gap-3 rounded-app border border-line bg-surface px-4 py-3 shadow-card transition-colors duration-ui hover:border-line-strong focus-visible:ring-2 focus-visible:ring-action"
+              key={item.to}
+              to={item.to}
+            >
+              <span>
+                <span className="block text-sm font-bold text-content">{item.label}</span>
+                <span className="mt-1 block text-xs font-normal text-content-subtle">
+                  {item.description}
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section aria-labelledby="account-settings-title" className="mt-6">
         <h2 className="text-lg font-bold text-content" id="account-settings-title">

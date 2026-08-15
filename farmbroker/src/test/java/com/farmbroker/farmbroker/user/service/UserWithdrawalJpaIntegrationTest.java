@@ -8,6 +8,14 @@ import com.farmbroker.farmbroker.common.config.PasswordEncoderConfig;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
+import com.farmbroker.farmbroker.order.domain.CartItem;
+import com.farmbroker.farmbroker.order.domain.Order;
+import com.farmbroker.farmbroker.order.domain.OrderItem;
+import com.farmbroker.farmbroker.order.repository.CartItemRepository;
+import com.farmbroker.farmbroker.order.repository.OrderRepository;
+import com.farmbroker.farmbroker.product.domain.Product;
+import com.farmbroker.farmbroker.product.domain.ProductCategory;
+import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.space.repository.SpaceRepository;
 import com.farmbroker.farmbroker.user.domain.User;
@@ -26,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,6 +55,9 @@ class UserWithdrawalJpaIntegrationTest {
     @Autowired private SpaceRepository spaceRepository;
     @Autowired private MatchingRepository matchingRepository;
     @Autowired private AiRecommendationRepository aiRecommendationRepository;
+    @Autowired private CartItemRepository cartItemRepository;
+    @Autowired private OrderRepository orderRepository;
+    @Autowired private ProductRepository productRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private PlatformTransactionManager transactionManager;
 
@@ -88,6 +100,44 @@ class UserWithdrawalJpaIntegrationTest {
                     .containsExactly(MatchingStatus.REQUESTED);
             assertThat(spaceRepository.findByOwnerIdAndDeletedFalseOrderByCreatedAtDesc(userId)).hasSize(1);
             assertThat(aiRecommendationRepository.findAllByUserId(userId)).hasSize(1);
+        });
+    }
+
+    @Test
+    void withdrawal_clears_cart_hides_products_and_preserves_anonymized_order_history() throws Exception {
+        Long[] ids = new TransactionTemplate(transactionManager).execute(status -> {
+            User user = userRepository.save(User.builder()
+                    .email("market-withdrawal@example.com")
+                    .password(passwordEncoder.encode("current-password"))
+                    .nickname("판매자")
+                    .build());
+            Product product = productRepository.save(Product.builder()
+                    .seller(user)
+                    .name("상추")
+                    .category(ProductCategory.LEAFY)
+                    .price(3000)
+                    .unit("팩")
+                    .stock(5)
+                    .harvestDate(LocalDate.of(2026, 8, 15))
+                    .producerName("판매자")
+                    .productionLocation("부산 스마트팜")
+                    .build());
+            cartItemRepository.save(CartItem.builder().user(user).product(product).quantity(1).build());
+            Order order = new Order(user);
+            order.addItem(new OrderItem(product, 1));
+            orderRepository.save(order);
+            return new Long[] {user.getId(), product.getId(), order.getId()};
+        });
+
+        userService.withdraw(ids[0], withdrawalRequest());
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            assertThat(cartItemRepository.findByUserIdOrderByCreatedAtAsc(ids[0])).isEmpty();
+            assertThat(productRepository.findById(ids[1]).orElseThrow().isDeleted()).isTrue();
+            assertThat(orderRepository.findByBuyerIdOrderByCreatedAtDesc(ids[0]))
+                    .extracting(Order::getId)
+                    .containsExactly(ids[2]);
+            assertThat(userRepository.findById(ids[0]).orElseThrow().getWithdrawnAt()).isNotNull();
         });
     }
 

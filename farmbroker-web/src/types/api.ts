@@ -319,8 +319,10 @@ export interface MarketItem {
   // 위경도·마일리지는 지도(Task 3) 전까지 백엔드에서 null로 내려올 수 있어 렌더 시 guard가 필요하다.
   foodMileageKm: number | null;
   stock: number;
-  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  // 판매 상태(ON_SALE/CLOSED)는 목록·상세 양쪽에 내려온다.
+  // 공개 목록은 ON_SALE·재고>0만 나오지만 판매자 본인 목록(GET /products/my)은 마감·품절도 포함한다.
   status?: string;
+  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
   sellerNickname?: string;
   description?: string | null;
   address?: string | null;
@@ -331,6 +333,68 @@ export interface MarketItem {
   traceabilityEvents?: MarketTraceabilityEvent[];
 }
 
+// 상품 등록(POST /products)·수정(PATCH /products/{id}) 요청 바디.
+// 서버가 정하는 값(sellerNickname·freshnessTags·status)은 보내지 않는다.
+// 위경도·푸드 마일리지는 지도 연동(Task 3)에서 채우므로 이 폼에서는 다루지 않는다.
+export interface ProductEventInput {
+  stage: string;
+  description?: string | null;
+  occurredAt: string;
+  sortOrder?: number;
+}
+
+export interface ProductInput {
+  name: string;
+  category: string;
+  price: number;
+  unit: string;
+  stock: number;
+  imageUrl?: string | null;
+  description?: string | null;
+  harvestDate: string;
+  // producerName은 요청에 없습니다 — 서버가 판매자 닉네임으로 고정합니다(#56 리뷰 반영).
+  productionLocation: string;
+  address?: string | null;
+  // '작업장에서 가져오기'로 채운 경우에만 값이 있는 느슨한 스냅샷(FK 아님)
+  spaceId?: number | null;
+  events?: ProductEventInput[];
+}
+
+// 장바구니 한 줄. purchasable은 담아 둔 뒤 판매자가 품절·마감했을 수 있어 서버가 매번 다시 계산해 준다.
+export interface CartLine {
+  productId: number;
+  name: string;
+  unit: string;
+  price: number;
+  quantity: number;
+  linePrice: number;
+  imageUrl: string | null;
+  stock: number;
+  purchasable: boolean;
+}
+
+export interface Cart {
+  items: CartLine[];
+  // 지금 구매 가능한 줄만 더한 금액이라 화면에서 다시 계산하지 않는다.
+  totalPrice: number;
+}
+
+// 주문 줄은 주문 시점 값으로 고정된다 — 판매자가 나중에 가격을 바꿔도 내역은 그대로다.
+export interface OrderLine {
+  productId: number;
+  name: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+  linePrice: number;
+}
+
+export interface Order {
+  orderId: number;
+  totalPrice: number;
+  createdAt: string;
+  items: OrderLine[];
+}
 // id는 화면이 지표를 알아보기 위한 안정적인 키입니다 — 라벨 문구가 바뀌어도 연결이 깨지지 않습니다.
 export type DashboardMetricId = 'spaces' | 'received' | 'sent';
 
