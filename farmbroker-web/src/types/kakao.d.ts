@@ -30,12 +30,19 @@ interface KakaoLatLng {
 
 interface KakaoMap {
   setCenter: (position: KakaoLatLng) => void;
+  setLevel: (level: number) => void;
   relayout: () => void;
 }
 
 interface KakaoMarker {
   setPosition: (position: KakaoLatLng) => void;
   setMap: (map: KakaoMap | null) => void;
+}
+
+interface KakaoCircle {
+  setMap: (map: KakaoMap | null) => void;
+  setPosition: (position: KakaoLatLng) => void;
+  setRadius: (meters: number) => void;
 }
 
 /** addressSearch 결과 한 건. x가 경도(lng), y가 위도(lat)이며 둘 다 문자열로 온다. */
@@ -60,7 +67,19 @@ interface KakaoMaps {
     container: HTMLElement,
     options: { center: KakaoLatLng; level: number },
   ) => KakaoMap;
-  Marker: new (options: { map?: KakaoMap; position: KakaoLatLng }) => KakaoMarker;
+  Marker: new (options: { map?: KakaoMap; position: KakaoLatLng; title?: string }) => KakaoMarker;
+  Circle: new (options: {
+    center: KakaoLatLng;
+    radius: number;
+    strokeWeight?: number;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    fillColor?: string;
+    fillOpacity?: number;
+  }) => KakaoCircle;
+  event: {
+    addListener: (target: object, type: string, handler: () => void) => void;
+  };
   services: {
     Geocoder: new () => KakaoGeocoder;
     Status: { OK: string; ZERO_RESULT: string; ERROR: string };
