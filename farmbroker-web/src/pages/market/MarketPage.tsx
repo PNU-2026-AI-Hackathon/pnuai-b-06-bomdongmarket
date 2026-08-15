@@ -1,5 +1,8 @@
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, Plus, Search, ShoppingCart, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
+import { useAuth } from '@/auth/authContext';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -11,20 +14,50 @@ import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
 import { useMarketItems } from '@/pages/market/hooks/useMarketItems';
 import type { MarketCategory } from '@/pages/market/types';
+import { ROUTES } from '@/constants/routes';
 
 // 소비자가 근처 스마트팜 상품을 검색하고 담을 수 있는 로컬 마켓 화면입니다.
 export function MarketPage() {
   const { keyword, setKeyword, category, setCategory, items, status, error, reload } =
     useMarketItems();
+  const { isAuthenticated } = useAuth();
 
   return (
     <PageContainer>
       <PageHeader
         action={
-          <Card className="text-sm font-semibold text-action" padding="sm">
-            <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
-            부산 반경 8km 이내
-          </Card>
+          <div className="flex flex-wrap items-center gap-2">
+            <Card className="text-sm font-semibold text-action" padding="sm">
+              <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
+              부산 반경 8km 이내
+            </Card>
+            {/* 장바구니는 로그인해야 서버에 담기므로 로그인한 사람에게만 보입니다. */}
+            {isAuthenticated ? (
+              <Link
+                className={buttonStyles({ size: 'sm', variant: 'outline' })}
+                to={ROUTES.cart}
+              >
+                <ShoppingCart className="h-4 w-4" aria-hidden />
+                장바구니
+              </Link>
+            ) : null}
+            {/* 판매 관리는 내 상품이 있어야 의미가 있어 로그인한 사람에게만 보입니다. */}
+            {isAuthenticated ? (
+              <Link
+                className={buttonStyles({ size: 'sm', variant: 'outline' })}
+                to={ROUTES.myProducts}
+              >
+                <Store className="h-4 w-4" aria-hidden />
+                판매 관리
+              </Link>
+            ) : null}
+            {/* 등록 진입점은 비로그인에도 보여 줍니다. 무엇을 할 수 있는 서비스인지 먼저 알리고,
+                누르면 ProtectedRoute가 로그인으로 보냈다가 로그인 후 이 화면으로 되돌립니다. */}
+            <Link className={buttonStyles({ size: 'sm' })} to={ROUTES.newProduct}>
+              <Plus className="h-4 w-4" aria-hidden />
+              상품 등록
+            </Link>
+          </div>
         }
         actionBreakpoint="lg"
         description="수확일, 푸드 마일리지, 생산 이력, 바로 담기 기능으로 로컬 농산물을 비교해보세요."

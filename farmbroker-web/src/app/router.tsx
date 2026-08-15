@@ -7,7 +7,14 @@ import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
 import { DashboardPage, MyPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
-import { MarketPage, ProductDetailPage } from '@/pages/market';
+import {
+  MarketPage,
+  MyProductsPage,
+  ProductDetailPage,
+  CartPage,
+  OrderCompletePage,
+  ProductFormPage,
+} from '@/pages/market';
 import { SpaceApplyPage } from '@/pages/space-apply';
 import { SpaceDetailPage } from '@/pages/space-detail';
 import { SpaceCreatePage, SpacePredictionPage, SpacesPage } from '@/pages/spaces';
@@ -34,6 +41,12 @@ export function AppRouter() {
           {/* 정적 세그먼트가 우선 매칭되므로 /spaces/new와 충돌하지 않습니다. */}
           <Route element={<SpaceApplyPage />} path="/spaces/:spaceId/apply" />
           <Route element={<MyPage />} path={ROUTES.myPage} />
+          {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
+          <Route element={<CartPage />} path={ROUTES.cart} />
+          <Route element={<OrderCompletePage />} path={ROUTES.orderComplete} />
+          <Route element={<MyProductsPage />} path={ROUTES.myProducts} />
+          <Route element={<ProductFormPage />} path={ROUTES.newProduct} />
+          <Route element={<ProductFormPage />} path="/market/:productId/edit" />
         </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />
       </Route>

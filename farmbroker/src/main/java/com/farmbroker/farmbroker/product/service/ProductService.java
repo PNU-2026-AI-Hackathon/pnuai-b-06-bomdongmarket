@@ -117,9 +117,12 @@ public class ProductService {
     // 상품 부분수정 — 등록자 본인만. events가 오면 이력을 전량 교체한다.
     @Transactional
     public ProductDetailResponse update(Long userId, Long productId, ProductUpdateRequest request) {
-        Product product = productRepository.findByIdAndDeletedFalse(productId)
+        Product product = productRepository.findForUpdate(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         validateOwner(product, userId);
+        if (request.getImageUrl() != null && Boolean.TRUE.equals(request.getRemoveImageUrl())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
 
         ProductCategory category = request.getCategory() == null ? null : parseCategory(request.getCategory());
         ProductStatus status = request.getStatus() == null ? null : parseStatus(request.getStatus());
@@ -129,6 +132,13 @@ public class ProductService {
                 request.getHarvestDate(), null, request.getProductionLocation(),
                 request.getAddress(), request.getLatitude(), request.getLongitude(),
                 request.getSpaceId(), request.getFoodMileageKm(), status);
+        if (Boolean.TRUE.equals(request.getRemoveImageUrl())) {
+            product.clearImageUrl();
+        }
+        // 재고를 함께 보충하는 요청은 허용하되, 적용 결과가 0이면 공개 판매를 재개할 수 없다.
+        if (status == ProductStatus.ON_SALE && product.getStock() <= 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
 
         List<ProductTraceabilityEvent> events;
         if (request.getEvents() != null) {

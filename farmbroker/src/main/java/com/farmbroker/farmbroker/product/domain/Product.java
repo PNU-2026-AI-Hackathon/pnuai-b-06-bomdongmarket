@@ -1,5 +1,7 @@
 package com.farmbroker.farmbroker.product.domain;
 
+import com.farmbroker.farmbroker.common.exception.BusinessException;
+import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -56,7 +58,7 @@ public class Product {
     @Column(nullable = false, length = 20)
     private String unit;
 
-    // 재고 — 주문/결제가 없으므로 정보성 값이다(구매로 차감되지 않는다).
+    // 재고 — 결제 확정 시 차감되며 0이 되면 판매 마감으로 전환된다.
     @Column(nullable = false)
     private Integer stock;
 
@@ -159,5 +161,29 @@ public class Product {
 
     public void softDelete() {
         this.deleted = true;
+    }
+
+    public void clearImageUrl() {
+        this.imageUrl = null;
+    }
+
+    // 결제 확정 시 재고를 줄인다. 재고가 0이 되면 더 팔 수 없으므로 판매 마감으로 바꾼다
+    // (마감 상품은 공개 목록에서 빠지고 상세에서도 구매가 막힌다).
+    // 재고보다 많이 팔리는 일이 없도록 호출부는 이 객체를 잠근 뒤 호출해야 한다.
+    public void reduceStock(int quantity) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("차감 수량은 1 이상이어야 합니다.");
+        }
+        if (this.stock == null || this.stock < quantity) {
+            throw new BusinessException(ErrorCode.OUT_OF_STOCK);
+        }
+        this.stock -= quantity;
+        if (this.stock == 0) {
+            this.status = ProductStatus.CLOSED;
+        }
+    }
+
+    public boolean isPurchasable() {
+        return !deleted && status == ProductStatus.ON_SALE && stock != null && stock > 0;
     }
 }

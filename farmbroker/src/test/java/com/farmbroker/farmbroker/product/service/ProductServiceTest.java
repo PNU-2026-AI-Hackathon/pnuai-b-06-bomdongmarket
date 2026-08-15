@@ -143,12 +143,60 @@ class ProductServiceTest {
                 .producerName("어반리프")
                 .productionLocation("장전 스마트팜")
                 .build();
-        given(productRepository.findByIdAndDeletedFalse(10L)).willReturn(Optional.of(product));
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
 
         assertThatThrownBy(() -> productService.update(2L, 10L, updateRequest("{ \"price\": 5000 }")))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_PRODUCT_OWNER);
+    }
+
+    @Test
+    @DisplayName("대표 사진 제거를 요청하면 이미지 URL을 비운다")
+    void updateClearsImageUrl() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 3, "https://example.com/files/product.jpg");
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+
+        productService.update(1L, 10L, updateRequest("{ \"removeImageUrl\": true }"));
+
+        assertThat(product.getImageUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("대표 사진 URL과 제거 요청을 함께 보내면 VALIDATION_ERROR")
+    void updateRejectsImageUrlAndRemovalTogether() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 3, "https://example.com/files/old.jpg");
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+
+        assertThatThrownBy(() -> productService.update(1L, 10L, updateRequest("""
+                {
+                  "imageUrl": "https://example.com/files/new.jpg",
+                  "removeImageUrl": true
+                }
+                """)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.VALIDATION_ERROR);
+    }
+
+    @Test
+    @DisplayName("재고가 0인 상품은 판매를 재개할 수 없다")
+    void updateRejectsReopeningWithoutStock() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 1, null);
+        product.reduceStock(1);
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+
+        assertThatThrownBy(() -> productService.update(
+                1L, 10L, updateRequest("{ \"status\": \"ON_SALE\" }")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
 
     @Test
@@ -208,5 +256,20 @@ class ProductServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN_ROLE);
+    }
+
+    private Product product(User owner, int stock, String imageUrl) {
+        return Product.builder()
+                .seller(owner)
+                .name("버터헤드 상추")
+                .category(ProductCategory.LEAFY)
+                .price(4300)
+                .unit("팩")
+                .stock(stock)
+                .imageUrl(imageUrl)
+                .harvestDate(LocalDate.of(2026, 7, 5))
+                .producerName("어반리프")
+                .productionLocation("장전 스마트팜")
+                .build();
     }
 }
