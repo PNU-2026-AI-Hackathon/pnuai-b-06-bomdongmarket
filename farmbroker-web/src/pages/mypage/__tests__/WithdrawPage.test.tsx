@@ -75,7 +75,7 @@ describe('WithdrawPage', () => {
     expect(screen.getByText(/2건/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '진행 중인 계약 확인' })).toHaveAttribute(
       'href',
-      '/dashboard#my-applications-title',
+      '/dashboard#contracted-spaces',
     );
     expect(screen.queryByRole('button', { name: '회원 탈퇴하기' })).not.toBeInTheDocument();
   });
