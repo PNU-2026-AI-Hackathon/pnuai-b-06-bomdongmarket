@@ -76,7 +76,11 @@ describe('SpaceMatchingRequestCard', () => {
     renderWithProviders(<SpaceMatchingRequestCard spaceId={7} />);
 
     expect(await screen.findByRole('button', { name: '채팅' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '계약서' })).toBeInTheDocument();
+    // 계약서는 이동이라 link입니다 — 해당 매칭의 계약서 화면으로 연결됩니다.
+    expect(screen.getByRole('link', { name: '계약서' })).toHaveAttribute(
+      'href',
+      '/matchings/21/contract',
+    );
     expect(screen.getByRole('button', { name: '신청 취소' })).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: /매칭 신청하기/i }),

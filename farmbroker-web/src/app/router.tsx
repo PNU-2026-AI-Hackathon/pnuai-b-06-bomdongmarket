@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
+import { ContractPage } from '@/pages/contract';
 import { DashboardPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
 import {
@@ -41,6 +42,8 @@ export function AppRouter() {
           <Route element={<SpacePredictionPage />} path={ROUTES.newSpacePrediction} />
           {/* 정적 세그먼트가 우선 매칭되므로 /spaces/new와 충돌하지 않습니다. */}
           <Route element={<SpaceApplyPage />} path="/spaces/:spaceId/apply" />
+          {/* 계약서는 매칭 당사자 둘만 볼 수 있어 서버가 권한을 판정합니다. */}
+          <Route element={<ContractPage />} path="/matchings/:matchingId/contract" />
           <Route element={<MyPage />} path={ROUTES.myPage} />
           <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
           <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
