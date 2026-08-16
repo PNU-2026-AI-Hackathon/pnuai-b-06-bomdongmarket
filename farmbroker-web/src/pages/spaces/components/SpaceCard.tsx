@@ -15,8 +15,21 @@ interface SpaceCardProps {
   compact?: boolean;
 }
 
+// 등록할 때 체크하지 않은 조건은 아이콘 자체를 내보내지 않습니다.
+function availableFacilities(space: SpaceSummary) {
+  return (
+    [
+      [space.hasWater, Droplets, '수도 사용 가능'],
+      [space.hasElectricity, Plug, '전기 사용 가능'],
+      [space.hasVentilation, Wind, '환기 가능'],
+    ] as const
+  ).filter(([enabled]) => enabled);
+}
+
 // 공간 목록과 개인 대시보드에서 함께 쓰는 카드형 공간 요약입니다.
 export function SpaceCard({ space, compact = false }: SpaceCardProps) {
+  const facilities = availableFacilities(space);
+
   return (
     <Card className="overflow-hidden" variant="interactive">
       <RemoteImage
@@ -49,11 +62,14 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
               {formatCurrency(space.monthlyRent)}
             </span>
           </span>
-          {!compact ? (
-            <div className="flex items-center gap-1 text-action" aria-label="주요 시설">
-              <Droplets className="h-4 w-4" aria-hidden />
-              <Plug className="h-4 w-4" aria-hidden />
-              <Wind className="h-4 w-4" aria-hidden />
+          {!compact && facilities.length > 0 ? (
+            <div className="flex items-center gap-1 text-action">
+              {facilities.map(([, Icon, label]) => (
+                <span key={label}>
+                  <Icon className="h-4 w-4" aria-hidden />
+                  <span className="sr-only">{label}</span>
+                </span>
+              ))}
             </div>
           ) : null}
         </div>

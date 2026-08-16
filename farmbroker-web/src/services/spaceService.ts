@@ -26,8 +26,30 @@ function buildSearchParams(params: SpaceSearchParams) {
 
 function toSummary(space: SpaceDetail): SpaceSummary {
   // 목록 카드에는 상세 필드가 필요 없으므로 API 명세의 요약 DTO 형태로 잘라냅니다.
-  const { spaceId, title, address, area, monthlyRent, status, imageUrl } = space;
-  return { spaceId, title, address, area, monthlyRent, status, imageUrl };
+  const {
+    spaceId,
+    title,
+    address,
+    area,
+    monthlyRent,
+    hasWater,
+    hasElectricity,
+    hasVentilation,
+    status,
+    imageUrl,
+  } = space;
+  return {
+    spaceId,
+    title,
+    address,
+    area,
+    monthlyRent,
+    hasWater,
+    hasElectricity,
+    hasVentilation,
+    status,
+    imageUrl,
+  };
 }
 
 function applySearch(spaces: SpaceDetail[], params: SpaceSearchParams = {}) {

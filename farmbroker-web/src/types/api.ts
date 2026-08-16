@@ -85,15 +85,16 @@ export interface SpaceSummary {
   address: string;
   area: number;
   monthlyRent: number;
+  // 목록 카드가 실제 등록값대로 시설 아이콘을 보여줘야 해서 요약에도 담깁니다.
+  hasWater: boolean;
+  hasElectricity: boolean;
+  hasVentilation: boolean;
   status: SpaceStatus;
   imageUrl: string | null;
 }
 
 export interface SpaceDetail extends SpaceSummary {
   floor: number;
-  hasWater: boolean;
-  hasElectricity: boolean;
-  hasVentilation: boolean;
   description: string;
   imageUrls: string[];
   floorPlanUrls: string[];
