@@ -72,6 +72,15 @@ public class SpaceUpdateRequest {
 
     private String description;
 
+    // 지도용 좌표(선택). 프론트가 주소를 지오코딩해 보낸다. 실패 시 null 허용.
+    @DecimalMin(value = "-90.0", message = "위도는 -90~90 사이여야 합니다.")
+    @DecimalMax(value = "90.0", message = "위도는 -90~90 사이여야 합니다.")
+    private Double latitude;
+
+    @DecimalMin(value = "-180.0", message = "경도는 -180~180 사이여야 합니다.")
+    @DecimalMax(value = "180.0", message = "경도는 -180~180 사이여야 합니다.")
+    private Double longitude;
+
     // AVAILABLE / CLOSED만 허용. MATCHED 등 그 외 값은 INVALID_STATUS_CHANGE
     private String status;
 

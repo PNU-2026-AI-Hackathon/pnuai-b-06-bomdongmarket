@@ -80,6 +80,15 @@ public class SpaceCreateRequest {
 
     private String description;
 
+    // 지도용 좌표(선택). 프론트가 주소를 지오코딩해 보낸다. 실패 시 null 허용.
+    @DecimalMin(value = "-90.0", message = "위도는 -90~90 사이여야 합니다.")
+    @DecimalMax(value = "90.0", message = "위도는 -90~90 사이여야 합니다.")
+    private Double latitude;
+
+    @DecimalMin(value = "-180.0", message = "경도는 -180~180 사이여야 합니다.")
+    @DecimalMax(value = "180.0", message = "경도는 -180~180 사이여야 합니다.")
+    private Double longitude;
+
     // 배열 순서 = 노출 순서 (0번이 대표 이미지). 미입력 시 이미지 없이 등록
     @Schema(description = """
             공간 사진 URL 배열. 선택 항목이며 최대 10장.

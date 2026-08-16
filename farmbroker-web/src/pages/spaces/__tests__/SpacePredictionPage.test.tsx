@@ -11,6 +11,13 @@ vi.mock('@/utils/kakaoSdk', async () =>
   (await import('@/test/kakaoSdkMock')).createKakaoSdkMock(),
 );
 
+// 등록은 주소 좌표 확보가 전제다(지오코딩 실패 시 제출 차단). 예측 단계로 넘어가려면
+// 지오코딩이 성공해야 하므로 성공값을 돌려주도록 mock한다.
+vi.mock('@/utils/geocode', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/geocode')>('@/utils/geocode');
+  return { ...actual, geocodeAddress: vi.fn().mockResolvedValue({ lat: 35.18, lng: 129.076 }) };
+});
+
 // 도면은 등록 필수라 예측 단계로 넘어가려면 반드시 한 장 올려야 합니다.
 async function uploadFloorPlan(user: ReturnType<typeof userEvent.setup>) {
   const file = new File([new Uint8Array(64)], '도면.png', { type: 'image/png' });

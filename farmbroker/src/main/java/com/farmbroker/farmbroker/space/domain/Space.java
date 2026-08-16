@@ -65,6 +65,13 @@ public class Space {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    // 지도 검색용 좌표. 등록/수정 시 프론트가 주소를 지오코딩해 채운다. 없으면 프론트가 폴백 지오코딩한다.
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SpaceStatus status;
@@ -83,7 +90,7 @@ public class Space {
     @Builder
     public Space(User owner, String title, String address, BigDecimal area, Integer monthlyRent,
                  Integer floor, boolean hasWater, boolean hasElectricity, boolean hasVentilation,
-                 String description) {
+                 String description, Double latitude, Double longitude) {
         this.owner = owner;
         this.title = title;
         this.address = address;
@@ -94,6 +101,8 @@ public class Space {
         this.hasElectricity = hasElectricity;
         this.hasVentilation = hasVentilation;
         this.description = description;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.status = SpaceStatus.AVAILABLE;
         this.deleted = false;
     }
@@ -103,7 +112,7 @@ public class Space {
     // PATCH 부분수정 — null이 아닌 필드만 반영한다. status/이미지는 별도 처리.
     public void update(String title, String address, BigDecimal area, Integer monthlyRent,
                        Integer floor, Boolean hasWater, Boolean hasElectricity, Boolean hasVentilation,
-                       String description) {
+                       String description, Double latitude, Double longitude) {
         if (title != null) this.title = title;
         if (address != null) this.address = address;
         if (area != null) this.area = area;
@@ -113,6 +122,8 @@ public class Space {
         if (hasElectricity != null) this.hasElectricity = hasElectricity;
         if (hasVentilation != null) this.hasVentilation = hasVentilation;
         if (description != null) this.description = description;
+        if (latitude != null) this.latitude = latitude;
+        if (longitude != null) this.longitude = longitude;
     }
 
     // OWNER의 직접 상태 전환 (AVAILABLE/CLOSED). MATCHED 검증은 서비스에서 수행 후 호출된다.

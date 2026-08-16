@@ -2,21 +2,34 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/common/Button';
 import { LoadingState } from '@/components/common/LoadingState';
-import type { MapItem } from '@/pages/market/hooks/useNearbyItems';
+import type { NearbyMapItem } from '@/components/map/useNearbyPlaces';
 import type { Coords } from '@/utils/geocode';
 import { hasKakaoMapKey, loadKakaoMaps } from '@/utils/kakaoSdk';
 
-interface MarketMapProps {
+interface NearbyMapProps<T> {
   center: Coords;
   radiusKm: number;
-  items: MapItem[];
+  items: NearbyMapItem<T>[];
   selectedId: number | null;
-  onSelect: (productId: number) => void;
+  onSelect: (id: number) => void;
+  getId: (item: T) => number;
+  getTitle: (item: T) => string;
+  /** 지도를 클릭하면 그 지점 좌표로 호출된다(주변 검색 중심 이동용). 선택 사항. */
+  onMapClick?: (coords: Coords) => void;
 }
 
 const MAP_LEVEL = 6; // 반경 수 km가 한눈에 들어오는 수준
 
-export function MarketMap({ center, radiusKm, items, selectedId, onSelect }: MarketMapProps) {
+export function NearbyMap<T>({
+  center,
+  radiusKm,
+  items,
+  selectedId,
+  onSelect,
+  getId,
+  getTitle,
+  onMapClick,
+}: NearbyMapProps<T>) {
   // Task 7에서 그리드 강조에 사용할 예정 — 지금은 소비만 해서 lint의 미사용 경고를 피한다.
   void selectedId;
 
@@ -27,6 +40,10 @@ export function MarketMap({ center, radiusKm, items, selectedId, onSelect }: Mar
   const circleRef = useRef<KakaoCircle | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [reloadToken, setReloadToken] = useState(0);
+
+  // 클릭 리스너는 지도 생성 시 1회만 등록하므로, 최신 콜백을 ref로 참조해 stale closure를 피한다.
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
 
   const isSupported = hasKakaoMapKey();
 
@@ -40,10 +57,16 @@ export function MarketMap({ center, radiusKm, items, selectedId, onSelect }: Mar
         if (cancelled || !containerRef.current) return;
         mapsRef.current = maps;
         if (!mapRef.current) {
-          mapRef.current = new maps.Map(containerRef.current, {
+          const map = new maps.Map(containerRef.current, {
             center: new maps.LatLng(center.lat, center.lng),
             level: MAP_LEVEL,
           });
+          // 지도 빈 곳 클릭 → 그 지점을 주변 검색 중심으로. 리스너는 여기서 딱 한 번 건다.
+          maps.event.addListener(map, 'click', (mouseEvent) => {
+            const latLng = mouseEvent.latLng;
+            onMapClickRef.current?.({ lat: latLng.getLat(), lng: latLng.getLng() });
+          });
+          mapRef.current = map;
         }
         setStatus('ready');
       })
@@ -64,7 +87,16 @@ export function MarketMap({ center, radiusKm, items, selectedId, onSelect }: Mar
     if (!maps || !map) return;
 
     const centerLatLng = new maps.LatLng(center.lat, center.lng);
-    map.setCenter(centerLatLng);
+    // 반경(1/3/5/10km)이 화면에 한눈에 들어오도록 원의 외접 사각형에 맞춰 지도를 맞춘다.
+    // (setBounds가 중심·확대수준을 함께 조정하므로 반경을 바꿔도 경계 마커가 화면 밖으로 나가지 않는다.)
+    const latDelta = radiusKm / 111; // 위도 1도 ≈ 111km
+    const lngDelta = radiusKm / (111 * Math.cos((center.lat * Math.PI) / 180));
+    map.setBounds(
+      new maps.LatLngBounds(
+        new maps.LatLng(center.lat - latDelta, center.lng - lngDelta),
+        new maps.LatLng(center.lat + latDelta, center.lng + lngDelta),
+      ),
+    );
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
@@ -85,12 +117,12 @@ export function MarketMap({ center, radiusKm, items, selectedId, onSelect }: Mar
       const marker = new maps.Marker({
         map,
         position: new maps.LatLng(coords.lat, coords.lng),
-        title: item.name,
+        title: getTitle(item),
       });
-      maps.event.addListener(marker, 'click', () => onSelect(item.productId));
+      maps.event.addListener(marker, 'click', () => onSelect(getId(item)));
       markersRef.current.push(marker);
     }
-  }, [center, radiusKm, items, onSelect]);
+  }, [center, radiusKm, items, onSelect, getId, getTitle]);
 
   useEffect(() => {
     if (status === 'ready') redraw();

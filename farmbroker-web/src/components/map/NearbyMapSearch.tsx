@@ -6,13 +6,19 @@ import { Input } from '@/components/common/Input';
 import { RADIUS_OPTIONS_KM } from '@/constants/geo';
 import { type Coords, geocodeAddress } from '@/utils/geocode';
 
-interface MarketMapSearchProps {
+interface NearbyMapSearchProps {
   radiusKm: number;
   onRadiusChange: (km: number) => void;
   onCenterChange: (center: Coords, label: string) => void;
+  placeholder?: string;
 }
 
-export function MarketMapSearch({ radiusKm, onRadiusChange, onCenterChange }: MarketMapSearchProps) {
+export function NearbyMapSearch({
+  radiusKm,
+  onRadiusChange,
+  onCenterChange,
+  placeholder = '예: 부산광역시 금정구 장전동',
+}: NearbyMapSearchProps) {
   const [address, setAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -20,7 +26,11 @@ export function MarketMapSearch({ radiusKm, onRadiusChange, onCenterChange }: Ma
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = address.trim();
-    if (!query) return;
+    if (!query) {
+      // 빈 주소 제출이 아무 안내 없이 끝나지 않도록 명시적으로 알린다.
+      setError('주소를 입력해 주세요.');
+      return;
+    }
     setIsSearching(true);
     setError(null);
     try {
@@ -42,7 +52,7 @@ export function MarketMapSearch({ radiusKm, onRadiusChange, onCenterChange }: Ma
       <Input
         aria-label="중심 주소"
         icon={<MapPin className="h-4 w-4" aria-hidden />}
-        placeholder="예: 부산광역시 금정구 장전동"
+        placeholder={placeholder}
         value={address}
         onChange={(e) => setAddress(e.target.value)}
       />

@@ -22,6 +22,7 @@ import {
   type SpaceNumberErrors,
 } from '@/pages/spaces/constants/spaceNumberLimits';
 import type { SpaceCreateLocationState } from '@/pages/spaces/types';
+import { geocodeAddress } from '@/utils/geocode';
 
 // 면적·월세 칸에서 음수 입력 자체를 막습니다. type="number"는 '-'와 지수 표기('e')를 허용하기 때문입니다.
 // 층수는 지하가 음수로 표현되므로 이 핸들러를 달지 않습니다.
@@ -64,7 +65,7 @@ export function SpaceCreatePage() {
   const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
   const [numberErrors, setNumberErrors] = useState<SpaceNumberErrors>({});
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     // 주소 칸은 검색으로만 채우는 readOnly라 브라우저 required 검증에 기댈 수 없습니다.
@@ -95,6 +96,16 @@ export function SpaceCreatePage() {
       return;
     }
 
+    // 좌표를 확보하지 못하면 등록을 진행하지 않는다. 좌표 없이 등록하면 주소가 지도에서
+    // 위치를 못 잡아(폴백 지오코딩까지 실패하면 반경 결과에서 제외됨) 검색에 노출되지 않는다.
+    const coords = await geocodeAddress(address.roadAddress).catch(() => null);
+    if (!coords) {
+      setAddressError(
+        '주소의 좌표를 확인하지 못했습니다. 주소를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
+      );
+      return;
+    }
+
     const state: SpaceCreateLocationState = {
       // 수정하러 돌아왔을 때 두 칸을 그대로 되살리려면 합치기 전 값도 함께 넘겨야 합니다.
       addressParts: address,
@@ -108,6 +119,8 @@ export function SpaceCreatePage() {
         description: String(formData.get('description')),
         imageUrls,
         floorPlanUrls,
+        latitude: coords.lat,
+        longitude: coords.lng,
       },
     };
 

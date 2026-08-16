@@ -5,10 +5,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { SpaceCreatePage } from '@/pages/spaces/SpaceCreatePage';
 import { SEARCHED_ADDRESS, searchAddress } from '@/test/kakaoSdkMock';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { geocodeAddress } from '@/utils/geocode';
 
 vi.mock('@/utils/kakaoSdk', async () =>
   (await import('@/test/kakaoSdkMock')).createKakaoSdkMock(),
 );
+
+vi.mock('@/utils/geocode', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/geocode')>('@/utils/geocode');
+  return { ...actual, geocodeAddress: vi.fn().mockResolvedValue({ lat: 35.18, lng: 129.076 }) };
+});
 
 function imageFile(name: string, sizeBytes = 1024) {
   return new File([new Uint8Array(sizeBytes)], name, { type: 'image/jpeg' });
@@ -265,6 +271,43 @@ describe('SpaceCreatePage', () => {
     await user.type(floor, '2');
 
     expect(floor).toBeValid();
+  });
+
+  it('제출 시 선택한 도로명 주소를 지오코딩한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    await waitFor(() => {
+      expect(geocodeAddress).toHaveBeenCalledWith(SEARCHED_ADDRESS);
+    });
+  });
+
+  it('주소 지오코딩이 실패하면 등록을 막고 안내한다', async () => {
+    // 좌표를 못 구하면 등록을 진행하지 않는다 — 지도에서 위치를 못 잡는 공간이 생기지 않도록.
+    vi.mocked(geocodeAddress).mockResolvedValueOnce(null);
+
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
+    // 등록 폼에 그대로 머문다(예측 단계로 넘어가지 않음).
+    expect(screen.getByLabelText('공간 이름')).toBeInTheDocument();
   });
 
   it('도면을 등록하면 안내가 사라진다', async () => {
