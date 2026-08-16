@@ -12,7 +12,11 @@ import type { MarketItem } from '@/types/api';
 import { geocodeAddress } from '@/utils/geocode';
 
 vi.mock('@/pages/market/hooks/useMyWorkplaces', () => ({
-  useMyWorkplaces: () => ({ workplaces: [], isLoading: false }),
+  useMyWorkplaces: () => ({
+    // 계약(매칭 수락)한 공간만 리스트업된다 — 고르면 생산 위치·주소가 채워진다.
+    workplaces: [{ spaceId: 5, title: '장전 스마트팜', address: '부산광역시 금정구 장전동 30' }],
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/services/marketService', () => ({
@@ -45,6 +49,7 @@ const existingProduct: MarketItem = {
   foodMileageKm: null,
   stock: 3,
   status: 'ON_SALE',
+  address: '부산광역시 금정구 장전동 30',
 };
 
 describe('ProductFormPage', () => {
@@ -136,14 +141,43 @@ describe('ProductFormPage', () => {
     await user.type(screen.getByLabelText('가격(원)'), '4300');
     await user.type(screen.getByLabelText('재고 수량'), '24');
     await user.type(screen.getByLabelText('수확일'), '2026-08-08');
-    await user.type(screen.getByLabelText('생산 위치'), '장전 스마트팜');
-    await user.type(screen.getByLabelText('생산지 주소'), '부산광역시 금정구 장전동 30');
+    // 생산 위치·주소는 직접 입력이 아니라 계약한 공간을 골라 채운다.
+    await user.selectOptions(screen.getByLabelText('어디서 생산했나요'), '5');
+    expect(screen.getByLabelText('생산 위치')).toHaveValue('장전 스마트팜');
+    expect(screen.getByLabelText('생산지 주소')).toHaveValue('부산광역시 금정구 장전동 30');
 
     await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
 
     await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
     const payload = vi.mocked(createProduct).mock.calls[0][0];
-    expect(payload).toMatchObject({ latitude: 35.18, longitude: 129.076 });
+    expect(payload).toMatchObject({
+      productionLocation: '장전 스마트팜',
+      address: '부산광역시 금정구 장전동 30',
+      latitude: 35.18,
+      longitude: 129.076,
+    });
+  });
+
+  it('생산 공간을 고르지 않으면 등록을 막고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/new" />
+      </Routes>,
+      { authenticated: true, route: '/market/new' },
+    );
+
+    await screen.findByRole('heading', { name: '상품 등록' });
+    await user.type(screen.getByLabelText('상품명'), '버터헤드 상추');
+    await user.type(screen.getByLabelText('한 번에 파는 양'), '200');
+    await user.type(screen.getByLabelText('가격(원)'), '4300');
+    await user.type(screen.getByLabelText('재고 수량'), '24');
+    await user.type(screen.getByLabelText('수확일'), '2026-08-08');
+    // 공간 미선택 → 생산 위치가 비어 제출을 막는다.
+    await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('공간을 선택해 주세요');
+    expect(createProduct).not.toHaveBeenCalled();
   });
 
   it('수정 시 주소 지오코딩이 실패하면 저장을 막고 안내한다', async () => {
@@ -160,9 +194,7 @@ describe('ProductFormPage', () => {
     );
 
     await screen.findByRole('heading', { name: '상품 수정' });
-    const addressInput = screen.getByLabelText('생산지 주소');
-    await user.clear(addressInput);
-    await user.type(addressInput, '부산광역시 금정구 새 주소 45');
+    // 주소는 상품에서 불러와 채워진 상태(readOnly). 저장 시 지오코딩이 실패하면 차단된다.
     await user.click(screen.getByRole('button', { name: '수정 내용 저장' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
