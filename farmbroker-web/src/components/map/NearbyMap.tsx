@@ -14,6 +14,8 @@ interface NearbyMapProps<T> {
   onSelect: (id: number) => void;
   getId: (item: T) => number;
   getTitle: (item: T) => string;
+  /** 지도를 클릭하면 그 지점 좌표로 호출된다(주변 검색 중심 이동용). 선택 사항. */
+  onMapClick?: (coords: Coords) => void;
 }
 
 const MAP_LEVEL = 6; // 반경 수 km가 한눈에 들어오는 수준
@@ -26,6 +28,7 @@ export function NearbyMap<T>({
   onSelect,
   getId,
   getTitle,
+  onMapClick,
 }: NearbyMapProps<T>) {
   // Task 7에서 그리드 강조에 사용할 예정 — 지금은 소비만 해서 lint의 미사용 경고를 피한다.
   void selectedId;
@@ -37,6 +40,10 @@ export function NearbyMap<T>({
   const circleRef = useRef<KakaoCircle | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [reloadToken, setReloadToken] = useState(0);
+
+  // 클릭 리스너는 지도 생성 시 1회만 등록하므로, 최신 콜백을 ref로 참조해 stale closure를 피한다.
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
 
   const isSupported = hasKakaoMapKey();
 
@@ -50,10 +57,16 @@ export function NearbyMap<T>({
         if (cancelled || !containerRef.current) return;
         mapsRef.current = maps;
         if (!mapRef.current) {
-          mapRef.current = new maps.Map(containerRef.current, {
+          const map = new maps.Map(containerRef.current, {
             center: new maps.LatLng(center.lat, center.lng),
             level: MAP_LEVEL,
           });
+          // 지도 빈 곳 클릭 → 그 지점을 주변 검색 중심으로. 리스너는 여기서 딱 한 번 건다.
+          maps.event.addListener(map, 'click', (mouseEvent) => {
+            const latLng = mouseEvent.latLng;
+            onMapClickRef.current?.({ lat: latLng.getLat(), lng: latLng.getLng() });
+          });
+          mapRef.current = map;
         }
         setStatus('ready');
       })

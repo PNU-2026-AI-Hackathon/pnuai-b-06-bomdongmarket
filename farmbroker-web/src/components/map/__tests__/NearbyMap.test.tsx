@@ -75,4 +75,26 @@ describe('NearbyMap', () => {
     mapMock.markers[0].handlers.click?.();
     expect(onSelect).toHaveBeenCalledWith(7);
   });
+
+  it('지도를 클릭하면 onMapClick에 클릭 좌표를 전달한다', async () => {
+    const mapMock = getMapMock();
+    const onMapClick = vi.fn();
+    render(
+      <NearbyMap
+        center={{ lat: 35.1798, lng: 129.075 }}
+        radiusKm={5}
+        items={[]}
+        selectedId={null}
+        onSelect={() => {}}
+        onMapClick={onMapClick}
+        getId={(item: TestPlace) => item.id}
+        getTitle={(item: TestPlace) => item.name}
+      />,
+    );
+    // 지도 생성(비동기) 후 클릭 리스너가 붙을 때까지 기다렸다가 클릭을 흉내 낸다.
+    await waitFor(() => {
+      mapMock.clickMap(35.2, 129.1);
+      expect(onMapClick).toHaveBeenCalledWith({ lat: 35.2, lng: 129.1 });
+    });
+  });
 });

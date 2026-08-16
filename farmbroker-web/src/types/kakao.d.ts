@@ -52,11 +52,32 @@ interface KakaoGeocoderResult {
   address_name: string;
 }
 
+interface KakaoAddressName {
+  address_name: string;
+}
+
+/** coord2Address 결과 한 건. 도로명주소는 지역에 따라 null일 수 있어 지번(address)으로 폴백한다. */
+interface KakaoCoord2AddressResult {
+  road_address: KakaoAddressName | null;
+  address: KakaoAddressName | null;
+}
+
 interface KakaoGeocoder {
   addressSearch: (
     address: string,
     callback: (result: KakaoGeocoderResult[], status: string) => void,
   ) => void;
+  /** 좌표 → 주소(역지오코딩). 인자 순서는 경도(x), 위도(y)다. */
+  coord2Address: (
+    longitude: number,
+    latitude: number,
+    callback: (result: KakaoCoord2AddressResult[], status: string) => void,
+  ) => void;
+}
+
+/** 지도 클릭 등 마우스 이벤트가 콜백에 넘겨주는 객체. 클릭 지점의 좌표를 담는다. */
+interface KakaoMapMouseEvent {
+  latLng: KakaoLatLng;
 }
 
 interface KakaoMaps {
@@ -78,7 +99,12 @@ interface KakaoMaps {
     fillOpacity?: number;
   }) => KakaoCircle;
   event: {
-    addListener: (target: object, type: string, handler: () => void) => void;
+    // 마커 클릭은 인자를 무시하고(() => void도 대입 가능), 지도 클릭은 KakaoMapMouseEvent를 받는다.
+    addListener: (
+      target: object,
+      type: string,
+      handler: (mouseEvent: KakaoMapMouseEvent) => void,
+    ) => void;
   };
   services: {
     Geocoder: new () => KakaoGeocoder;

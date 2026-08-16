@@ -21,7 +21,7 @@ import type { MarketCategory } from '@/pages/market/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM } from '@/constants/geo';
 import { ROUTES } from '@/constants/routes';
 import type { MarketItem } from '@/types/api';
-import type { Coords } from '@/utils/geocode';
+import { type Coords, reverseGeocode } from '@/utils/geocode';
 import { hasKakaoMapKey } from '@/utils/kakaoSdk';
 
 // 소비자가 근처 스마트팜 상품을 검색하고 담을 수 있는 로컬 마켓 화면입니다.
@@ -58,6 +58,15 @@ export function MarketPage() {
   function handleSelect(productId: number) {
     setSelectedId(productId);
     cardRefs.current.get(productId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // 지도 빈 곳을 클릭하면 그 지점을 검색 중심으로 삼고, 역지오코딩으로 지명 라벨을 붙인다.
+  async function handleMapClick(coords: Coords) {
+    setCenter(coords);
+    setSelectedId(null);
+    setCenterLabel('선택한 위치');
+    const label = await reverseGeocode(coords).catch(() => null);
+    if (label) setCenterLabel(label);
   }
 
   return (
@@ -115,6 +124,7 @@ export function MarketPage() {
             items={mapItems}
             selectedId={selectedId}
             onSelect={handleSelect}
+            onMapClick={handleMapClick}
             getId={(i) => i.productId}
             getTitle={(i) => i.name}
           />

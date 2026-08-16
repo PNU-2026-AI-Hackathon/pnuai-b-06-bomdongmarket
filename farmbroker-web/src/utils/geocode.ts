@@ -50,3 +50,22 @@ export async function geocodeAddress(address: string): Promise<Coords | null> {
     });
   });
 }
+
+/**
+ * 좌표 → 사람이 읽는 주소 라벨(역지오코딩). 실패 시 null.
+ * 도로명주소를 우선하고, 없으면 지번주소로 폴백한다. 지도 클릭 위치의 이름표에 쓴다.
+ */
+export async function reverseGeocode(coords: Coords): Promise<string | null> {
+  const maps = await loadKakaoMaps();
+  return new Promise<string | null>((resolve) => {
+    // coord2Address 인자 순서는 (경도, 위도)다.
+    new maps.services.Geocoder().coord2Address(coords.lng, coords.lat, (results, status) => {
+      const found = status === maps.services.Status.OK ? results?.[0] : undefined;
+      if (!found) {
+        resolve(null);
+        return;
+      }
+      resolve(found.road_address?.address_name ?? found.address?.address_name ?? null);
+    });
+  });
+}
