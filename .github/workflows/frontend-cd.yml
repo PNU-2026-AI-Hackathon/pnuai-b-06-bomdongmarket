@@ -29,9 +29,6 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
-    defaults:
-      run:
-        working-directory: farmbroker-web
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -57,6 +54,7 @@ jobs:
           test -n "$VERCEL_TOKEN" || { echo "VERCEL_TOKEN is not configured" >&2; exit 1; }
 
       - name: Install dependencies
+        working-directory: farmbroker-web
         run: npm ci
 
       - name: Pull Vercel production settings
