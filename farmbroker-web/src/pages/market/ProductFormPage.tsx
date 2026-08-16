@@ -32,6 +32,7 @@ import { deleteImage } from '@/services/fileService';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
 import type { ProductEventInput } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
+import { geocodeAddress } from '@/utils/geocode';
 import { formatCurrency } from '@/utils/format';
 
 // 판매자가 로컬마켓 상품을 등록·수정하는 화면입니다.
@@ -43,7 +44,7 @@ import { formatCurrency } from '@/utils/format';
 // - address는 카카오맵으로 생산지를 찍는 데 쓰이므로 접이식 섹션이 아니라 기본 정보에 둡니다.
 // - imageUrl은 POST /files 업로드 결과 URL입니다. 판매자가 사진을 인터넷 어딘가에 먼저
 //   올려 둘 필요가 없도록 URL 입력 대신 로컬 파일 업로드만 받습니다.
-// - 위경도·푸드 마일리지는 지도 연동(Task 3)에서 서버가 채우므로 이 폼에서 받지 않습니다.
+// - 주소를 지오코딩해 위경도를 함께 저장합니다(실패해도 등록은 진행, 조회 시 폴백). 푸드 마일리지는 이 폼에서 받지 않습니다.
 // 필수는 기본 정보 한 섹션에 모으고 나머지는 접어 두어, 처음 여는 사람이 채울 칸이 적어 보이게 합니다.
 export function ProductFormPage() {
   const navigate = useNavigate();
@@ -160,6 +161,13 @@ export function ProductFormPage() {
     setIsSaving(true);
     setError(null);
 
+    const trimmedAddress = fields.address.trim();
+    let coords: { lat: number; lng: number } | null = null;
+    if (trimmedAddress) {
+      // 지오코딩 실패는 저장을 막지 않는다 — 좌표 없이 등록하고 조회 시 폴백 지오코딩된다.
+      coords = await geocodeAddress(trimmedAddress).catch(() => null);
+    }
+
     const imageUrl = fields.imageUrl.trim();
     const payload = {
       name: fields.name,
@@ -172,7 +180,9 @@ export function ProductFormPage() {
       description: fields.description.trim() || null,
       harvestDate: fields.harvestDate,
       productionLocation: fields.productionLocation,
-      address: fields.address.trim() || null,
+      address: trimmedAddress || null,
+      latitude: coords?.lat ?? null,
+      longitude: coords?.lng ?? null,
       spaceId,
       // 단계와 일자가 모두 채워진 이력만 보냅니다(서버 필수값).
       events: events

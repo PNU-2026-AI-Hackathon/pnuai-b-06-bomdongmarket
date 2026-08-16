@@ -364,12 +364,13 @@ export interface MarketItem {
   // 판매 상태(ON_SALE/CLOSED)는 목록·상세 양쪽에 내려온다.
   // 공개 목록은 ON_SALE·재고>0만 나오지만 판매자 본인 목록(GET /products/my)은 마감·품절도 포함한다.
   status?: string;
-  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
-  sellerNickname?: string;
-  description?: string | null;
+  // 주소·위경도는 지도 검색을 위해 목록·상세 양쪽에 내려온다(등록 시 저장, 없으면 프론트가 폴백 지오코딩).
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  // 아래는 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  sellerNickname?: string;
+  description?: string | null;
   spaceId?: number | null;
   createdAt?: string;
   traceabilityEvents?: MarketTraceabilityEvent[];
@@ -377,7 +378,7 @@ export interface MarketItem {
 
 // 상품 등록(POST /products)·수정(PATCH /products/{id}) 요청 바디.
 // 서버가 정하는 값(sellerNickname·freshnessTags·status)은 보내지 않는다.
-// 위경도·푸드 마일리지는 지도 연동(Task 3)에서 채우므로 이 폼에서는 다루지 않는다.
+// 위경도는 폼에서 주소를 지오코딩해 함께 보낸다(실패 시 null). 푸드 마일리지는 서버가 채운다.
 export interface ProductEventInput {
   stage: string;
   description?: string | null;
@@ -397,6 +398,8 @@ export interface ProductInput {
   // producerName은 요청에 없습니다 — 서버가 판매자 닉네임으로 고정합니다(#56 리뷰 반영).
   productionLocation: string;
   address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   // '작업장에서 가져오기'로 채운 경우에만 값이 있는 느슨한 스냅샷(FK 아님)
   spaceId?: number | null;
   events?: ProductEventInput[];

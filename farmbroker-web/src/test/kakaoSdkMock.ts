@@ -42,3 +42,69 @@ export async function searchAddress(user: ReturnType<typeof userEvent.setup>) {
     expect(screen.getByLabelText('주소')).toHaveValue(SEARCHED_ADDRESS);
   });
 }
+
+// 지도 마커/원을 만드는 화면(MarketMap) 테스트용. 생성된 마커 수 등을 관찰할 수 있게
+// 간단한 가짜 maps 네임스페이스를 돌려준다. hasKakaoMapKey는 true.
+export function createKakaoMapMock() {
+  const markers: Array<{ position: unknown; handlers: Record<string, () => void> }> = [];
+
+  const maps = {
+    load: (cb: () => void) => cb(),
+    LatLng: class {
+      constructor(
+        public lat: number,
+        public lng: number,
+      ) {}
+      getLat() {
+        return this.lat;
+      }
+      getLng() {
+        return this.lng;
+      }
+    },
+    Map: class {
+      setCenter() {}
+      setLevel() {}
+      relayout() {}
+    },
+    Marker: class {
+      handlers: Record<string, () => void> = {};
+      constructor(public options: { position: unknown }) {
+        markers.push({ position: options.position, handlers: this.handlers });
+      }
+      setPosition() {}
+      setMap() {}
+    },
+    Circle: class {
+      setMap() {}
+      setPosition() {}
+      setRadius() {}
+    },
+    event: {
+      addListener: (
+        target: { handlers?: Record<string, () => void> },
+        type: string,
+        handler: () => void,
+      ) => {
+        if (target.handlers) target.handlers[type] = handler;
+      },
+    },
+    services: {
+      Geocoder: class {
+        addressSearch(_a: string, cb: (r: unknown[], s: string) => void) {
+          cb([{ x: '129.075', y: '35.1798', address_name: '부산' }], 'OK');
+        }
+      },
+      Status: { OK: 'OK', ZERO_RESULT: 'ZERO_RESULT', ERROR: 'ERROR' },
+    },
+  };
+
+  return {
+    markers,
+    module: {
+      hasKakaoMapKey: () => true,
+      loadKakaoMaps: () => Promise.resolve(maps as unknown as KakaoMaps),
+      loadPostcodeScript: () => Promise.reject(new Error('이 mock은 지도만 담당합니다.')),
+    },
+  };
+}

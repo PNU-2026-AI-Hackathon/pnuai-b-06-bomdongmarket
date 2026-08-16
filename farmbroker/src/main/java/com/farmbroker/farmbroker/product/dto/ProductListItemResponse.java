@@ -24,6 +24,10 @@ public class ProductListItemResponse {
     private final Integer stock;
     private final String status;
     private final List<String> freshnessTags;
+    // 지도 검색용 — 등록 시 저장된 좌표/주소(없으면 프론트가 주소로 지오코딩 폴백)
+    private final Double latitude;
+    private final Double longitude;
+    private final String address;
 
     private ProductListItemResponse(Product product, List<String> freshnessTags) {
         this.productId = product.getId();
@@ -39,6 +43,9 @@ public class ProductListItemResponse {
         this.stock = product.getStock();
         this.status = product.getStatus().name();
         this.freshnessTags = freshnessTags;
+        this.latitude = product.getLatitude();
+        this.longitude = product.getLongitude();
+        this.address = product.getAddress();
     }
 
     public static ProductListItemResponse from(Product product, List<String> freshnessTags) {

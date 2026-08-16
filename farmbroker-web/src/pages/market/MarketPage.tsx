@@ -1,4 +1,5 @@
-import { MapPin, Plus, Search, ShoppingCart, Store } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Store } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
@@ -10,11 +11,17 @@ import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { MarketMap } from '@/pages/market/components/MarketMap';
+import { MarketMapSearch } from '@/pages/market/components/MarketMapSearch';
 import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
 import { useMarketItems } from '@/pages/market/hooks/useMarketItems';
+import { useNearbyItems } from '@/pages/market/hooks/useNearbyItems';
 import type { MarketCategory } from '@/pages/market/types';
+import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM } from '@/constants/geo';
 import { ROUTES } from '@/constants/routes';
+import type { Coords } from '@/utils/geocode';
+import { hasKakaoMapKey } from '@/utils/kakaoSdk';
 
 // 소비자가 근처 스마트팜 상품을 검색하고 담을 수 있는 로컬 마켓 화면입니다.
 export function MarketPage() {
@@ -22,15 +29,27 @@ export function MarketPage() {
     useMarketItems();
   const { isAuthenticated } = useAuth();
 
+  const [center, setCenter] = useState<Coords>(DEFAULT_MAP_CENTER);
+  const [centerLabel, setCenterLabel] = useState('부산시청');
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const cardRefs = useRef(new Map<number, HTMLDivElement>());
+
+  const mapSupported = hasKakaoMapKey();
+  const { mapItems, visibleItems, distances } = useNearbyItems(items, center, radiusKm);
+  // 앱키가 없으면 반경 개념이 없으므로 서버가 준 전체를 그대로 보인다.
+  const gridItems = mapSupported ? visibleItems : items;
+
+  function handleSelect(productId: number) {
+    setSelectedId(productId);
+    cardRefs.current.get(productId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   return (
     <PageContainer>
       <PageHeader
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Card className="text-sm font-semibold text-action" padding="sm">
-              <MapPin className="mr-2 inline h-4 w-4 align-[-2px]" aria-hidden />
-              부산 반경 8km 이내
-            </Card>
             {/* 장바구니는 로그인해야 서버에 담기므로 로그인한 사람에게만 보입니다. */}
             {isAuthenticated ? (
               <Link
@@ -64,6 +83,30 @@ export function MarketPage() {
         eyebrow="로컬 마켓"
         title="가까운 스마트팜에서 온 신선한 농산물"
       />
+
+      {mapSupported ? (
+        <Card className="mt-6 grid gap-4" padding="md">
+          <MarketMapSearch
+            radiusKm={radiusKm}
+            onRadiusChange={setRadiusKm}
+            onCenterChange={(coords, label) => {
+              setCenter(coords);
+              setCenterLabel(label);
+            }}
+          />
+          <MarketMap
+            center={center}
+            radiusKm={radiusKm}
+            items={mapItems}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+          />
+          <p className="text-xs font-medium text-content-subtle">
+            <span className="font-bold text-action">{centerLabel}</span> 반경 {radiusKm}km · 상품{' '}
+            {mapItems.length}곳
+          </p>
+        </Card>
+      ) : null}
 
       <Card className="mt-6 grid gap-3 lg:grid-cols-[1fr_auto]" padding="md">
         <Input
@@ -101,16 +144,27 @@ export function MarketPage() {
             onRetry={reload}
           />
         ) : null}
-        {status === 'success' && items.length === 0 ? (
+        {status === 'success' && gridItems.length === 0 ? (
           <EmptyState
             title="검색된 상품이 없습니다"
             description="다른 카테고리를 선택하거나 가까운 농장을 검색해보세요."
           />
         ) : null}
-        {status === 'success' && items.length > 0 ? (
+        {status === 'success' && gridItems.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((item) => (
-              <ProductCard item={item} key={item.productId} />
+            {gridItems.map((item) => (
+              <div
+                key={item.productId}
+                ref={(el) => {
+                  if (el) cardRefs.current.set(item.productId, el);
+                  else cardRefs.current.delete(item.productId);
+                }}
+                className={
+                  selectedId === item.productId ? 'rounded-app ring-2 ring-leaf-500' : undefined
+                }
+              >
+                <ProductCard item={item} distanceKm={distances.get(item.productId) ?? null} />
+              </div>
             ))}
           </div>
         ) : null}
