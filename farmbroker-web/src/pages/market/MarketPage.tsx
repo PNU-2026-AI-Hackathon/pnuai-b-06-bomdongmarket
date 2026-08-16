@@ -46,8 +46,11 @@ export function MarketPage() {
     }),
     [],
   );
+  // 로딩·에러 중에는 지도에 이전 조건의 마커가 남지 않도록 성공 상태의 목록만 넘긴다
+  // (지도와 아래 목록의 상태가 어긋나 보이는 것을 막는다).
+  const mapSourceItems = status === 'success' ? items : [];
   const { mapItems, visibleItems, distances } = useNearbyPlaces(
-    items,
+    mapSourceItems,
     center,
     radiusKm,
     productAdapter,
