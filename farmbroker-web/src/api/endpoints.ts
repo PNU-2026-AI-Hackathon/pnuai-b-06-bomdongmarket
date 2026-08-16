@@ -61,4 +61,12 @@ export const ENDPOINTS = {
   orders: {
     checkout: '/orders',
   },
+  chat: {
+    conversations: '/chat/conversations',
+    conversation: (conversationId: number | string) => `/chat/conversations/${conversationId}`,
+    messages: (conversationId: number | string) =>
+      `/chat/conversations/${conversationId}/messages`,
+    read: (conversationId: number | string) => `/chat/conversations/${conversationId}/read`,
+    messageImage: (messageId: number | string) => `/chat/messages/${messageId}/image`,
+  },
 } as const;

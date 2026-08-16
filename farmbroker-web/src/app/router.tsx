@@ -7,6 +7,7 @@ import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
 import { ContractPage } from '@/pages/contract';
 import { DashboardPage } from '@/pages/dashboard';
+import { ChatListPage, ChatRoomPage } from '@/pages/chat';
 import { HomePage } from '@/pages/home';
 import {
   CartPage,
@@ -44,6 +45,8 @@ export function AppRouter() {
           <Route element={<SpaceApplyPage />} path="/spaces/:spaceId/apply" />
           {/* 계약서는 매칭 당사자 둘만 볼 수 있어 서버가 권한을 판정합니다. */}
           <Route element={<ContractPage />} path="/matchings/:matchingId/contract" />
+          <Route element={<ChatListPage />} path={ROUTES.chat} />
+          <Route element={<ChatRoomPage />} path="/chat/:conversationId" />
           <Route element={<MyPage />} path={ROUTES.myPage} />
           <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
           <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
