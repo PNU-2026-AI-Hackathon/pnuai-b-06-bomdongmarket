@@ -290,6 +290,26 @@ describe('SpaceCreatePage', () => {
     });
   });
 
+  it('주소 지오코딩이 실패하면 등록을 막고 안내한다', async () => {
+    // 좌표를 못 구하면 등록을 진행하지 않는다 — 지도에서 위치를 못 잡는 공간이 생기지 않도록.
+    vi.mocked(geocodeAddress).mockResolvedValueOnce(null);
+
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
+    await waitFor(() => {
+      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
+    // 등록 폼에 그대로 머문다(예측 단계로 넘어가지 않음).
+    expect(screen.getByLabelText('공간 이름')).toBeInTheDocument();
+  });
+
   it('도면을 등록하면 안내가 사라진다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);

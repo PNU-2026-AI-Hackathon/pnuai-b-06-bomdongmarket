@@ -165,10 +165,10 @@ export function ProductFormPage() {
     let coords: { lat: number; lng: number } | null = null;
     if (trimmedAddress) {
       coords = await geocodeAddress(trimmedAddress).catch(() => null);
-      // 수정 시 좌표를 함께 갱신하지 못하면 저장을 막는다.
-      // 백엔드 PATCH는 null을 '변경 없음'으로 보므로, 주소만 바뀌고 좌표가 이전 값으로 남아
-      // 주소·지도 위치가 영구히 불일치하는 것을 방지한다(등록은 좌표 없이도 폴백 지오코딩 가능).
-      if (!coords && isEdit) {
+      // 주소가 있는데 좌표를 확보하지 못하면 저장을 막는다 — 주소⇒좌표 불일치를 원천 차단.
+      // (수정: 백엔드 PATCH가 null을 '변경 없음'으로 봐 주소만 바뀌고 옛 좌표가 남는다.
+      //  등록: 좌표 없이 저장하면 주소 지오코딩이 안 될 때 반경 검색에서 빠져 지도에 안 보인다.)
+      if (!coords) {
         setError(
           '주소의 좌표를 확인하지 못했습니다. 주소를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
         );
