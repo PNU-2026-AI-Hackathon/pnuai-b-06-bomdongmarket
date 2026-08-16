@@ -31,6 +31,9 @@ export function ContractPage() {
     useContract(Number(matchingId));
   const agreeConfirmation = useDisclosure();
   const cancelConfirmation = useDisclosure();
+  // 저장하지 않은 입력값으로는 동의할 수 없습니다 — 동의 요청은 저장된 조건에 대한 것이라
+  // 화면에 보이는 금액과 다른 조건에 동의하게 됩니다.
+  const [termsDirty, setTermsDirty] = useState(false);
 
   return (
     <PageContainer narrow>
@@ -51,7 +54,12 @@ export function ContractPage() {
         ) : (
           <div className="grid gap-4">
             <PartiesCard contract={contract} />
-            <TermsCard contract={contract} isSubmitting={isSubmitting} onSave={save} />
+            <TermsCard
+              contract={contract}
+              isSubmitting={isSubmitting}
+              onDirtyChange={setTermsDirty}
+              onSave={save}
+            />
             <AgreementCard contract={contract} />
 
             {actionError ? (
@@ -60,10 +68,16 @@ export function ContractPage() {
               </p>
             ) : null}
 
+            {termsDirty ? (
+              <p className="text-body-sm font-semibold text-content" role="status">
+                저장하지 않은 변경사항이 있습니다. 먼저 저장해 주세요.
+              </p>
+            ) : null}
+
             {contract.status === 'DRAFT' ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button
-                  disabled={isSubmitting || viewerAgreed(contract)}
+                  disabled={isSubmitting || viewerAgreed(contract) || termsDirty}
                   onClick={agreeConfirmation.open}
                 >
                   {viewerAgreed(contract) ? '동의 완료' : '계약'}
@@ -147,11 +161,14 @@ function PartiesCard({ contract }: { contract: ContractDetail }) {
 interface TermsCardProps {
   contract: ContractDetail;
   isSubmitting: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onSave: (input: ContractTermsInput) => void;
 }
 
-function TermsCard({ contract, isSubmitting, onSave }: TermsCardProps) {
+function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardProps) {
   const isOwner = contract.viewerRole === 'OWNER';
+  // 확정·취소된 계약은 조건을 바꿀 수 없습니다(서버도 같은 규칙으로 막습니다).
+  const canEdit = isOwner && contract.status === 'DRAFT';
   // 조건이 저장되면(내가 저장했든 상대가 저장했든) 입력값을 서버 값에 다시 맞춥니다.
   const [monthlyRent, setMonthlyRent] = useState(contract.monthlyRent?.toString() ?? '');
   const [maintenanceFee, setMaintenanceFee] = useState(
@@ -182,6 +199,21 @@ function TermsCard({ contract, isSubmitting, onSave }: TermsCardProps) {
     contract.endDate,
   ]);
 
+  // 입력값이 저장된 조건과 하나라도 다르면 저장 전까지 동의를 막습니다.
+  // 도심 농부는 입력이 readOnly라 canEdit에서 걸러집니다.
+  const isDirty =
+    canEdit &&
+    (monthlyRent !== (contract.monthlyRent?.toString() ?? '') ||
+      maintenanceFee !== (contract.maintenanceFee?.toString() ?? '') ||
+      maintenanceFeePayer !== (contract.maintenanceFeePayer ?? '') ||
+      deposit !== (contract.deposit?.toString() ?? '') ||
+      startDate !== (contract.startDate ?? '') ||
+      endDate !== (contract.endDate ?? ''));
+
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
@@ -208,9 +240,6 @@ function TermsCard({ contract, isSubmitting, onSave }: TermsCardProps) {
       endDate,
     });
   };
-
-  // 확정·취소된 계약은 조건을 바꿀 수 없습니다(서버도 같은 규칙으로 막습니다).
-  const canEdit = isOwner && contract.status === 'DRAFT';
 
   return (
     <Card padding="lg">

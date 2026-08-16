@@ -117,6 +117,30 @@ describe('ContractPage', () => {
   });
 
 
+  it('저장하지 않은 조건 변경이 있으면 저장 전까지 계약에 동의할 수 없다', async () => {
+    const user = userEvent.setup();
+    renderPage({ viewerRole: 'OWNER', ...savedTerms });
+
+    const monthlyRent = await screen.findByLabelText('월세');
+    expect(screen.getByRole('button', { name: '계약' })).toBeEnabled();
+
+    await user.clear(monthlyRent);
+    await user.type(monthlyRent, '900000');
+
+    // 입력값만 바뀐 동안 동의하면 화면에 없는 500,000원 조건에 동의하게 됩니다.
+    expect(screen.getByRole('button', { name: '계약' })).toBeDisabled();
+    expect(
+      screen.getByText('저장하지 않은 변경사항이 있습니다. 먼저 저장해 주세요.'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '계약' })).toBeEnabled());
+    expect(
+      screen.queryByText('저장하지 않은 변경사항이 있습니다. 먼저 저장해 주세요.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('공간 제공자가 조건을 저장하면 이미 받은 동의가 풀린다', async () => {
     const user = userEvent.setup();
     renderPage({ viewerRole: 'OWNER', farmerAgreed: true, ...savedTerms });
