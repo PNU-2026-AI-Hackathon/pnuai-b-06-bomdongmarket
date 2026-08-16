@@ -1,5 +1,5 @@
 import { Plus, Search, ShoppingCart, Store } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
@@ -11,15 +11,16 @@ import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { MarketMap } from '@/pages/market/components/MarketMap';
-import { MarketMapSearch } from '@/pages/market/components/MarketMapSearch';
+import { NearbyMap } from '@/components/map/NearbyMap';
+import { NearbyMapSearch } from '@/components/map/NearbyMapSearch';
+import { type NearbyAdapter, useNearbyPlaces } from '@/components/map/useNearbyPlaces';
 import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
 import { useMarketItems } from '@/pages/market/hooks/useMarketItems';
-import { useNearbyItems } from '@/pages/market/hooks/useNearbyItems';
 import type { MarketCategory } from '@/pages/market/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM } from '@/constants/geo';
 import { ROUTES } from '@/constants/routes';
+import type { MarketItem } from '@/types/api';
 import type { Coords } from '@/utils/geocode';
 import { hasKakaoMapKey } from '@/utils/kakaoSdk';
 
@@ -36,7 +37,21 @@ export function MarketPage() {
   const cardRefs = useRef(new Map<number, HTMLDivElement>());
 
   const mapSupported = hasKakaoMapKey();
-  const { mapItems, visibleItems, distances } = useNearbyItems(items, center, radiusKm);
+  const productAdapter = useMemo<NearbyAdapter<MarketItem>>(
+    () => ({
+      getId: (i) => i.productId,
+      getDirectCoords: (i) =>
+        i.latitude != null && i.longitude != null ? { lat: i.latitude, lng: i.longitude } : null,
+      getAddress: (i) => i.address ?? null,
+    }),
+    [],
+  );
+  const { mapItems, visibleItems, distances } = useNearbyPlaces(
+    items,
+    center,
+    radiusKm,
+    productAdapter,
+  );
   // 앱키가 없으면 반경 개념이 없으므로 서버가 준 전체를 그대로 보인다.
   const gridItems = mapSupported ? visibleItems : items;
 
@@ -86,7 +101,7 @@ export function MarketPage() {
 
       {mapSupported ? (
         <Card className="mt-6 grid gap-4" padding="md">
-          <MarketMapSearch
+          <NearbyMapSearch
             radiusKm={radiusKm}
             onRadiusChange={setRadiusKm}
             onCenterChange={(coords, label) => {
@@ -94,12 +109,14 @@ export function MarketPage() {
               setCenterLabel(label);
             }}
           />
-          <MarketMap
+          <NearbyMap
             center={center}
             radiusKm={radiusKm}
             items={mapItems}
             selectedId={selectedId}
             onSelect={handleSelect}
+            getId={(i) => i.productId}
+            getTitle={(i) => i.name}
           />
           <p className="text-xs font-medium text-content-subtle">
             <span className="font-bold text-action">{centerLabel}</span> 반경 {radiusKm}km · 상품{' '}
