@@ -25,31 +25,95 @@ jobs:
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     environment:
       name: production
+      url: https://farmbroker.onrender.com
+    env:
+      RENDER_CLI_VERSION: 2.22.0
+      RENDER_SERVICE_URL: https://farmbroker.onrender.com
 
     steps:
-      - name: Validate deployment secret
+      - name: Validate deployment secrets
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
-          test -n "$RENDER_DEPLOY_HOOK_URL" || {
-            echo "RENDER_DEPLOY_HOOK_URL is not configured" >&2
-            exit 1
-          }
+          test -n "$RENDER_API_KEY" || { echo "RENDER_API_KEY is not configured" >&2; exit 1; }
+          test -n "$RENDER_SERVICE_ID" || { echo "RENDER_SERVICE_ID is not configured" >&2; exit 1; }
+
+      - name: Install Render CLI
+        run: |
+          set -euo pipefail
+
+          archive="cli_${RENDER_CLI_VERSION}_linux_amd64.zip"
+          release_url="https://github.com/render-oss/cli/releases/download/v${RENDER_CLI_VERSION}"
+
+          curl --fail --show-error --silent --location \
+            "$release_url/$archive" \
+            --output "/tmp/$archive"
+          curl --fail --show-error --silent --location \
+            "$release_url/cli_${RENDER_CLI_VERSION}_SHA256SUMS" \
+            --output /tmp/render-cli-checksums
+
+          expected_checksum="$(awk -v archive="$archive" '$2 == archive { print $1 }' /tmp/render-cli-checksums)"
+          test -n "$expected_checksum" || { echo "Render CLI checksum is missing" >&2; exit 1; }
+          echo "$expected_checksum  /tmp/$archive" | sha256sum --check
+          unzip -q "/tmp/$archive" -d /tmp/render-cli
+          sudo install "/tmp/render-cli/cli_v${RENDER_CLI_VERSION}" /usr/local/bin/render
+          render --version
 
       - name: Deploy verified commit to Render
+        id: deploy
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
           DEPLOY_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          separator="?"
-          case "$RENDER_DEPLOY_HOOK_URL" in
-            *\?*) separator="&" ;;
-          esac
+          set -euo pipefail
 
+          render deploys create "$RENDER_SERVICE_ID" \
+            --commit "$DEPLOY_COMMIT_SHA" \
+            --wait \
+            --confirm \
+            --output json \
+            | tee render-deploy.json
+
+          deploy_id="$(jq --exit-status --raw-output '.id' render-deploy.json)"
+          deploy_status="$(jq --exit-status --raw-output '.status' render-deploy.json)"
+
+          echo "id=$deploy_id" >> "$GITHUB_OUTPUT"
+          echo "status=$deploy_status" >> "$GITHUB_OUTPUT"
+          echo "Render deployment $deploy_id reached $deploy_status"
+
+      - name: Show Render logs on failure
+        if: failure() && steps.deploy.outcome != 'skipped'
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: render logs --resources "$RENDER_SERVICE_ID" --start 30m --limit 200
+
+      - name: Smoke test production API
+        run: |
           curl --fail --show-error --silent \
-            --request POST \
-            "${RENDER_DEPLOY_HOOK_URL}${separator}ref=${DEPLOY_COMMIT_SHA}"
-          echo "Triggered Render deployment for ${DEPLOY_COMMIT_SHA}"
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "$RENDER_SERVICE_URL/api/crops" \
+            --output /dev/null
+
+      - name: Write deployment summary
+        if: always()
+        env:
+          DEPLOY_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEPLOY_ID: ${{ steps.deploy.outputs.id }}
+          DEPLOY_STATUS: ${{ steps.deploy.outputs.status }}
+        run: |
+          {
+            echo "### Render production deployment"
+            echo
+            echo "- Commit: \`$DEPLOY_COMMIT_SHA\`"
+            echo "- Deploy ID: \`${DEPLOY_ID:-unavailable}\`"
+            echo "- Status: \`${DEPLOY_STATUS:-failed}\`"
+            echo "- URL: $RENDER_SERVICE_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
