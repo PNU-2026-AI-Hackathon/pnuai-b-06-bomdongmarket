@@ -124,6 +124,7 @@ export function SpaceCreatePage() {
             name="title"
             placeholder="예: 부산대 앞 20평 상가 공실"
             required
+            requiredMark
           />
           <AddressField
             detail={address.detail}
@@ -147,6 +148,7 @@ export function SpaceCreatePage() {
               onKeyDown={blockNegativeKeys}
               placeholder="예: 66"
               required
+              requiredMark
               step="any"
               type="number"
             />
@@ -161,6 +163,7 @@ export function SpaceCreatePage() {
               onChange={markZeroFloorInvalid}
               placeholder="예: 2"
               required
+              requiredMark
               type="number"
             />
             <Input
@@ -172,6 +175,7 @@ export function SpaceCreatePage() {
               onKeyDown={blockNegativeKeys}
               placeholder="예: 500000"
               required
+              requiredMark
               type="number"
             />
           </div>
@@ -215,7 +219,9 @@ export function SpaceCreatePage() {
         <Card padding="lg">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-ink-900">사진 업로드</h2>
+              <h2 className="text-lg font-bold text-ink-900">
+                사진 업로드 <span className="text-feedback-danger">*</span>
+              </h2>
               <p className="mt-1 text-sm text-slate-600">
                 공간 상태를 확인할 수 있도록 최소 1장은 등록해 주세요. 먼저 선택한 사진이
                 목록 카드의 대표 이미지가 됩니다.
