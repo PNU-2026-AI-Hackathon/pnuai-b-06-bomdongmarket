@@ -1,6 +1,6 @@
 package com.farmbroker.farmbroker.security;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,6 +15,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Arrays;
 import java.util.List;
 
 // Spring Security 6.x 방식의 보안 설정.
@@ -24,10 +25,20 @@ import java.util.List;
 // CORS도 여기서 함께 관리해 웹 프론트(React)와의 연동을 보장한다.
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final List<String> allowedOrigins;
+
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+    }
 
     // 401 응답 JSON 상수 — ObjectMapper 의존 없이 직접 작성
     private static final String UNAUTHORIZED_BODY =
@@ -74,12 +85,12 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // CORS 설정 — 웹 프론트(Vite: 5173, CRA: 3000) 양쪽 허용
+    // CORS 설정 — 로컬 기본값 외 운영 프론트 Origin은 CORS_ALLOWED_ORIGINS로 주입한다.
     // allowCredentials(true)이므로 Origin에 * 사용 불가 → 명시적 Origin 지정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
