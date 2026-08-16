@@ -87,7 +87,16 @@ export function NearbyMap<T>({
     if (!maps || !map) return;
 
     const centerLatLng = new maps.LatLng(center.lat, center.lng);
-    map.setCenter(centerLatLng);
+    // 반경(1/3/5/10km)이 화면에 한눈에 들어오도록 원의 외접 사각형에 맞춰 지도를 맞춘다.
+    // (setBounds가 중심·확대수준을 함께 조정하므로 반경을 바꿔도 경계 마커가 화면 밖으로 나가지 않는다.)
+    const latDelta = radiusKm / 111; // 위도 1도 ≈ 111km
+    const lngDelta = radiusKm / (111 * Math.cos((center.lat * Math.PI) / 180));
+    map.setBounds(
+      new maps.LatLngBounds(
+        new maps.LatLng(center.lat - latDelta, center.lng - lngDelta),
+        new maps.LatLng(center.lat + latDelta, center.lng + lngDelta),
+      ),
+    );
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];

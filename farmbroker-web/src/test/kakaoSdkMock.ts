@@ -50,6 +50,9 @@ export function createKakaoMapMock() {
   // 지도에 등록된 이벤트 핸들러를 관찰해 클릭을 흉내 낼 수 있게 붙든다.
   // (this 자체가 아니라 handlers 객체만 잡아 no-this-alias 규칙을 피한다.)
   let mapHandlers: Record<string, (e: unknown) => void> | null = null;
+  // setBounds로 맞춘 마지막 범위 — 반경 변경 시 화면 조정을 검증할 때 관찰한다.
+  let lastBounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null =
+    null;
 
   const maps = {
     load: (cb: () => void) => cb(),
@@ -72,7 +75,19 @@ export function createKakaoMapMock() {
       }
       setCenter() {}
       setLevel() {}
+      setBounds(bounds: { sw: KakaoLatLng; ne: KakaoLatLng }) {
+        lastBounds = {
+          sw: { lat: bounds.sw.getLat(), lng: bounds.sw.getLng() },
+          ne: { lat: bounds.ne.getLat(), lng: bounds.ne.getLng() },
+        };
+      }
       relayout() {}
+    },
+    LatLngBounds: class {
+      constructor(
+        public sw: KakaoLatLng,
+        public ne: KakaoLatLng,
+      ) {}
     },
     Marker: class {
       handlers: Record<string, () => void> = {};
@@ -122,6 +137,8 @@ export function createKakaoMapMock() {
     // 지도 클릭을 흉내 낸다 — 최초 생성된 지도에 등록된 click 핸들러를 좌표와 함께 호출한다.
     clickMap: (lat: number, lng: number) =>
       mapHandlers?.click?.({ latLng: new maps.LatLng(lat, lng) }),
+    // setBounds로 맞춘 마지막 범위(반경 변경 시 화면 조정 검증용).
+    getLastBounds: () => lastBounds,
     module: {
       hasKakaoMapKey: () => true,
       loadKakaoMaps: () => Promise.resolve(maps as unknown as KakaoMaps),

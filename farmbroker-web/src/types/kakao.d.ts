@@ -28,9 +28,17 @@ interface KakaoLatLng {
   getLng: () => number;
 }
 
+// 남서(sw)·북동(ne) 두 점이 이루는 사각 범위. 반경 원이 화면에 들어오도록 지도를 맞출 때 쓴다.
+interface KakaoLatLngBounds {
+  getSouthWest: () => KakaoLatLng;
+  getNorthEast: () => KakaoLatLng;
+}
+
 interface KakaoMap {
   setCenter: (position: KakaoLatLng) => void;
   setLevel: (level: number) => void;
+  // 주어진 범위가 모두 보이도록 지도의 중심·확대수준을 한 번에 맞춘다.
+  setBounds: (bounds: KakaoLatLngBounds) => void;
   relayout: () => void;
 }
 
@@ -84,6 +92,7 @@ interface KakaoMaps {
   /** autoload=false로 받은 SDK를 실제로 초기화합니다. services 라이브러리도 이 시점에 준비됩니다. */
   load: (callback: () => void) => void;
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
+  LatLngBounds: new (sw: KakaoLatLng, ne: KakaoLatLng) => KakaoLatLngBounds;
   Map: new (
     container: HTMLElement,
     options: { center: KakaoLatLng; level: number },

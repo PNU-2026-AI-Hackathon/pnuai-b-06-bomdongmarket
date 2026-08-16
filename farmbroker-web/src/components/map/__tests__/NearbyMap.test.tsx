@@ -76,6 +76,29 @@ describe('NearbyMap', () => {
     expect(onSelect).toHaveBeenCalledWith(7);
   });
 
+  it('반경에 맞춰 지도 범위(setBounds)를 조정한다', async () => {
+    const center = { lat: 35.1798, lng: 129.075 };
+    render(
+      <NearbyMap
+        center={center}
+        radiusKm={5}
+        items={[]}
+        selectedId={null}
+        onSelect={() => {}}
+        getId={(item: TestPlace) => item.id}
+        getTitle={(item: TestPlace) => item.name}
+      />,
+    );
+    // 위도 span은 반경의 함수(2 * radiusKm / 111)여야 한다 — 반경이 커지면 화면 범위도 넓어진다.
+    // (공유 mock 상태의 stale 값을 피하려고 반경에 대응하는 정확한 값으로 수렴할 때까지 기다린다.)
+    const expectedLatSpan = (2 * 5) / 111;
+    await waitFor(() => {
+      const b = getMapMock().getLastBounds();
+      expect(b).not.toBeNull();
+      expect(b!.ne.lat - b!.sw.lat).toBeCloseTo(expectedLatSpan, 3);
+    });
+  });
+
   it('지도를 클릭하면 onMapClick에 클릭 좌표를 전달한다', async () => {
     const mapMock = getMapMock();
     const onMapClick = vi.fn();
