@@ -33,4 +33,20 @@ describe('SpaceCard', () => {
     rerender(<SpaceCard space={{ ...space, imageUrl: null }} />);
     expect(screen.getByText('등록된 이미지 없음')).toBeInTheDocument();
   });
+
+  it('distanceKm이 있으면 중심에서의 거리를 표시한다', () => {
+    const space = mockSpaces[0];
+
+    renderWithProviders(<SpaceCard distanceKm={3.456} space={space} />);
+
+    expect(screen.getByText('3.5km')).toBeInTheDocument();
+  });
+
+  it('distanceKm이 없으면 거리 뱃지를 표시하지 않는다', () => {
+    const space = mockSpaces[0];
+
+    renderWithProviders(<SpaceCard space={space} />);
+
+    expect(screen.queryByText(/km$/)).not.toBeInTheDocument();
+  });
 });
