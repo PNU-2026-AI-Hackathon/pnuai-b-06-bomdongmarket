@@ -69,4 +69,7 @@ export const ENDPOINTS = {
     read: (conversationId: number | string) => `/chat/conversations/${conversationId}/read`,
     messageImage: (messageId: number | string) => `/chat/messages/${messageId}/image`,
   },
+  blocks: {
+    user: (userId: number | string) => `/blocks/${userId}`,
+  },
 } as const;

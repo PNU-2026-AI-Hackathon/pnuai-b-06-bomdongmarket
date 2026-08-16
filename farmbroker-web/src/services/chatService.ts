@@ -107,6 +107,26 @@ export async function markRead(conversationId: number): Promise<ChatReadResult> 
   return response.data;
 }
 
+// 차단은 채팅 상대에게만 걸므로 채팅 서비스에 함께 둡니다.
+// 서버가 양방향 차단을 모두 막으므로, 내가 걸었든 상대가 걸었든 대화가 잠깁니다.
+export async function blockUser(userId: number): Promise<void> {
+  if (USE_MOCKS) {
+    await mockDelay();
+    setMockBlocked(userId, true);
+    return;
+  }
+  await apiRequest<unknown>(ENDPOINTS.blocks.user(userId), { method: 'POST' });
+}
+
+export async function unblockUser(userId: number): Promise<void> {
+  if (USE_MOCKS) {
+    await mockDelay();
+    setMockBlocked(userId, false);
+    return;
+  }
+  await apiRequest<unknown>(ENDPOINTS.blocks.user(userId), { method: 'DELETE' });
+}
+
 // ── 목업 ──
 // 백엔드 없이도 목록→방→전송→안읽음 정리 흐름이 그대로 보이도록 sessionStorage에 담아 둡니다.
 
@@ -269,6 +289,14 @@ function mockSend(conversationId: number, text: string): ChatMessage {
   );
   writeState(state);
   return message;
+}
+
+function setMockBlocked(otherUserId: number, blocked: boolean) {
+  const state = readState();
+  state.conversations = state.conversations.map((item) =>
+    item.otherUserId === otherUserId ? { ...item, blocked } : item,
+  );
+  writeState(state);
 }
 
 function mockMarkRead(conversationId: number): ChatReadResult {

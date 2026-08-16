@@ -1,12 +1,23 @@
-import { Send } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { ImagePlus, Send, Ban, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
+import { RemoteImage } from '@/components/common/RemoteImage';
+import { APP_INFO } from '@/constants/appInfo';
 import { contextLabel } from '@/pages/chat/chatFilters';
-import { getConversation, getMessages, markRead, sendMessage } from '@/services/chatService';
+import { ENDPOINTS } from '@/api/endpoints';
+import {
+  blockUser,
+  getConversation,
+  getMessages,
+  markRead,
+  sendMessage,
+  unblockUser,
+} from '@/services/chatService';
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES, isAcceptedImage } from '@/services/fileService';
 import type { ChatMessage, Conversation } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
@@ -16,6 +27,11 @@ interface ChatConversationPanelProps {
   myUserId: number | null;
   // 위젯 안에서는 높이를 줄여 씁니다.
   compact?: boolean;
+}
+
+// 이미지 메시지는 인증이 필요한 경로라 <img src> 로 직접 부릅니다(쿠키가 함께 나갑니다).
+function imageUrl(messageId: number): string {
+  return `${APP_INFO.baseUrl}${ENDPOINTS.chat.messageImage(messageId)}`;
 }
 
 // 대화 하나를 보여 주고 보내는 패널입니다.
@@ -30,9 +46,15 @@ export function ChatConversationPanel({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [text, setText] = useState('');
+  const [image, setImage] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 위로 더 불러올 커서. null 이면 더 없습니다.
+  const [beforeId, setBeforeId] = useState<number | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -43,6 +65,7 @@ export function ChatConversationPanel({
       ]);
       setConversation(room);
       setMessages(page.messages);
+      setBeforeId(page.hasNext ? page.nextBeforeId : null);
       setStatus('success');
       // 방을 열었으면 읽은 것으로 처리해 목록의 안읽음 배지를 정리합니다.
       await markRead(conversationId).catch(() => undefined);
@@ -57,25 +80,80 @@ export function ChatConversationPanel({
 
   // 새 메시지가 붙으면 항상 아래를 보여 줍니다.
   // jsdom에는 scrollIntoView가 없어 존재를 확인하고 부릅니다(테스트 환경 보호).
+  // 위로 더 불러올 때는 읽던 자리가 튀므로 내리지 않습니다.
   useEffect(() => {
+    if (isLoadingMore) return;
     bottomRef.current?.scrollIntoView?.({ block: 'end' });
-  }, [messages]);
+  }, [isLoadingMore, messages]);
+
+  async function handleLoadMore() {
+    if (beforeId == null || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const page = await getMessages(conversationId, beforeId);
+      // 위로 붙입니다 — 서버는 오래된 것부터 정렬해 돌려줍니다.
+      setMessages((prev) => [...page.messages, ...prev]);
+      setBeforeId(page.hasNext ? page.nextBeforeId : null);
+    } catch {
+      setError('이전 메시지를 불러오지 못했습니다.');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  function handlePickImage(event: ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0];
+    // 같은 파일을 다시 고를 수 있도록 값을 비웁니다.
+    event.target.value = '';
+    if (!picked) return;
+    if (!isAcceptedImage(picked)) {
+      setError('jpg, png, webp, gif 이미지만 보낼 수 있습니다.');
+      return;
+    }
+    if (picked.size > MAX_IMAGE_SIZE_BYTES) {
+      setError('사진은 5MB 이하만 보낼 수 있습니다.');
+      return;
+    }
+    setError(null);
+    setImage(picked);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || isSending) return;
+    if ((!trimmed && !image) || isSending) return;
 
     setIsSending(true);
     setError(null);
     try {
-      const sent = await sendMessage(conversationId, trimmed);
+      const sent = await sendMessage(conversationId, trimmed, image);
       setMessages((prev) => [...prev, sent]);
       setText('');
+      setImage(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '메시지를 보내지 못했습니다.');
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function handleToggleBlock() {
+    if (!conversation) return;
+    setIsBlocking(true);
+    setError(null);
+    try {
+      if (conversation.blocked) {
+        await unblockUser(conversation.otherUserId);
+      } else {
+        await blockUser(conversation.otherUserId);
+      }
+      // 차단 여부는 서버가 판단하므로 방 정보를 다시 받습니다
+      // (상대가 나를 차단한 경우 내가 풀 수 없습니다).
+      setConversation(await getConversation(conversationId));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '차단 상태를 바꾸지 못했습니다.');
+    } finally {
+      setIsBlocking(false);
     }
   }
 
@@ -92,10 +170,19 @@ export function ChatConversationPanel({
         <Badge tone={conversation.contextType === 'SPACE' ? 'yellow' : 'green'}>
           {contextLabel(conversation.contextType)}
         </Badge>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate font-bold text-ink-900">{conversation.otherUserNickname}</p>
           <p className="truncate text-xs text-slate-500">{conversation.contextTitle}</p>
         </div>
+        <Button
+          aria-label={conversation.blocked ? '차단 해제' : '이 사용자 차단'}
+          disabled={isBlocking}
+          onClick={() => void handleToggleBlock()}
+          size="sm"
+          variant="ghost"
+        >
+          <Ban className="h-4 w-4" aria-hidden />
+        </Button>
       </div>
 
       <div
@@ -104,10 +191,20 @@ export function ChatConversationPanel({
           compact ? 'max-h-72' : '',
         ].join(' ')}
       >
+        {beforeId != null ? (
+          <Button
+            className="w-full"
+            disabled={isLoadingMore}
+            onClick={() => void handleLoadMore()}
+            size="sm"
+            variant="ghost"
+          >
+            {isLoadingMore ? '불러오는 중...' : '이전 메시지 더 보기'}
+          </Button>
+        ) : null}
+
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-500">
-            먼저 인사를 건네 보세요.
-          </p>
+          <p className="py-8 text-center text-sm text-slate-500">먼저 인사를 건네 보세요.</p>
         ) : null}
         {messages.map((message) => {
           const mine = myUserId != null && message.senderId === myUserId;
@@ -116,14 +213,25 @@ export function ChatConversationPanel({
               className={mine ? 'flex justify-end' : 'flex justify-start'}
               key={message.messageId}
             >
-              <p
+              <div
                 className={[
-                  'max-w-[75%] whitespace-pre-wrap break-words rounded-app px-3 py-2 text-sm',
+                  'max-w-[75%] overflow-hidden rounded-app',
                   mine ? 'bg-leaf-700 text-white' : 'bg-leaf-50 text-ink-900',
                 ].join(' ')}
               >
-                {message.text}
-              </p>
+                {message.type === 'IMAGE' ? (
+                  <RemoteImage
+                    alt="보낸 사진"
+                    className="max-h-60 w-full object-cover"
+                    src={imageUrl(message.messageId)}
+                  />
+                ) : null}
+                {message.text ? (
+                  <p className="whitespace-pre-wrap break-words px-3 py-2 text-sm">
+                    {message.text}
+                  </p>
+                ) : null}
+              </div>
             </div>
           );
         })}
@@ -139,21 +247,56 @@ export function ChatConversationPanel({
       {/* 차단된 상대에게는 서버가 전송을 막으므로 입력창부터 잠급니다. */}
       {conversation.blocked ? (
         <p className="border-t border-leaf-100 px-4 py-3 text-sm text-slate-500">
-          차단된 상대와는 대화할 수 없습니다.
+          차단된 상대와는 대화할 수 없습니다. 위 차단 버튼으로 해제할 수 있습니다.
         </p>
       ) : (
-        <form className="flex gap-2 border-t border-leaf-100 p-3" onSubmit={handleSubmit}>
-          <input
-            aria-label="메시지 입력"
-            className="min-w-0 flex-1 rounded-app border border-leaf-200 px-3 py-2 text-base"
-            maxLength={1000}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="메시지를 입력하세요"
-            value={text}
-          />
-          <Button aria-label="보내기" disabled={isSending || !text.trim()} type="submit">
-            <Send className="h-4 w-4" aria-hidden />
-          </Button>
+        <form className="border-t border-leaf-100 p-3" onSubmit={handleSubmit}>
+          {image ? (
+            <div className="mb-2 flex items-center gap-2 rounded-app bg-leaf-50 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-sm text-slate-600">{image.name}</span>
+              <button
+                aria-label="사진 빼기"
+                className="rounded-app p-1 text-slate-500 hover:bg-white"
+                onClick={() => setImage(null)}
+                type="button"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          ) : null}
+          <div className="flex gap-2">
+            <input
+              accept={ACCEPTED_IMAGE_TYPES}
+              aria-label="사진 선택"
+              className="sr-only"
+              onChange={handlePickImage}
+              ref={fileRef}
+              type="file"
+            />
+            <Button
+              aria-label="사진 첨부"
+              onClick={() => fileRef.current?.click()}
+              type="button"
+              variant="outline"
+            >
+              <ImagePlus className="h-4 w-4" aria-hidden />
+            </Button>
+            <input
+              aria-label="메시지 입력"
+              className="min-w-0 flex-1 rounded-app border border-leaf-200 px-3 py-2 text-base"
+              maxLength={1000}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="메시지를 입력하세요"
+              value={text}
+            />
+            <Button
+              aria-label="보내기"
+              disabled={isSending || (!text.trim() && !image)}
+              type="submit"
+            >
+              <Send className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
         </form>
       )}
     </div>
