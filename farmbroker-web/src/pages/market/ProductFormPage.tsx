@@ -164,8 +164,17 @@ export function ProductFormPage() {
     const trimmedAddress = fields.address.trim();
     let coords: { lat: number; lng: number } | null = null;
     if (trimmedAddress) {
-      // 지오코딩 실패는 저장을 막지 않는다 — 좌표 없이 등록하고 조회 시 폴백 지오코딩된다.
       coords = await geocodeAddress(trimmedAddress).catch(() => null);
+      // 수정 시 좌표를 함께 갱신하지 못하면 저장을 막는다.
+      // 백엔드 PATCH는 null을 '변경 없음'으로 보므로, 주소만 바뀌고 좌표가 이전 값으로 남아
+      // 주소·지도 위치가 영구히 불일치하는 것을 방지한다(등록은 좌표 없이도 폴백 지오코딩 가능).
+      if (!coords && isEdit) {
+        setError(
+          '주소의 좌표를 확인하지 못했습니다. 주소를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
+        );
+        setIsSaving(false);
+        return;
+      }
     }
 
     const imageUrl = fields.imageUrl.trim();
