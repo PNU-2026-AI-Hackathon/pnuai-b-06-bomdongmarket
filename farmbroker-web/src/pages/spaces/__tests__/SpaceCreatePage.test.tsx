@@ -81,10 +81,6 @@ describe('SpaceCreatePage', () => {
     await user.type(screen.getByLabelText('전체 면적(㎡)'), '66');
     await user.type(screen.getByLabelText('층수'), '2');
     await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
 
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
@@ -157,18 +153,6 @@ describe('SpaceCreatePage', () => {
     expect(screen.getByText(/공간 사진 0\/10장 등록됨/)).toBeInTheDocument();
   });
 
-  it('도면 없이 제출하면 막고 안내한다', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<SpaceCreatePage />);
-
-    await fillRequiredFields(user);
-    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '도면을 최소 1장 등록해야 합니다.',
-    );
-  });
-
   // 음수가 들어가면 브라우저 제약 검증(min)이 제출 자체를 막아 다음 단계로 넘어가지 않는다.
   it('면적에 음수가 들어가면 제출되지 않는다', async () => {
     const user = userEvent.setup();
@@ -179,10 +163,6 @@ describe('SpaceCreatePage', () => {
     await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
     await user.type(screen.getByLabelText('층수'), '2');
     await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
 
     // '-' 키는 막혀 있으므로 붙여넣기 경로를 흉내 내 값을 직접 주입한다.
     const area = screen.getByLabelText('전체 면적(㎡)');
@@ -230,10 +210,6 @@ describe('SpaceCreatePage', () => {
     renderWithProviders(<SpaceCreatePage />);
 
     await fillRequiredFields(user);
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
 
     // 0은 그대로 입력된다 — 키 입력을 막지 않는다.
     const floor = screen.getByLabelText('층수');
@@ -265,21 +241,5 @@ describe('SpaceCreatePage', () => {
     await user.type(floor, '2');
 
     expect(floor).toBeValid();
-  });
-
-  it('도면을 등록하면 안내가 사라진다', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<SpaceCreatePage />);
-
-    await fillRequiredFields(user);
-    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
-
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

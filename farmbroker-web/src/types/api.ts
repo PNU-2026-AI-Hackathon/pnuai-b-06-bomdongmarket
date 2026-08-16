@@ -122,8 +122,8 @@ export interface SpaceCreateInput {
   hasVentilation: boolean;
   description?: string;
   imageUrls?: string[];
-  // 도면은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
-  floorPlanUrls: string[];
+  // 등록 폼에서는 더 이상 도면을 받지 않습니다. 이미 등록된 공간의 수정 요청에만 쓰입니다.
+  floorPlanUrls?: string[];
 }
 
 export type SpaceUpdateInput = Partial<SpaceCreateInput> & {

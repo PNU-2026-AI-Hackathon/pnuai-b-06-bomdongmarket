@@ -10,7 +10,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// 도면은 필수, 공간 사진은 선택이라는 등록 규칙을 요청 DTO 검증으로 고정한다.
+// 등록 폼에서 도면 입력을 걷어냈으므로 도면 없이 등록되는 요청도 통과해야 한다.
 class SpaceCreateRequestValidationTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -28,10 +28,9 @@ class SpaceCreateRequestValidationTest {
                   "floor": %s,
                   "hasWater": true,
                   "hasElectricity": true,
-                  "hasVentilation": true,
-                  "floorPlanUrls": ["http://localhost:8080/api/files/%032d.jpg"]
+                  "hasVentilation": true
                 }
-                """.formatted(area, monthlyRent, floor, 1),
+                """.formatted(area, monthlyRent, floor),
                 SpaceCreateRequest.class);
     }
 
@@ -62,27 +61,15 @@ class SpaceCreateRequestValidationTest {
     }
 
     @Test
-    void accepts_floor_plan_without_photos() throws Exception {
-        assertThat(validator.validate(request("[]", urls(1)))).isEmpty();
-    }
-
-    @Test
     void accepts_photos_and_floor_plans_up_to_ten() throws Exception {
         assertThat(validator.validate(request(urls(10), urls(10)))).isEmpty();
     }
 
+    // 등록 폼이 도면을 받지 않으므로 빈 배열이든 아예 없든 통과해야 한다.
     @Test
-    void rejects_missing_floor_plan() throws Exception {
-        assertThat(validator.validate(request(urls(3), "[]")))
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .contains("floorPlanUrls");
-    }
-
-    @Test
-    void rejects_null_floor_plan() throws Exception {
-        assertThat(validator.validate(request(urls(3), "null")))
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .contains("floorPlanUrls");
+    void accepts_request_without_floor_plan() throws Exception {
+        assertThat(validator.validate(request(urls(3), "[]"))).isEmpty();
+        assertThat(validator.validate(request(urls(3), "null"))).isEmpty();
     }
 
     // ── 숫자 필드 ──────────────────────────────────────────────────────────

@@ -25,7 +25,6 @@ public class SpaceCreateRequest {
     private static final int FLOOR_MAX = 200;
     private static final int IMAGE_URL_MAX_LENGTH = 500;
     private static final int IMAGE_MAX_COUNT = 10;
-    private static final int FLOOR_PLAN_MIN_COUNT = 1;
 
     // 검증 메시지 상수
     private static final String MSG_TITLE_REQUIRED = "제목은 필수입니다.";
@@ -44,8 +43,7 @@ public class SpaceCreateRequest {
     private static final String MSG_VENTILATION_REQUIRED = "환기 가능 여부는 필수입니다.";
     private static final String MSG_IMAGE_URL_BLANK = "이미지 URL은 비어 있을 수 없습니다.";
     private static final String MSG_IMAGE_COUNT = "이미지는 10장까지 등록할 수 있습니다.";
-    private static final String MSG_FLOOR_PLAN_REQUIRED = "도면은 최소 1장 등록해야 합니다.";
-    private static final String MSG_FLOOR_PLAN_COUNT = "도면은 1~10장까지 등록할 수 있습니다.";
+    private static final String MSG_FLOOR_PLAN_COUNT = "도면은 10장까지 등록할 수 있습니다.";
 
     @NotBlank(message = MSG_TITLE_REQUIRED)
     @Size(max = TITLE_MAX_LENGTH, message = MSG_TITLE_SIZE)
@@ -89,13 +87,12 @@ public class SpaceCreateRequest {
     @Size(max = IMAGE_MAX_COUNT, message = MSG_IMAGE_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> imageUrls;
 
-    // 공간 사진과 달리 도면은 필수다 — 재배 모듈 배치를 검토하려면 반드시 있어야 한다.
+    // 등록 폼에서 도면 입력을 걷어내 더는 필수가 아니다. 필드 자체는 남겨 이미 등록된 도면과 수정 API 호환을 지킨다.
     @Schema(description = """
-            도면 URL 배열. 재배 모듈 배치 검토에 필요하므로 최소 1장이 필수이며 최대 10장.
+            도면 URL 배열. 선택 항목이며 최대 10장.
             공간 사진과 별도로 저장되고(space_floor_plans) 목록 카드 썸네일에는 쓰이지 않는다.
             POST /files로 업로드한 뒤 응답의 url을 그대로 넣는다.""",
-            requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotEmpty(message = MSG_FLOOR_PLAN_REQUIRED)
-    @Size(min = FLOOR_PLAN_MIN_COUNT, max = IMAGE_MAX_COUNT, message = MSG_FLOOR_PLAN_COUNT)
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Size(max = IMAGE_MAX_COUNT, message = MSG_FLOOR_PLAN_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> floorPlanUrls;
 }
