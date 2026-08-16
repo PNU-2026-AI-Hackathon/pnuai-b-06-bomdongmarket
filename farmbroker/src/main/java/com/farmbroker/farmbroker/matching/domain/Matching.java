@@ -85,6 +85,10 @@ public class Matching {
 
     private LocalDate contractEndDate;
 
+    // 조건을 저장할 때마다 1씩 오르는 번호. 동의 요청이 "내가 본 조건"을 지목하는 데 쓴다 —
+    // 조회한 뒤 소유자가 조건을 바꿨다면 번호가 어긋나 동의가 거절된다(검증은 서비스).
+    private Integer contractTermsVersion;
+
     // 계약 동의 시각. 양측이 모두 채워지면 확정이다.
     private LocalDateTime ownerAgreedAt;
 
@@ -138,8 +142,14 @@ public class Matching {
         this.contractDeposit = deposit;
         this.contractStartDate = startDate;
         this.contractEndDate = endDate;
+        this.contractTermsVersion = getTermsVersion() + 1;
         this.ownerAgreedAt = null;
         this.farmerAgreedAt = null;
+    }
+
+    // 조건을 한 번도 저장하지 않은 계약(과 컬럼 추가 이전의 기존 행)은 0번이다.
+    public int getTermsVersion() {
+        return contractTermsVersion == null ? 0 : contractTermsVersion;
     }
 
     // 이미 동의했으면 시각을 유지한다 — 같은 버튼을 두 번 눌러도 결과가 같다.

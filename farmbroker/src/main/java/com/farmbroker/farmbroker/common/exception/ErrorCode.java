@@ -48,6 +48,7 @@ public enum ErrorCode {
 
     // ── contract (매칭 1건에 붙는 계약서) ────────────────────────────────────
     CONTRACT_CLOSED(HttpStatus.CONFLICT, "이미 확정되었거나 취소된 계약입니다."),
+    CONTRACT_TERMS_CHANGED(HttpStatus.CONFLICT, "계약 조건이 변경되었습니다. 다시 확인해 주세요."),
     CONTRACT_TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "월세와 계약기간을 먼저 입력해야 합니다."),
     CONTRACT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "계약 종료일은 시작일보다 뒤여야 합니다."),
 

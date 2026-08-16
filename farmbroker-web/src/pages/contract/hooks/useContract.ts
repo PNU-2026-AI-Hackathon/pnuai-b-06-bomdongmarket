@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { ApiError } from '@/api/client';
 import {
   agreeContract,
   cancelContract,
@@ -52,12 +53,21 @@ export function useContract(matchingId: number) {
       } catch (caught) {
         setActionError(caught instanceof Error ? caught.message : failureMessage);
         setActionStatus('error');
+        // 409는 화면이 서버보다 오래됐다는 뜻(조건이 바뀌었거나 상대가 이미 확정·취소함)이라 값을 다시 받아 옵니다.
+        // reload()가 아니라 여기서 직접 받는 이유: 로딩 화면으로 넘어가면 방금 띄운 안내 문구가 사라집니다.
+        if (caught instanceof ApiError && caught.status === 409) {
+          try {
+            setContract(await getContract(matchingId));
+          } catch {
+            // 재조회까지 실패하면 기존 화면을 그대로 두고 문구만 남깁니다.
+          }
+        }
         return false;
       } finally {
         isRunning.current = false;
       }
     },
-    [],
+    [matchingId],
   );
 
   const save = useCallback(
@@ -66,9 +76,13 @@ export function useContract(matchingId: number) {
     [matchingId, run],
   );
 
+  // 지금 화면에 그려진 조건의 번호를 함께 보냅니다 — 그 사이 조건이 바뀌었으면 서버가 409로 거절합니다.
   const agree = useCallback(
-    () => run(() => agreeContract(matchingId), '계약에 동의하지 못했습니다.'),
-    [matchingId, run],
+    () =>
+      contract
+        ? run(() => agreeContract(matchingId, contract.termsVersion), '계약에 동의하지 못했습니다.')
+        : Promise.resolve(false),
+    [contract, matchingId, run],
   );
 
   const cancel = useCallback(

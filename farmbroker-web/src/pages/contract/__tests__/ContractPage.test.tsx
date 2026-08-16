@@ -4,7 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearAuthSession, saveAuthSession } from '@/auth/session';
-import { resetMockContract } from '@/mocks/mockContract';
+import { resetMockContract, saveMockContractTerms } from '@/mocks/mockContract';
 import { ContractPage } from '@/pages/contract';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { ContractDetail, UserRole } from '@/types/api';
@@ -158,6 +158,25 @@ describe('ContractPage', () => {
     await user.click(screen.getByRole('button', { name: '계약 동의' }));
 
     expect(await screen.findByRole('button', { name: '동의 완료' })).toBeDisabled();
+  });
+
+  it('조회한 뒤 조건이 바뀌었으면 동의가 거절되고 바뀐 조건을 다시 보여준다', async () => {
+    const user = userEvent.setup();
+    renderPage({ viewerRole: 'FARMER', ...savedTerms });
+
+    // 농부가 화면을 열어 둔 사이 소유자가 다른 세션에서 월세를 올린 상황입니다.
+    expect(await screen.findByLabelText('월세')).toHaveValue(500000);
+    saveMockContractTerms(21, { ...savedTerms, monthlyRent: 900000 });
+
+    await user.click(screen.getByRole('button', { name: '계약' }));
+    await user.click(screen.getByRole('button', { name: '계약 동의' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '계약 조건이 변경되었습니다. 다시 확인해 주세요.',
+    );
+    // 재조회로 바뀐 조건이 화면에 반영되고, 그 조건에는 다시 동의할 수 있어야 합니다.
+    await waitFor(() => expect(screen.getByLabelText('월세')).toHaveValue(900000));
+    expect(screen.getByRole('button', { name: '계약' })).toBeEnabled();
   });
 
   it('양측이 모두 동의하면 계약이 확정된다', async () => {
