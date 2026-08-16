@@ -106,6 +106,9 @@ describe('ContractPage', () => {
 
     // 음수·소수·지수 표기는 키 입력 단계에서 막습니다.
     const maintenanceFee = await screen.findByLabelText('관리비');
+    // 칸이 나타난 것과 저장된 조건이 채워진 것은 다르다.
+    // 채워지기 전에 비우면 뒤늦게 들어온 값 위에 타이핑돼 50000153 같은 값이 된다.
+    await waitFor(() => expect(maintenanceFee).toHaveValue(savedTerms.maintenanceFee));
     await user.clear(maintenanceFee);
     await user.type(maintenanceFee, '-1.5e3');
     expect(maintenanceFee).toHaveValue(153);
@@ -122,6 +125,7 @@ describe('ContractPage', () => {
     renderPage({ viewerRole: 'OWNER', farmerAgreed: true, ...savedTerms });
 
     const monthlyRent = await screen.findByLabelText('월세');
+    await waitFor(() => expect(monthlyRent).toHaveValue(savedTerms.monthlyRent));
     await user.clear(monthlyRent);
     await user.type(monthlyRent, '900000');
     await user.click(screen.getByRole('button', { name: '저장' }));
@@ -138,6 +142,7 @@ describe('ContractPage', () => {
     renderPage({ viewerRole: 'OWNER', ...savedTerms });
 
     const endDate = await screen.findByLabelText('계약 종료일');
+    await waitFor(() => expect(endDate).toHaveValue(savedTerms.endDate));
     await user.clear(endDate);
     await user.type(endDate, '2026-08-01');
     await user.click(screen.getByRole('button', { name: '저장' }));
