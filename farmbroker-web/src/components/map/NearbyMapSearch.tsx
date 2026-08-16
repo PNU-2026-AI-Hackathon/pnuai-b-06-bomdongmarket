@@ -26,7 +26,11 @@ export function NearbyMapSearch({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = address.trim();
-    if (!query) return;
+    if (!query) {
+      // 빈 주소 제출이 아무 안내 없이 끝나지 않도록 명시적으로 알린다.
+      setError('주소를 입력해 주세요.');
+      return;
+    }
     setIsSearching(true);
     setError(null);
     try {
