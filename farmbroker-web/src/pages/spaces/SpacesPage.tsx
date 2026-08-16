@@ -15,7 +15,7 @@ import { SpaceFilter } from '@/pages/spaces/components/SpaceFilter';
 import { SpaceList } from '@/pages/spaces/components/SpaceList';
 import { useSpaces } from '@/pages/spaces/hooks/useSpaces';
 import type { SpaceSummary } from '@/types/api';
-import type { Coords } from '@/utils/geocode';
+import { type Coords, reverseGeocode } from '@/utils/geocode';
 import { hasKakaoMapKey } from '@/utils/kakaoSdk';
 
 // 공개 공간 탐색 화면입니다. API 명세의 검색/필터/정렬 조건을 mock 서비스와 연결합니다.
@@ -52,6 +52,15 @@ export function SpacesPage() {
     cardRefs.current.get(spaceId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  // 지도 빈 곳을 클릭하면 그 지점을 검색 중심으로 삼고, 역지오코딩으로 지명 라벨을 붙인다.
+  async function handleMapClick(coords: Coords) {
+    setCenter(coords);
+    setSelectedId(null);
+    setCenterLabel('선택한 위치');
+    const label = await reverseGeocode(coords).catch(() => null);
+    if (label) setCenterLabel(label);
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -86,6 +95,7 @@ export function SpacesPage() {
             items={mapItems}
             selectedId={selectedId}
             onSelect={handleSelect}
+            onMapClick={handleMapClick}
             getId={(s) => s.spaceId}
             getTitle={(s) => s.title}
           />
