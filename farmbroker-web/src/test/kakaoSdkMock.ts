@@ -47,6 +47,12 @@ export async function searchAddress(user: ReturnType<typeof userEvent.setup>) {
 // 간단한 가짜 maps 네임스페이스를 돌려준다. hasKakaoMapKey는 true.
 export function createKakaoMapMock() {
   const markers: Array<{ position: unknown; handlers: Record<string, () => void> }> = [];
+  // 지도에 등록된 이벤트 핸들러를 관찰해 클릭을 흉내 낼 수 있게 붙든다.
+  // (this 자체가 아니라 handlers 객체만 잡아 no-this-alias 규칙을 피한다.)
+  let mapHandlers: Record<string, (e: unknown) => void> | null = null;
+  // setBounds로 맞춘 마지막 범위 — 반경 변경 시 화면 조정을 검증할 때 관찰한다.
+  let lastBounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null =
+    null;
 
   const maps = {
     load: (cb: () => void) => cb(),
@@ -63,9 +69,25 @@ export function createKakaoMapMock() {
       }
     },
     Map: class {
+      handlers: Record<string, (e: unknown) => void> = {};
+      constructor() {
+        mapHandlers = this.handlers;
+      }
       setCenter() {}
       setLevel() {}
+      setBounds(bounds: { sw: KakaoLatLng; ne: KakaoLatLng }) {
+        lastBounds = {
+          sw: { lat: bounds.sw.getLat(), lng: bounds.sw.getLng() },
+          ne: { lat: bounds.ne.getLat(), lng: bounds.ne.getLng() },
+        };
+      }
       relayout() {}
+    },
+    LatLngBounds: class {
+      constructor(
+        public sw: KakaoLatLng,
+        public ne: KakaoLatLng,
+      ) {}
     },
     Marker: class {
       handlers: Record<string, () => void> = {};
@@ -94,6 +116,17 @@ export function createKakaoMapMock() {
         addressSearch(_a: string, cb: (r: unknown[], s: string) => void) {
           cb([{ x: '129.075', y: '35.1798', address_name: '부산' }], 'OK');
         }
+        coord2Address(_lng: number, _lat: number, cb: (r: unknown[], s: string) => void) {
+          cb(
+            [
+              {
+                road_address: { address_name: '부산 금정구 부산대학로63번길 2' },
+                address: { address_name: '부산 금정구 장전동 30' },
+              },
+            ],
+            'OK',
+          );
+        }
       },
       Status: { OK: 'OK', ZERO_RESULT: 'ZERO_RESULT', ERROR: 'ERROR' },
     },
@@ -101,6 +134,11 @@ export function createKakaoMapMock() {
 
   return {
     markers,
+    // 지도 클릭을 흉내 낸다 — 최초 생성된 지도에 등록된 click 핸들러를 좌표와 함께 호출한다.
+    clickMap: (lat: number, lng: number) =>
+      mapHandlers?.click?.({ latLng: new maps.LatLng(lat, lng) }),
+    // setBounds로 맞춘 마지막 범위(반경 변경 시 화면 조정 검증용).
+    getLastBounds: () => lastBounds,
     module: {
       hasKakaoMapKey: () => true,
       loadKakaoMaps: () => Promise.resolve(maps as unknown as KakaoMaps),

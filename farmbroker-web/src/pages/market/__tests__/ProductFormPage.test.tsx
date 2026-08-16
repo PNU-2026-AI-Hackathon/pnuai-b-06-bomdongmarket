@@ -9,6 +9,7 @@ import { deleteImage } from '@/services/fileService';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { MarketItem } from '@/types/api';
+import { geocodeAddress } from '@/utils/geocode';
 
 vi.mock('@/pages/market/hooks/useMyWorkplaces', () => ({
   useMyWorkplaces: () => ({ workplaces: [], isLoading: false }),
@@ -143,5 +144,28 @@ describe('ProductFormPage', () => {
     await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
     const payload = vi.mocked(createProduct).mock.calls[0][0];
     expect(payload).toMatchObject({ latitude: 35.18, longitude: 129.076 });
+  });
+
+  it('수정 시 주소 지오코딩이 실패하면 저장을 막고 안내한다', async () => {
+    // 백엔드 PATCH는 null 좌표를 '변경 없음'으로 보므로, 주소만 바뀌고 좌표가 이전 값으로
+    // 남는 불일치를 막기 위해 좌표를 못 구하면 저장하지 않는다.
+    vi.mocked(geocodeAddress).mockResolvedValueOnce(null);
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/:productId/edit" />
+      </Routes>,
+      { authenticated: true, route: '/market/10/edit' },
+    );
+
+    await screen.findByRole('heading', { name: '상품 수정' });
+    const addressInput = screen.getByLabelText('생산지 주소');
+    await user.clear(addressInput);
+    await user.type(addressInput, '부산광역시 금정구 새 주소 45');
+    await user.click(screen.getByRole('button', { name: '수정 내용 저장' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
+    expect(updateProduct).not.toHaveBeenCalled();
   });
 });

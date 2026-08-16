@@ -130,6 +130,58 @@ class SpaceCreateRequestValidationTest {
                 .contains("area");
     }
 
+    // ── 좌표 필드 ──────────────────────────────────────────────────────────
+
+    private SpaceCreateRequest coords(String latitude, String longitude) throws Exception {
+        return objectMapper.readValue(
+                """
+                {
+                  "title": "부산대 앞 20평 상가 공실",
+                  "address": "부산광역시 금정구 장전동",
+                  "area": 66,
+                  "monthlyRent": 500000,
+                  "floor": 2,
+                  "hasWater": true,
+                  "hasElectricity": true,
+                  "hasVentilation": true,
+                  "imageUrls": ["http://localhost:8080/api/files/%032d.jpg"],
+                  "latitude": %s,
+                  "longitude": %s
+                }
+                """.formatted(1, latitude, longitude),
+                SpaceCreateRequest.class);
+    }
+
+    @Test
+    void accepts_null_coordinates() throws Exception {
+        assertThat(validator.validate(coords("null", "null"))).isEmpty();
+    }
+
+    @Test
+    void accepts_coordinates_within_range() throws Exception {
+        assertThat(validator.validate(coords("35.1798", "129.075"))).isEmpty();
+    }
+
+    @Test
+    void rejects_latitude_out_of_range() throws Exception {
+        assertThat(validator.validate(coords("90.1", "129.075")))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("latitude");
+        assertThat(validator.validate(coords("-90.1", "129.075")))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("latitude");
+    }
+
+    @Test
+    void rejects_longitude_out_of_range() throws Exception {
+        assertThat(validator.validate(coords("35.1798", "180.1")))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("longitude");
+        assertThat(validator.validate(coords("35.1798", "-180.1")))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("longitude");
+    }
+
     @Test
     void rejects_more_than_ten_images() throws Exception {
         assertThat(validator.validate(request(urls(11), urls(1))))

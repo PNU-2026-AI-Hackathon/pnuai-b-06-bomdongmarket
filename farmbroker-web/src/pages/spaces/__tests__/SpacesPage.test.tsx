@@ -1,10 +1,29 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { SpaceList } from '@/pages/spaces/components/SpaceList';
 import { SpacesPage } from '@/pages/spaces/SpacesPage';
+
+// 지도 검색 통합 테스트용 — 반경 검색은 mock 공간의 실제 지오코딩 없이 좌표를 직접 제어해야 한다.
+const FAR_QUERY = '강원도 정선군 두메산골';
+const NEAR_COORDS = { lat: 35.1798, lng: 129.075 };
+const FAR_COORDS = { lat: 37.5, lng: 128.9 };
+
+vi.mock('@/utils/geocode', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/geocode')>('@/utils/geocode');
+  return {
+    ...actual,
+    geocodeAddress: (address: string) =>
+      Promise.resolve(address === FAR_QUERY ? FAR_COORDS : NEAR_COORDS),
+  };
+});
+
+vi.mock('@/utils/kakaoSdk', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/kakaoSdk')>('@/utils/kakaoSdk');
+  return { ...actual, hasKakaoMapKey: () => true };
+});
 
 describe('SpacesPage', () => {
   it('mock 서비스의 등록 공간을 렌더링한다', async () => {
@@ -33,6 +52,24 @@ describe('SpacesPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/서면 지하 재배 공간/i)).toBeInTheDocument();
+    });
+  });
+
+  it('주소 검색 시 반경 밖 공간이 목록에서 사라진다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpacesPage />);
+
+    expect(await screen.findByText(/부산대 앞 20평 상가 공실/i)).toBeInTheDocument();
+    // 기본 중심(부산시청) 반경 안이라 처음엔 서면 공간도 보인다(mock 지오코딩 fallback).
+    await waitFor(() => {
+      expect(screen.getByText(/서면 지하 재배 공간/i)).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText('중심 주소'), FAR_QUERY);
+    await user.click(screen.getByRole('button', { name: /이 주변 검색/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/서면 지하 재배 공간/i)).not.toBeInTheDocument();
     });
   });
 

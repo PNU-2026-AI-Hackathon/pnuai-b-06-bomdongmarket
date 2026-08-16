@@ -37,6 +37,8 @@ function toSummary(space: SpaceDetail): SpaceSummary {
     hasVentilation,
     status,
     imageUrl,
+    latitude,
+    longitude,
   } = space;
   return {
     spaceId,
@@ -49,6 +51,8 @@ function toSummary(space: SpaceDetail): SpaceSummary {
     hasVentilation,
     status,
     imageUrl,
+    latitude,
+    longitude,
   };
 }
 
@@ -179,6 +183,8 @@ export async function updateSpace(
     description: input.description ?? space.description,
     imageUrls: input.imageUrls ?? space.imageUrls,
     floorPlanUrls: input.floorPlanUrls ?? space.floorPlanUrls,
+    latitude: input.latitude ?? space.latitude,
+    longitude: input.longitude ?? space.longitude,
     spaceId,
     status: input.status ?? space.status,
     ownerId: space.owner.userId,

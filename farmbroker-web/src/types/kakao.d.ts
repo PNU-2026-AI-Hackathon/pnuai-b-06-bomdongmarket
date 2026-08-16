@@ -28,9 +28,17 @@ interface KakaoLatLng {
   getLng: () => number;
 }
 
+// 남서(sw)·북동(ne) 두 점이 이루는 사각 범위. 반경 원이 화면에 들어오도록 지도를 맞출 때 쓴다.
+interface KakaoLatLngBounds {
+  getSouthWest: () => KakaoLatLng;
+  getNorthEast: () => KakaoLatLng;
+}
+
 interface KakaoMap {
   setCenter: (position: KakaoLatLng) => void;
   setLevel: (level: number) => void;
+  // 주어진 범위가 모두 보이도록 지도의 중심·확대수준을 한 번에 맞춘다.
+  setBounds: (bounds: KakaoLatLngBounds) => void;
   relayout: () => void;
 }
 
@@ -52,17 +60,39 @@ interface KakaoGeocoderResult {
   address_name: string;
 }
 
+interface KakaoAddressName {
+  address_name: string;
+}
+
+/** coord2Address 결과 한 건. 도로명주소는 지역에 따라 null일 수 있어 지번(address)으로 폴백한다. */
+interface KakaoCoord2AddressResult {
+  road_address: KakaoAddressName | null;
+  address: KakaoAddressName | null;
+}
+
 interface KakaoGeocoder {
   addressSearch: (
     address: string,
     callback: (result: KakaoGeocoderResult[], status: string) => void,
   ) => void;
+  /** 좌표 → 주소(역지오코딩). 인자 순서는 경도(x), 위도(y)다. */
+  coord2Address: (
+    longitude: number,
+    latitude: number,
+    callback: (result: KakaoCoord2AddressResult[], status: string) => void,
+  ) => void;
+}
+
+/** 지도 클릭 등 마우스 이벤트가 콜백에 넘겨주는 객체. 클릭 지점의 좌표를 담는다. */
+interface KakaoMapMouseEvent {
+  latLng: KakaoLatLng;
 }
 
 interface KakaoMaps {
   /** autoload=false로 받은 SDK를 실제로 초기화합니다. services 라이브러리도 이 시점에 준비됩니다. */
   load: (callback: () => void) => void;
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
+  LatLngBounds: new (sw: KakaoLatLng, ne: KakaoLatLng) => KakaoLatLngBounds;
   Map: new (
     container: HTMLElement,
     options: { center: KakaoLatLng; level: number },
@@ -78,7 +108,12 @@ interface KakaoMaps {
     fillOpacity?: number;
   }) => KakaoCircle;
   event: {
-    addListener: (target: object, type: string, handler: () => void) => void;
+    // 마커 클릭은 인자를 무시하고(() => void도 대입 가능), 지도 클릭은 KakaoMapMouseEvent를 받는다.
+    addListener: (
+      target: object,
+      type: string,
+      handler: (mouseEvent: KakaoMapMouseEvent) => void,
+    ) => void;
   };
   services: {
     Geocoder: new () => KakaoGeocoder;

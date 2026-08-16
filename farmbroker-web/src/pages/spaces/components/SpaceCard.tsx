@@ -11,6 +11,8 @@ import { formatArea, formatCurrency } from '@/utils/format';
 interface SpaceCardProps {
   space: SpaceSummary;
   compact?: boolean;
+  // 지도 반경 검색의 중심에서 이 공간까지의 거리(km). 지도 검색 중일 때만 값이 있다.
+  distanceKm?: number | null;
 }
 
 // 등록할 때 체크하지 않은 조건은 아이콘 자체를 내보내지 않습니다.
@@ -25,7 +27,7 @@ function availableFacilities(space: SpaceSummary) {
 }
 
 // 공간 목록과 개인 대시보드에서 함께 쓰는 카드형 공간 요약입니다.
-export function SpaceCard({ space, compact = false }: SpaceCardProps) {
+export function SpaceCard({ space, compact = false, distanceKm }: SpaceCardProps) {
   const facilities = availableFacilities(space);
 
   return (
@@ -46,6 +48,12 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
         <p className="mt-3 flex items-start gap-1.5 text-sm text-content-muted">
           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden />
           {space.address}
+          {distanceKm != null ? (
+            <>
+              <span aria-hidden> · </span>
+              <span className="font-bold text-action">{distanceKm.toFixed(1)}km</span>
+            </>
+          ) : null}
         </p>
         <div className="mt-4 flex items-center justify-between gap-3">
           <span>

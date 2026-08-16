@@ -20,6 +20,8 @@ public class SpaceListItemResponse {
     private final boolean hasVentilation;
     private final String status;
     private final String imageUrl;
+    private final Double latitude;
+    private final Double longitude;
 
     private SpaceListItemResponse(Space space, String imageUrl) {
         this.spaceId = space.getId();
@@ -32,6 +34,8 @@ public class SpaceListItemResponse {
         this.hasVentilation = space.isHasVentilation();
         this.status = space.getStatus().name();
         this.imageUrl = imageUrl;
+        this.latitude = space.getLatitude();
+        this.longitude = space.getLongitude();
     }
 
     public static SpaceListItemResponse from(Space space, String imageUrl) {

@@ -91,6 +91,9 @@ export interface SpaceSummary {
   hasVentilation: boolean;
   status: SpaceStatus;
   imageUrl: string | null;
+  // 지도 검색용 좌표. 등록 시 프론트가 주소를 지오코딩해 저장하며, 없으면 프론트가 폴백 지오코딩한다.
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface SpaceDetail extends SpaceSummary {
@@ -126,6 +129,9 @@ export interface SpaceCreateInput {
   imageUrls: string[];
   // 등록 폼에서는 더 이상 도면을 받지 않습니다. 이미 등록된 공간의 수정 요청에만 쓰입니다.
   floorPlanUrls?: string[];
+  // 지도용 좌표(선택). 폼에서 주소를 지오코딩해 함께 보낸다(실패 시 null).
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export type SpaceUpdateInput = Partial<SpaceCreateInput> & {
