@@ -1,14 +1,12 @@
 import { ArrowRight, Droplets, MapPin, Plug, Wind } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
 import { RemoteImage } from '@/components/common/RemoteImage';
 import { buttonStyles } from '@/components/common/buttonStyles';
 import { ROUTES } from '@/constants/routes';
 import type { SpaceSummary } from '@/types/api';
 import { formatArea, formatCurrency } from '@/utils/format';
-import { getSpaceStatusLabel } from '@/utils/labels';
 
 interface SpaceCardProps {
   space: SpaceSummary;
@@ -39,15 +37,9 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
       />
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <Badge tone={space.status === 'AVAILABLE' ? 'green' : 'slate'}>
-              {getSpaceStatusLabel(space.status)}
-            </Badge>
-            <h2 className="mt-3 line-clamp-2 text-lg font-bold text-ink-900">
-              {space.title}
-            </h2>
-          </div>
-          <span className="rounded-app bg-accent-soft px-2.5 py-1 text-sm font-bold text-soil-700">
+          {/* 공개 목록에는 매칭 가능한 공간만 올라오므로 상태 배지는 달지 않습니다. */}
+          <h2 className="line-clamp-2 text-lg font-bold text-ink-900">{space.title}</h2>
+          <span className="shrink-0 rounded-app bg-accent-soft px-2.5 py-1 text-sm font-bold text-soil-700">
             {formatArea(space.area)}
           </span>
         </div>
