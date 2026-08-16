@@ -10,7 +10,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// 등록 폼에서 도면 입력을 걷어냈으므로 도면 없이 등록되는 요청도 통과해야 한다.
+// 공간 사진은 필수, 도면은 선택이라는 등록 규칙을 요청 DTO 검증으로 고정한다.
 class SpaceCreateRequestValidationTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -28,9 +28,10 @@ class SpaceCreateRequestValidationTest {
                   "floor": %s,
                   "hasWater": true,
                   "hasElectricity": true,
-                  "hasVentilation": true
+                  "hasVentilation": true,
+                  "imageUrls": ["http://localhost:8080/api/files/%032d.jpg"]
                 }
-                """.formatted(area, monthlyRent, floor),
+                """.formatted(area, monthlyRent, floor, 1),
                 SpaceCreateRequest.class);
     }
 
@@ -70,6 +71,17 @@ class SpaceCreateRequestValidationTest {
     void accepts_request_without_floor_plan() throws Exception {
         assertThat(validator.validate(request(urls(3), "[]"))).isEmpty();
         assertThat(validator.validate(request(urls(3), "null"))).isEmpty();
+    }
+
+    // 공간 상태를 확인할 수 없는 공실은 등록시키지 않는다.
+    @Test
+    void rejects_missing_photos() throws Exception {
+        assertThat(validator.validate(request("[]", urls(1))))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("imageUrls");
+        assertThat(validator.validate(request("null", urls(1))))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("imageUrls");
     }
 
     // ── 숫자 필드 ──────────────────────────────────────────────────────────

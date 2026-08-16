@@ -24,6 +24,7 @@ public class SpaceCreateRequest {
     private static final int FLOOR_MIN = -10;
     private static final int FLOOR_MAX = 200;
     private static final int IMAGE_URL_MAX_LENGTH = 500;
+    private static final int IMAGE_MIN_COUNT = 1;
     private static final int IMAGE_MAX_COUNT = 10;
 
     // 검증 메시지 상수
@@ -42,7 +43,8 @@ public class SpaceCreateRequest {
     private static final String MSG_ELECTRICITY_REQUIRED = "전기 가능 여부는 필수입니다.";
     private static final String MSG_VENTILATION_REQUIRED = "환기 가능 여부는 필수입니다.";
     private static final String MSG_IMAGE_URL_BLANK = "이미지 URL은 비어 있을 수 없습니다.";
-    private static final String MSG_IMAGE_COUNT = "이미지는 10장까지 등록할 수 있습니다.";
+    private static final String MSG_IMAGE_REQUIRED = "공간 사진은 최소 1장 등록해야 합니다.";
+    private static final String MSG_IMAGE_COUNT = "공간 사진은 1~10장까지 등록할 수 있습니다.";
     private static final String MSG_FLOOR_PLAN_COUNT = "도면은 10장까지 등록할 수 있습니다.";
 
     @NotBlank(message = MSG_TITLE_REQUIRED)
@@ -78,13 +80,14 @@ public class SpaceCreateRequest {
 
     private String description;
 
-    // 배열 순서 = 노출 순서 (0번이 대표 이미지). 미입력 시 이미지 없이 등록
+    // 배열 순서 = 노출 순서 (0번이 대표 이미지). 공간 상태를 확인할 수 없는 공실은 등록시키지 않는다.
     @Schema(description = """
-            공간 사진 URL 배열. 선택 항목이며 최대 10장.
+            공간 사진 URL 배열. 최소 1장이 필수이며 최대 10장.
             배열 순서가 노출 순서이고 0번이 목록 카드의 대표 이미지가 된다.
             POST /files로 업로드한 뒤 응답의 url을 그대로 넣는다.""",
-            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-    @Size(max = IMAGE_MAX_COUNT, message = MSG_IMAGE_COUNT)
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotEmpty(message = MSG_IMAGE_REQUIRED)
+    @Size(min = IMAGE_MIN_COUNT, max = IMAGE_MAX_COUNT, message = MSG_IMAGE_COUNT)
     private List<@NotBlank(message = MSG_IMAGE_URL_BLANK) @Size(max = IMAGE_URL_MAX_LENGTH) String> imageUrls;
 
     // 등록 폼에서 도면 입력을 걷어내 더는 필수가 아니다. 필드 자체는 남겨 이미 등록된 도면과 수정 API 호환을 지킨다.

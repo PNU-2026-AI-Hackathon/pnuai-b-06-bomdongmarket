@@ -58,6 +58,7 @@ export function SpaceCreatePage() {
   const [addressError, setAddressError] = useState<string | null>(null);
   // 사진은 고르는 즉시 업로드되므로 폼에는 서버가 돌려준 URL만 남습니다.
   const [imageUrls, setImageUrls] = useState<string[]>(previous?.imageUrls ?? []);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [numberErrors, setNumberErrors] = useState<SpaceNumberErrors>({});
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -69,6 +70,13 @@ export function SpaceCreatePage() {
       return;
     }
     setAddressError(null);
+
+    // 사진은 파일 입력이라 브라우저 required 검증이 걸리지 않아 여기서 직접 막습니다.
+    if (imageUrls.length === 0) {
+      setImageError('공간 사진을 최소 1장 등록해야 합니다.');
+      return;
+    }
+    setImageError(null);
 
     const formData = new FormData(event.currentTarget);
     const numbers = {
@@ -207,15 +215,23 @@ export function SpaceCreatePage() {
         <Card padding="lg">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-ink-900">사진 업로드 (선택)</h2>
+              <h2 className="text-lg font-bold text-ink-900">사진 업로드</h2>
               <p className="mt-1 text-sm text-slate-600">
-                먼저 선택한 사진이 목록 카드의 대표 이미지가 됩니다.
+                공간 상태를 확인할 수 있도록 최소 1장은 등록해 주세요. 먼저 선택한 사진이
+                목록 카드의 대표 이미지가 됩니다.
               </p>
             </div>
             <Camera className="h-8 w-8 text-leaf-700" aria-hidden />
           </div>
           <div className="mt-4">
-            <SpaceImageUploader onChange={setImageUrls} value={imageUrls} />
+            <SpaceImageUploader
+              onChange={(next) => {
+                setImageUrls(next);
+                if (next.length > 0) setImageError(null);
+              }}
+              requiredMessage={imageError}
+              value={imageUrls}
+            />
           </div>
         </Card>
 

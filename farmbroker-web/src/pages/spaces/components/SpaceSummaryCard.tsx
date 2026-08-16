@@ -17,7 +17,7 @@ const facilityLabels: [keyof SpaceCreateInput, string][] = [
 // 등록 직전에 입력한 공간 정보를 그대로 되짚어 볼 수 있게 요약합니다.
 export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
   const facilities = facilityLabels.filter(([key]) => input[key]);
-  const imageUrls = input.imageUrls ?? [];
+  const imageUrls = input.imageUrls;
 
   return (
     <Card padding="lg">

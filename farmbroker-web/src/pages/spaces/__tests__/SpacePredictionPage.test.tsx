@@ -11,6 +11,15 @@ vi.mock('@/utils/kakaoSdk', async () =>
   (await import('@/test/kakaoSdkMock')).createKakaoSdkMock(),
 );
 
+// 공간 사진은 등록 필수라 예측 단계로 넘어가려면 반드시 한 장 올려야 합니다.
+async function uploadPhoto(user: ReturnType<typeof userEvent.setup>) {
+  const file = new File([new Uint8Array(64)], '정면.jpg', { type: 'image/jpeg' });
+  await user.upload(screen.getByLabelText('공간 사진 선택'), [file]);
+  await waitFor(() => {
+    expect(screen.getByText(/공간 사진 1\/10장 등록됨/)).toBeInTheDocument();
+  });
+}
+
 async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('공간 이름'), '테스트 상가 공실');
   await searchAddress(user);
@@ -18,6 +27,7 @@ async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('전체 면적(㎡)'), '66');
   await user.type(screen.getByLabelText('층수'), '2');
   await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
+  await uploadPhoto(user);
 }
 
 describe('공간 등록 전 수익 예측 확인', () => {
@@ -58,6 +68,7 @@ describe('공간 등록 전 수익 예측 확인', () => {
     await user.type(screen.getByLabelText('전체 면적(㎡)'), '132');
     await user.type(screen.getByLabelText('층수'), '1');
     await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
+    await uploadPhoto(user);
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
     // 66㎡의 두 배 면적이므로 매출도 두 배가 됩니다.
@@ -134,5 +145,7 @@ describe('공간 등록 전 수익 예측 확인', () => {
     // 합쳐서 보낸 주소가 원래의 두 칸으로 그대로 나뉘어 돌아옵니다.
     expect(screen.getByLabelText('주소')).toHaveValue(SEARCHED_ADDRESS);
     expect(screen.getByLabelText('상세 주소')).toHaveValue('3층 302호');
+    // 이미 올린 사진은 URL로 남아 있으므로 다시 업로드할 필요가 없습니다.
+    expect(screen.getByText(/공간 사진 1\/10장 등록됨/)).toBeInTheDocument();
   });
 });

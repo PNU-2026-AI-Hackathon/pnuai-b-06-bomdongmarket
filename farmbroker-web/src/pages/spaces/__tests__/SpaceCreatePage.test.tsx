@@ -153,6 +153,35 @@ describe('SpaceCreatePage', () => {
     expect(screen.getByText(/공간 사진 0\/10장 등록됨/)).toBeInTheDocument();
   });
 
+  // 사진 없이 등록되면 도심 농부가 공간 상태를 확인할 방법이 없다.
+  it('사진 없이 제출하면 막고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '공간 사진을 최소 1장 등록해야 합니다.',
+    );
+  });
+
+  it('사진을 등록하면 안내가 사라진다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.upload(screen.getByLabelText('공간 사진 선택'), [imageFile('정면.jpg')]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/공간 사진 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   // 음수가 들어가면 브라우저 제약 검증(min)이 제출 자체를 막아 다음 단계로 넘어가지 않는다.
   it('면적에 음수가 들어가면 제출되지 않는다', async () => {
     const user = userEvent.setup();

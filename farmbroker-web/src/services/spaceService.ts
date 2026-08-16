@@ -120,7 +120,6 @@ export async function createSpace(input: SpaceCreateInput): Promise<SpaceMutatio
   return {
     ...input,
     spaceId: 99,
-    imageUrls: input.imageUrls ?? [],
     // 등록 폼은 더 이상 도면을 보내지 않지만 응답 형태는 그대로 유지합니다.
     floorPlanUrls: input.floorPlanUrls ?? [],
     status: 'AVAILABLE',
