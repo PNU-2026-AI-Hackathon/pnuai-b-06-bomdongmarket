@@ -30,9 +30,9 @@ const accountMenuItems = [
 
 const serviceMenuItems = [
   {
-    label: '장바구니',
+    label: '찜',
     description: '담아 둔 상품을 확인하고 결제를 진행합니다.',
-    to: ROUTES.cart,
+    to: ROUTES.wishlist,
   },
   {
     label: '판매 상품 관리',
@@ -71,7 +71,7 @@ export function MyPage() {
   return (
     <PageContainer narrow>
       <PageHeader
-        description="계정 정보와 보유 역할, 장바구니와 판매 활동을 한곳에서 확인하세요."
+        description="계정 정보와 보유 역할, 찜과 판매 활동을 한곳에서 확인하세요."
         eyebrow="Account"
         title="마이페이지"
       />

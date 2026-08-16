@@ -84,7 +84,7 @@ export const roleSections: RoleSectionContent[] = [
     label: '로컬 소비자',
     title: '근처 스마트팜의 신선한 작물을 생산 이력과 함께 확인하세요.',
     description:
-      '소비자는 장바구니에 담기 전에 수확일, 푸드 마일리지, 생산자 정보를 비교할 수 있습니다.',
+      '소비자는 찜해 두기 전에 수확일, 푸드 마일리지, 생산자 정보를 비교할 수 있습니다.',
     icon: ShoppingBasket,
     ctaLabel: '마켓 둘러보기',
     href: ROUTES.market,

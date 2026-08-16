@@ -1,4 +1,4 @@
-import { ArrowLeft, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Heart, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -11,7 +11,7 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
-import { addToCart } from '@/services/cartService';
+import { addWishlist, createOrder, getWishlist, removeWishlist } from '@/services/wishlistService';
 import { getMarketItem } from '@/services/marketService';
 import type { MarketItem } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
@@ -19,7 +19,8 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { ProductImage } from '@/pages/market/components/ProductImage';
 import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTraceabilityTimeline';
 
-// 상품 상세와 생산 이력, 수량 선택, 구매 CTA를 제공하는 마켓 상세 화면입니다.
+// 상품 상세와 생산 이력, 수량 선택, 찜·구매 CTA를 제공하는 마켓 상세 화면입니다.
+// 거래는 판매자와의 채팅이 기본이고, 바로 사고 싶을 때를 위해 단건 구매를 함께 둡니다.
 export function ProductDetailPage() {
   const requireAuth = useRequireAuth();
   const navigate = useNavigate();
@@ -27,8 +28,10 @@ export function ProductDetailPage() {
   const [item, setItem] = useState<MarketItem | null>(null);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [quantity, setQuantity] = useState(1);
-  const [isAdding, setIsAdding] = useState(false);
-  const [cartError, setCartError] = useState<string | null>(null);
+  const [isBuying, setIsBuying] = useState(false);
+  const [isWishing, setIsWishing] = useState(false);
+  const [wished, setWished] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -49,18 +52,47 @@ export function ProductDetailPage() {
   // 마감(CLOSED)·품절(stock 0) 상품은 목록에서 빠지지만 직접 URL로 들어올 수 있어 구매를 막는다.
   const isSoldOut = item != null && (item.status === 'CLOSED' || item.stock <= 0);
 
-  // 담고 나면 바로 장바구니로 보냅니다 — 결제까지 이어지는 흐름이 한 번에 보이도록.
-  function handleAddToCart() {
+  // 이미 찜한 상품인지는 목록을 받아 판단합니다. 비로그인이면 조회 자체가 막히므로 조용히 넘깁니다.
+  useEffect(() => {
+    if (!item) return;
+    let alive = true;
+    getWishlist()
+      .then((wishlist) => {
+        if (alive) setWished(wishlist.items.some((line) => line.productId === item.productId));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [item]);
+
+  function handleToggleWish() {
     if (!item) return;
     requireAuth(() => {
-      setIsAdding(true);
-      setCartError(null);
-      addToCart(item.productId, quantity)
-        .then(() => navigate(ROUTES.cart))
+      setIsWishing(true);
+      setActionError(null);
+      const next = wished ? removeWishlist(item.productId) : addWishlist(item.productId);
+      next
+        .then(() => setWished((value) => !value))
         .catch((caught: unknown) => {
-          setCartError(caught instanceof Error ? caught.message : '장바구니에 담지 못했습니다.');
+          setActionError(caught instanceof Error ? caught.message : '찜을 변경하지 못했습니다.');
         })
-        .finally(() => setIsAdding(false));
+        .finally(() => setIsWishing(false));
+    });
+  }
+
+  // 채팅으로 흥정하지 않고 바로 살 때의 경로입니다. 주문이 확정되면 완료 화면으로 보냅니다.
+  function handleBuyNow() {
+    if (!item) return;
+    requireAuth(() => {
+      setIsBuying(true);
+      setActionError(null);
+      createOrder(item.productId, quantity)
+        .then((order) => navigate(ROUTES.orderComplete, { replace: true, state: { order } }))
+        .catch((caught: unknown) => {
+          setActionError(caught instanceof Error ? caught.message : '주문하지 못했습니다.');
+        })
+        .finally(() => setIsBuying(false));
     });
   }
 
@@ -141,21 +173,32 @@ export function ProductDetailPage() {
                 </Button>
               </div>
             </div>
-            <Button
-              className="mt-5 w-full"
-              disabled={isSoldOut || isAdding}
-              onClick={handleAddToCart}
-            >
-              <ShoppingBag className="h-5 w-5" aria-hidden />
-              {isSoldOut
-                ? '판매 마감된 상품입니다'
-                : isAdding
-                  ? '담는 중...'
-                  : `${formatCurrency(item.price * quantity)} 장바구니에 담기`}
-            </Button>
-            {cartError ? (
+            <div className="mt-5 flex gap-2">
+              {/* 찜은 품절이어도 누를 수 있습니다 — 다시 올라오길 기다리는 것도 관심 표시입니다. */}
+              <Button
+                aria-label={wished ? '찜 해제' : '찜하기'}
+                aria-pressed={wished}
+                disabled={isWishing}
+                onClick={handleToggleWish}
+                variant="outline"
+              >
+                <Heart
+                  className={wished ? 'h-5 w-5 fill-current' : 'h-5 w-5'}
+                  aria-hidden
+                />
+              </Button>
+              <Button className="flex-1" disabled={isSoldOut || isBuying} onClick={handleBuyNow}>
+                <ShoppingBag className="h-5 w-5" aria-hidden />
+                {isSoldOut
+                  ? '판매 마감된 상품입니다'
+                  : isBuying
+                    ? '주문 중...'
+                    : `${formatCurrency(item.price * quantity)} 바로 구매`}
+              </Button>
+            </div>
+            {actionError ? (
               <p className="mt-2 text-sm font-semibold text-feedback-danger" role="alert">
-                {cartError}
+                {actionError}
               </p>
             ) : null}
           </Card>

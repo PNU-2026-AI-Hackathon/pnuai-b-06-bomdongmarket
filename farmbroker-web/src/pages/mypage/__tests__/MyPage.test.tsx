@@ -52,14 +52,14 @@ describe('MyPage 계정 설정', () => {
     expect(screen.queryByText('소비자')).not.toBeInTheDocument();
   });
 
-  it('소비자에게 장바구니와 계정 설정 링크를 제공한다', () => {
+  it('소비자에게 찜과 계정 설정 링크를 제공한다', () => {
     signInWithRoles(['CONSUMER']);
 
     renderWithProviders(<MyPage />);
 
-    expect(screen.getByRole('link', { name: /장바구니/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /찜/ })).toHaveAttribute(
       'href',
-      '/market/cart',
+      '/market/wishlist',
     );
     expect(screen.getByRole('link', { name: /계정 정보 수정/ })).toHaveAttribute(
       'href',
@@ -94,7 +94,7 @@ describe('MyPage 계정 설정', () => {
     renderWithProviders(<MyPage />);
 
     await user.tab();
-    expect(screen.getByRole('link', { name: /장바구니/ })).toHaveFocus();
+    expect(screen.getByRole('link', { name: /찜/ })).toHaveFocus();
 
     await user.tab();
     expect(screen.getByRole('link', { name: /계정 정보 수정/ })).toHaveFocus();

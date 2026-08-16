@@ -7,7 +7,7 @@ import {
   rejectMatching,
 } from '@/services/matchingService';
 import type {
-  CartLine,
+  WishlistLine,
   ContractSummary,
   ContractedSpaceSummary,
   MatchingRequest,
@@ -15,13 +15,13 @@ import type {
 } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
-// 대시보드의 공간·신청·장바구니 데이터와 받은 신청 처리 상태를 관리합니다.
+// 대시보드의 공간·신청·찜 데이터와 받은 신청 처리 상태를 관리합니다.
 export function useDashboard() {
   const [ownedSpaces, setOwnedSpaces] = useState<SpaceSummary[]>([]);
   const [contractedSpaces, setContractedSpaces] = useState<ContractedSpaceSummary[]>([]);
   const [receivedApplications, setReceivedApplications] = useState<MatchingRequest[]>([]);
   const [sentApplications, setSentApplications] = useState<ContractSummary[]>([]);
-  const [cartItems, setCartItems] = useState<CartLine[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<WishlistLine[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function useDashboard() {
       setContractedSpaces(result.contractedSpaces);
       setReceivedApplications(result.receivedApplications);
       setSentApplications(result.sentApplications);
-      setCartItems(result.cartItems);
+      setWishlistItems(result.wishlistItems);
       setStatus('success');
     } catch (caught) {
       setError(
@@ -130,7 +130,7 @@ export function useDashboard() {
     contractedSpaces,
     receivedApplications,
     sentApplications,
-    cartItems,
+    wishlistItems,
     status,
     error,
     actionError,

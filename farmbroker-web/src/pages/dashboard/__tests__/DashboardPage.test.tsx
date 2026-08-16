@@ -23,10 +23,8 @@ describe('Dashboard pages', () => {
 
   it('등록 공간, 계약 공간, 찜한 상품을 슬라이드로 렌더링한다', async () => {
     signIn(['OWNER']);
-    window.sessionStorage.setItem(
-      'farmbroker.mock.cart',
-      JSON.stringify([{ productId: 1, quantity: 2 }]),
-    );
+    // 찜 목업은 상품 id 배열만 저장한다 — 찜에는 수량이 없다.
+    window.sessionStorage.setItem('farmbroker.mock.wishlist', JSON.stringify([1]));
     renderWithProviders(<DashboardPage />);
 
     expect(
@@ -47,7 +45,6 @@ describe('Dashboard pages', () => {
     expect(
       screen.getByRole('link', { name: '버터헤드 상추 상품 상세 보기' }),
     ).toHaveAttribute('href', '/market/1');
-    expect(screen.getByText('장바구니 2개')).toBeInTheDocument();
     expect(screen.queryByText('빠른 실행')).not.toBeInTheDocument();
     expect(screen.queryByText('전체보기')).not.toBeInTheDocument();
     expect(screen.queryByText('도심농부 김민준')).not.toBeInTheDocument();

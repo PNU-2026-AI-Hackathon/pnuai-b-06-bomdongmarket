@@ -19,7 +19,7 @@ describe('Market pages', () => {
     });
   });
 
-  it('수량 변경 시 담기 버튼의 금액을 갱신한다', async () => {
+  it('수량 변경 시 바로 구매 버튼의 금액을 갱신한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ProductDetailPage />, { route: '/market/1' });
 
@@ -29,7 +29,7 @@ describe('Market pages', () => {
     await user.click(screen.getByRole('button', { name: /수량 늘리기/i }));
 
     expect(
-      screen.getByRole('button', { name: /₩8,600 장바구니에 담기/i }),
+      screen.getByRole('button', { name: /₩8,600 바로 구매/i }),
     ).toBeInTheDocument();
   });
 });

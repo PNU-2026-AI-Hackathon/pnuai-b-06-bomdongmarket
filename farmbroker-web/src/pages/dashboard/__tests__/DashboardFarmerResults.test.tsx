@@ -22,7 +22,7 @@ const emptyDashboard: DashboardData = {
   contractedSpaces: [],
   receivedApplications: [],
   sentApplications: [],
-  cartItems: [],
+  wishlistItems: [],
 };
 
 afterEach(() => {

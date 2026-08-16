@@ -9,7 +9,7 @@ import { ContractPage } from '@/pages/contract';
 import { DashboardPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
 import {
-  CartPage,
+  WishlistPage,
   MarketPage,
   MyProductsPage,
   OrderCompletePage,
@@ -48,7 +48,7 @@ export function AppRouter() {
           <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
           <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
           {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
-          <Route element={<CartPage />} path={ROUTES.cart} />
+          <Route element={<WishlistPage />} path={ROUTES.wishlist} />
           <Route element={<OrderCompletePage />} path={ROUTES.orderComplete} />
           <Route element={<MyProductsPage />} path={ROUTES.myProducts} />
           <Route element={<ProductFormPage />} path={ROUTES.newProduct} />
