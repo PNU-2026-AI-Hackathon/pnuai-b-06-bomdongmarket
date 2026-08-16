@@ -12,19 +12,22 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 장바구니 한 줄. 장바구니 자체를 엔티티로 두지 않고 (사용자, 상품) 조합으로 관리한다 —
-// 사용자당 장바구니는 하나뿐이라 별도 테이블을 두면 조인만 늘어난다.
-// 같은 상품을 다시 담으면 줄을 늘리지 않고 수량을 더한다(uk_cart_user_product).
+// 찜한 상품 한 줄. 찜 자체를 엔티티로 두지 않고 (사용자, 상품) 조합으로 관리한다 —
+// 사용자당 찜 목록은 하나뿐이라 별도 테이블을 두면 조인만 늘어난다.
+//
+// 수량을 두지 않는다. 거래는 채팅으로 협의하고 주문은 상품 단위로 확정하므로
+// 미리 담아 둔 수량은 의미가 없다. 수량이 붙는 순간 이름만 찜이고 실체는 장바구니가 된다.
 @Entity
 @Table(
-        name = "cart_items",
-        indexes = @Index(name = "idx_cart_item_user_id", columnList = "user_id"),
-        uniqueConstraints = @UniqueConstraint(name = "uk_cart_user_product", columnNames = {"user_id", "product_id"})
+        name = "wishlist_items",
+        indexes = @Index(name = "idx_wishlist_user_id", columnList = "user_id"),
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_wishlist_user_product", columnNames = {"user_id", "product_id"})
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class CartItem {
+public class WishlistItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,29 +41,13 @@ public class CartItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false)
-    private Integer quantity;
-
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public CartItem(User user, Product product, Integer quantity) {
+    public WishlistItem(User user, Product product) {
         this.user = user;
         this.product = product;
-        this.quantity = quantity;
-    }
-
-    public void changeQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public void addQuantity(int quantity) {
-        this.quantity += quantity;
-    }
-
-    public int totalPrice() {
-        return product.getPrice() * quantity;
     }
 }
