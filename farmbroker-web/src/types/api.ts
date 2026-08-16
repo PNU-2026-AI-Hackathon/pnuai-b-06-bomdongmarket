@@ -395,17 +395,6 @@ export interface Order {
   createdAt: string;
   items: OrderLine[];
 }
-// id는 화면이 지표를 알아보기 위한 안정적인 키입니다 — 라벨 문구가 바뀌어도 연결이 깨지지 않습니다.
-export type DashboardMetricId = 'spaces' | 'received' | 'sent';
-
-export interface DashboardMetric {
-  id: DashboardMetricId;
-  label: string;
-  value: string;
-  helper: string;
-  trend: string;
-}
-
 // 대시보드·계약 화면이 쓰는 "내가 보낸 신청" 한 건의 요약.
 // contractId는 매칭 ID와 같고, spaceId는 신청 상세(/spaces/:spaceId/apply) 링크를 만드는 데 씁니다.
 export interface ContractSummary {
@@ -416,4 +405,14 @@ export interface ContractSummary {
   status: MatchingStatus;
   monthlyRent: number;
   type: MatchingType | null;
+  imageUrl: string | null;
+}
+
+// 받은/보낸 신청 중 수락된 공간을 대시보드 카드로 합친 요약입니다.
+export interface ContractedSpaceSummary {
+  matchingId: number;
+  spaceId: number;
+  spaceName: string;
+  imageUrl: string | null;
+  status: Extract<MatchingStatus, 'ACCEPTED'>;
 }

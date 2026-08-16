@@ -3,7 +3,7 @@ export const ROUTES = {
   login: '/login',
   signup: '/signup',
   dashboard: '/dashboard',
-  dashboardApplications: '/dashboard#my-applications-title',
+  dashboardApplications: '/dashboard#contracted-spaces',
   spaces: '/spaces',
   newSpace: '/spaces/new',
   newSpacePrediction: '/spaces/new/prediction',
