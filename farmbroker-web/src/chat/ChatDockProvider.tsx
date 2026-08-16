@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/authContext';
 import { ToastHost, type ToastItem } from '@/components/common/Toast';
 import { ROUTES } from '@/constants/routes';
 import { ChatDockContext, type ChatDockValue } from '@/chat/chatDockContext';
-import { useChatPolling, type IncomingMessage } from '@/chat/useChatPolling';
+import { useChatSocket, type IncomingMessage } from '@/chat/useChatSocket';
 import { ChatConversationPanel } from '@/pages/chat/components/ChatConversationPanel';
 import { ConversationRow } from '@/pages/chat/components/ConversationRow';
 import { createOrGetConversation } from '@/services/chatService';
@@ -17,9 +17,9 @@ type DockState = 'hidden' | 'minimized' | 'open';
 // 화면 어디서나 채팅을 이어 볼 수 있는 우측 하단 위젯입니다.
 // 라우트 안에 두면 페이지를 옮길 때 대화가 끊겨서 레이아웃 수준에 둡니다.
 //
-// 알림은 폴링으로 새 메시지를 감지해 토스트로 띄웁니다(useChatPolling 주석 참고).
+// 새 메시지는 서버가 /user/queue/chat-events 로 밀어 주고, 받으면 토스트로 띄웁니다.
 export function ChatDockProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [dockState, setDockState] = useState<DockState>('hidden');
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -50,7 +50,7 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
     [openConversation],
   );
 
-  const { conversations, totalUnread, refresh } = useChatPolling(isAuthenticated, handleIncoming);
+  const { conversations, totalUnread, refresh } = useChatSocket(isAuthenticated, handleIncoming);
 
   const openContext = useCallback(
     async (contextType: ChatContextType, contextId: number) => {
@@ -108,7 +108,7 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
               </div>
 
               {activeId ? (
-                <ChatConversationPanel compact conversationId={activeId} myUserId={null} />
+                <ChatConversationPanel compact conversationId={activeId} myUserId={user?.userId ?? null} />
               ) : (
                 <div className="min-h-0 flex-1 overflow-y-auto p-2">
                   {conversations.length === 0 ? (
