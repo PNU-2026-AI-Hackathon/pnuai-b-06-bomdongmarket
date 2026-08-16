@@ -1,6 +1,7 @@
 import { Client, type IMessage } from '@stomp/stompjs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { APP_INFO } from '@/constants/appInfo';
 import { getConversations } from '@/services/chatService';
 import type { ChatMessage, Conversation } from '@/types/api';
 
@@ -18,14 +19,17 @@ interface ChatRealtimeEvent {
   unreadCount: number;
 }
 
-// 개발 서버는 5173, 백엔드는 8080이라 프록시 없이 절대 주소로 붙습니다.
-// 배포에서 같은 오리진이면 VITE_WS_URL 없이 현재 호스트를 씁니다.
+// 소켓 주소는 API 주소에서 끌어냅니다.
+// 프런트는 nginx(5173)가 서빙하고 API 는 8080/api 라, 화면 오리진으로 만들면
+// nginx 에 없는 경로로 붙어 연결이 되지 않습니다. STOMP 엔드포인트는 백엔드
+// 컨텍스트 경로 아래에 있어 최종 주소가 ws://host:8080/api/ws-chat 이 됩니다.
 function resolveSocketUrl(): string {
   const configured = import.meta.env.VITE_WS_URL as string | undefined;
   if (configured) return configured;
-  const base = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  const origin = base ?? window.location.origin;
-  return origin.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws-chat';
+  const url = new URL(APP_INFO.baseUrl, window.location.origin);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/ws-chat`;
+  return url.toString();
 }
 
 // 채팅방 목록을 들고 있으면서 새 메시지를 실시간으로 받습니다.
