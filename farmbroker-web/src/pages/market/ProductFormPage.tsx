@@ -1,4 +1,4 @@
-import { Camera, FileText, Plus, Route, Sprout, Trash2 } from 'lucide-react';
+import { Camera, Sprout } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -16,10 +16,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { FormSection } from '@/pages/market/components/FormSection';
 import { ProductImageUploader } from '@/pages/market/components/ProductImageUploader';
-import {
-  productCategories,
-  traceabilitySteps,
-} from '@/pages/market/constants/marketOptions';
+import { productCategories } from '@/pages/market/constants/marketOptions';
 import {
   DEFAULT_SALE_UNIT,
   composeUnit,
@@ -30,7 +27,6 @@ import {
 import { useMyWorkplaces } from '@/pages/market/hooks/useMyWorkplaces';
 import { deleteImage } from '@/services/fileService';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
-import type { ProductEventInput } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { geocodeAddress } from '@/utils/geocode';
 import { formatCurrency } from '@/utils/format';
@@ -45,7 +41,9 @@ import { formatCurrency } from '@/utils/format';
 // - imageUrl은 POST /files 업로드 결과 URL입니다. 판매자가 사진을 인터넷 어딘가에 먼저
 //   올려 둘 필요가 없도록 URL 입력 대신 로컬 파일 업로드만 받습니다.
 // - 주소를 지오코딩해 위경도를 함께 저장합니다(실패해도 등록은 진행, 조회 시 폴백). 푸드 마일리지는 이 폼에서 받지 않습니다.
-// 필수는 기본 정보 한 섹션에 모으고 나머지는 접어 두어, 처음 여는 사람이 채울 칸이 적어 보이게 합니다.
+// 대표 사진은 필수입니다 — 사진 없는 상품은 목록에서 사실상 눌리지 않습니다.
+// 상품 설명은 접이식으로 빼면 대부분 비운 채 등록해 기본 정보에 함께 둡니다.
+// 생산 이력 입력은 등록 부담이 커 이 폼에서 뺐습니다(기존에 저장된 이력은 상세에 그대로 보입니다).
 export function ProductFormPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
@@ -62,7 +60,6 @@ export function ProductFormPage() {
   const ownedPlaces = workplaces.filter((place) => place.source === 'owned');
   const farmingPlaces = workplaces.filter((place) => place.source === 'farming');
   const [spaceId, setSpaceId] = useState<number | null>(null);
-  const [events, setEvents] = useState<ProductEventInput[]>([]);
   const [discardedUrls, setDiscardedUrls] = useState<string[]>([]);
   const [fields, setFields] = useState({
     name: '',
@@ -99,14 +96,6 @@ export function ProductFormPage() {
           address: item.address ?? '',
         });
         setSpaceId(item.spaceId ?? null);
-        setEvents(
-          (item.traceabilityEvents ?? []).map((event) => ({
-            stage: event.stage,
-            description: event.description ?? '',
-            occurredAt: event.occurredAt,
-            sortOrder: event.sortOrder,
-          })),
-        );
         setLoadStatus('success');
       } catch {
         setLoadStatus('error');
@@ -139,21 +128,6 @@ export function ProductFormPage() {
       // 주소는 지도 표시에 쓰이므로 비어 있으면 덮지 않고 기존 입력을 지킵니다.
       address: picked.address || prev.address,
     }));
-  }
-
-  function addEvent() {
-    setEvents((prev) => [
-      ...prev,
-      { stage: traceabilitySteps[0], description: '', occurredAt: '', sortOrder: prev.length },
-    ]);
-  }
-
-  function updateEvent(index: number, patch: Partial<ProductEventInput>) {
-    setEvents((prev) => prev.map((event, i) => (i === index ? { ...event, ...patch } : event)));
-  }
-
-  function removeEvent(index: number) {
-    setEvents((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -198,10 +172,6 @@ export function ProductFormPage() {
       latitude: coords?.lat ?? null,
       longitude: coords?.lng ?? null,
       spaceId,
-      // 단계와 일자가 모두 채워진 이력만 보냅니다(서버 필수값).
-      events: events
-        .filter((item) => item.stage && item.occurredAt)
-        .map((item, index) => ({ ...item, sortOrder: index })),
     };
 
     try {
@@ -414,6 +384,14 @@ export function ProductFormPage() {
             placeholder="예: 부산광역시 금정구 장전동 30"
             value={fields.address}
           />
+          <Textarea
+            helperText="재배 방식과 보관 방법을 적어 두면 구매자가 더 믿고 삽니다."
+            label="상품 설명"
+            onChange={(event) => setField('description', event.target.value)}
+            placeholder="예: 무농약으로 키웠고 수확 당일 발송합니다. 냉장 보관해 주세요."
+            rows={4}
+            value={fields.description}
+          />
         </FormSection>
 
         {/* 사진 없는 상품은 목록에서 사실상 눌리지 않아 필수로 받습니다. */}
@@ -427,80 +405,6 @@ export function ProductFormPage() {
             onDiscard={(url) => setDiscardedUrls((prev) => [...prev, url])}
             value={fields.imageUrl}
           />
-        </FormSection>
-
-        <FormSection
-          collapsible
-          description="적어 두면 구매자가 더 믿고 삽니다. 나중에 수정해도 됩니다."
-          icon={<FileText className="h-8 w-8" aria-hidden />}
-          optional
-          title="상세 정보"
-        >
-          <Textarea
-            label="상품 설명"
-            onChange={(event) => setField('description', event.target.value)}
-            placeholder="재배 방식과 보관 방법을 적어 주세요."
-            rows={4}
-            value={fields.description}
-          />
-        </FormSection>
-
-        <FormSection
-          collapsible
-          defaultOpen={events.length > 0}
-          description="파종부터 등록까지의 과정을 남기면 상세 화면에 타임라인으로 표시됩니다."
-          icon={<Route className="h-8 w-8" aria-hidden />}
-          optional
-          title="생산 이력"
-        >
-          {events.map((event, index) => (
-            <div className="grid gap-3 rounded-app border border-leaf-100 p-4" key={index}>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select
-                  label="단계"
-                  onChange={(changed) => updateEvent(index, { stage: changed.target.value })}
-                  value={event.stage}
-                >
-                  {traceabilitySteps.map((step) => (
-                    <option key={step} value={step}>
-                      {step}
-                    </option>
-                  ))}
-                </Select>
-                <Input
-                  label="일자"
-                  onChange={(changed) => updateEvent(index, { occurredAt: changed.target.value })}
-                  type="date"
-                  value={event.occurredAt}
-                />
-              </div>
-              <Input
-                label="설명"
-                onChange={(changed) => updateEvent(index, { description: changed.target.value })}
-                placeholder="예: 육묘 트레이에 파종"
-                value={event.description ?? ''}
-              />
-              <Button
-                className="justify-self-start"
-                onClick={() => removeEvent(index)}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-                삭제
-              </Button>
-            </div>
-          ))}
-          <Button
-            className="w-full"
-            onClick={addEvent}
-            type="button"
-            variant="outline"
-          >
-            <Plus className="h-5 w-5" aria-hidden />
-            {events.length === 0 ? '첫 이력 추가' : '이력 추가'}
-          </Button>
         </FormSection>
 
         {error ? (
