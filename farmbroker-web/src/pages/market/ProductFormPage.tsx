@@ -161,6 +161,13 @@ export function ProductFormPage() {
     setIsSaving(true);
     setError(null);
 
+    const imageUrl = fields.imageUrl.trim();
+    if (!imageUrl) {
+      setError('대표 사진을 한 장 올려 주세요.');
+      setIsSaving(false);
+      return;
+    }
+
     const trimmedAddress = fields.address.trim();
     let coords: { lat: number; lng: number } | null = null;
     if (trimmedAddress) {
@@ -177,15 +184,13 @@ export function ProductFormPage() {
       }
     }
 
-    const imageUrl = fields.imageUrl.trim();
     const payload = {
       name: fields.name,
       category: fields.category,
       price: Number(fields.price),
       unit: composeUnit(fields.unitAmount, fields.unitType),
       stock: Number(fields.stock),
-      // 수정에서 사진을 비울 때는 null이 '변경 없음'으로 해석되지 않도록 제거 의사를 따로 보냅니다.
-      ...(imageUrl ? { imageUrl } : isEdit ? { removeImageUrl: true } : { imageUrl: null }),
+      imageUrl,
       description: fields.description.trim() || null,
       harvestDate: fields.harvestDate,
       productionLocation: fields.productionLocation,
@@ -411,10 +416,10 @@ export function ProductFormPage() {
           />
         </FormSection>
 
+        {/* 사진 없는 상품은 목록에서 사실상 눌리지 않아 필수로 받습니다. */}
         <FormSection
-          description="비워 두면 기본 이미지가 표시됩니다."
+          description="구매자가 목록에서 가장 먼저 보는 화면입니다. 한 장은 꼭 올려 주세요."
           icon={<Camera className="h-8 w-8" aria-hidden />}
-          optional
           title="대표 사진"
         >
           <ProductImageUploader
