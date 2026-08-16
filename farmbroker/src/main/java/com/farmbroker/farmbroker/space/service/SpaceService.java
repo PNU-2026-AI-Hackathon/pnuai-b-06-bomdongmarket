@@ -68,6 +68,8 @@ public class SpaceService {
                 .hasElectricity(request.getHasElectricity())
                 .hasVentilation(request.getHasVentilation())
                 .description(request.getDescription())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .build());
 
         List<String> imageUrls = saveImages(space, request.getImageUrls());
@@ -154,7 +156,8 @@ public class SpaceService {
         }
         space.update(request.getTitle(), request.getAddress(), request.getArea(),
                 request.getMonthlyRent(), request.getFloor(), request.getHasWater(),
-                request.getHasElectricity(), request.getHasVentilation(), request.getDescription());
+                request.getHasElectricity(), request.getHasVentilation(), request.getDescription(),
+                request.getLatitude(), request.getLongitude());
 
         List<String> imageUrls;
         if (request.getImageUrls() != null) {
