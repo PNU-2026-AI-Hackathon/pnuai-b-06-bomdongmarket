@@ -56,8 +56,9 @@ export function ChatConversationPanel({
   }, [load]);
 
   // 새 메시지가 붙으면 항상 아래를 보여 줍니다.
+  // jsdom에는 scrollIntoView가 없어 존재를 확인하고 부릅니다(테스트 환경 보호).
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
+    bottomRef.current?.scrollIntoView?.({ block: 'end' });
   }, [messages]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
