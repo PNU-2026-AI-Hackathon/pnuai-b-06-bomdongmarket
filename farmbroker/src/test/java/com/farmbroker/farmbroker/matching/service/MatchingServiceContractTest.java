@@ -3,6 +3,7 @@ package com.farmbroker.farmbroker.matching.service;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.ContractStatus;
+import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
@@ -144,7 +145,11 @@ class MatchingServiceContractTest {
     void updateTermsWithInvalidPeriodIsRejected() {
         givenLockedMatching(matching());
         ContractTermsRequest reversed = termsJson("""
-                { "monthlyRent": 500000, "startDate": "2026-12-31", "endDate": "2026-09-01" }
+                {
+                  "monthlyRent": 500000, "maintenanceFee": 50000,
+                  "maintenanceFeePayer": "FARMER", "deposit": 3000000,
+                  "startDate": "2026-12-31", "endDate": "2026-09-01"
+                }
                 """);
 
         assertThatThrownBy(() -> matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, reversed))
@@ -167,6 +172,20 @@ class MatchingServiceContractTest {
         assertThat(matching.getOwnerAgreedAt()).isNull();
         assertThat(response.getMonthlyRent()).isEqualTo(900_000);
         assertThat(response.isFarmerAgreed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("관리비·책임소재·보증금도 함께 저장되어 응답에 실린다")
+    void updateTermsSavesFeeAndDeposit() {
+        Matching matching = matching();
+        givenLockedMatching(matching);
+
+        ContractResponse response = matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
+
+        assertThat(response.getMaintenanceFee()).isEqualTo(50_000);
+        assertThat(response.getMaintenanceFeePayer()).isEqualTo(MaintenanceFeePayer.FARMER);
+        assertThat(response.getDeposit()).isEqualTo(3_000_000);
+        assertThat(matching.getContractMaintenanceFeePayer()).isEqualTo(MaintenanceFeePayer.FARMER);
     }
 
     @Test
@@ -292,7 +311,11 @@ class MatchingServiceContractTest {
 
     private ContractTermsRequest terms(int monthlyRent) {
         return termsJson("""
-                { "monthlyRent": %d, "startDate": "2026-09-01", "endDate": "2027-08-31" }
+                {
+                  "monthlyRent": %d, "maintenanceFee": 50000,
+                  "maintenanceFeePayer": "FARMER", "deposit": 3000000,
+                  "startDate": "2026-09-01", "endDate": "2027-08-31"
+                }
                 """.formatted(monthlyRent));
     }
 

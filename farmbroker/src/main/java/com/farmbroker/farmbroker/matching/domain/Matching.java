@@ -72,6 +72,15 @@ public class Matching {
     // 조건 입력은 공간 소유자만 가능하고(권한 검증은 서비스), 저장된 값은 양측이 함께 본다.
     private Integer contractMonthlyRent;
 
+    private Integer contractMaintenanceFee;
+
+    // 관리비를 내는 쪽. 금액과 짝이라 관리비와 함께 저장된다.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MaintenanceFeePayer contractMaintenanceFeePayer;
+
+    private Integer contractDeposit;
+
     private LocalDate contractStartDate;
 
     private LocalDate contractEndDate;
@@ -120,8 +129,13 @@ public class Matching {
 
     // 조건을 바꾸면 양측 동의를 함께 지운다 —
     // 동의를 남겨두면 상대가 동의한 적 없는 금액·기간으로 계약이 확정될 수 있다.
-    public void updateContractTerms(Integer monthlyRent, LocalDate startDate, LocalDate endDate) {
+    public void updateContractTerms(Integer monthlyRent, Integer maintenanceFee,
+                                    MaintenanceFeePayer maintenanceFeePayer, Integer deposit,
+                                    LocalDate startDate, LocalDate endDate) {
         this.contractMonthlyRent = monthlyRent;
+        this.contractMaintenanceFee = maintenanceFee;
+        this.contractMaintenanceFeePayer = maintenanceFeePayer;
+        this.contractDeposit = deposit;
         this.contractStartDate = startDate;
         this.contractEndDate = endDate;
         this.ownerAgreedAt = null;
@@ -147,7 +161,9 @@ public class Matching {
     }
 
     public boolean hasContractTerms() {
-        return contractMonthlyRent != null && contractStartDate != null && contractEndDate != null;
+        return contractMonthlyRent != null && contractMaintenanceFee != null
+                && contractMaintenanceFeePayer != null && contractDeposit != null
+                && contractStartDate != null && contractEndDate != null;
     }
 
     public ContractStatus getContractStatus() {

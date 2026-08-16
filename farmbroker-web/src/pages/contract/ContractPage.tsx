@@ -9,13 +9,20 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { Input } from '@/components/common/Input';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
+import { Select } from '@/components/common/Select';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import {
+  AMOUNT_MIN,
+  blockNonPositiveIntegerKeys,
+  validateAmounts,
+  type ContractAmountErrors,
+} from '@/pages/contract/constants/contractAmounts';
 import { useContract } from '@/pages/contract/hooks/useContract';
-import type { ContractDetail } from '@/types/api';
+import type { ContractDetail, ContractTermsInput, MaintenanceFeePayer } from '@/types/api';
 
 // 매칭 1건에 붙는 계약서 화면입니다.
-// 이름(양측 닉네임)과 주소는 기존 정보를 그대로 보여주고, 월세·계약기간만 입력받습니다.
+// 이름(양측 닉네임)과 주소는 기존 정보를 그대로 보여주고, 금액·관리비 책임소재·계약기간만 입력받습니다.
 // 입력은 공간 제공자만 가능하고, 저장하면 상대도 같은 값을 봅니다.
 // '계약'은 양측이 모두 눌러야 확정되고, '계약 취소'는 한 쪽만 눌러도 취소됩니다.
 export function ContractPage() {
@@ -140,32 +147,66 @@ function PartiesCard({ contract }: { contract: ContractDetail }) {
 interface TermsCardProps {
   contract: ContractDetail;
   isSubmitting: boolean;
-  onSave: (input: { monthlyRent: number; startDate: string; endDate: string }) => void;
+  onSave: (input: ContractTermsInput) => void;
 }
 
 function TermsCard({ contract, isSubmitting, onSave }: TermsCardProps) {
   const isOwner = contract.viewerRole === 'OWNER';
   // 조건이 저장되면(내가 저장했든 상대가 저장했든) 입력값을 서버 값에 다시 맞춥니다.
   const [monthlyRent, setMonthlyRent] = useState(contract.monthlyRent?.toString() ?? '');
+  const [maintenanceFee, setMaintenanceFee] = useState(
+    contract.maintenanceFee?.toString() ?? '',
+  );
+  const [maintenanceFeePayer, setMaintenanceFeePayer] = useState<MaintenanceFeePayer | ''>(
+    contract.maintenanceFeePayer ?? '',
+  );
+  const [deposit, setDeposit] = useState(contract.deposit?.toString() ?? '');
   const [startDate, setStartDate] = useState(contract.startDate ?? '');
   const [endDate, setEndDate] = useState(contract.endDate ?? '');
+  const [amountErrors, setAmountErrors] = useState<ContractAmountErrors>({});
   const [periodError, setPeriodError] = useState<string | null>(null);
 
   useEffect(() => {
     setMonthlyRent(contract.monthlyRent?.toString() ?? '');
+    setMaintenanceFee(contract.maintenanceFee?.toString() ?? '');
+    setMaintenanceFeePayer(contract.maintenanceFeePayer ?? '');
+    setDeposit(contract.deposit?.toString() ?? '');
     setStartDate(contract.startDate ?? '');
     setEndDate(contract.endDate ?? '');
-  }, [contract.monthlyRent, contract.startDate, contract.endDate]);
+  }, [
+    contract.monthlyRent,
+    contract.maintenanceFee,
+    contract.maintenanceFeePayer,
+    contract.deposit,
+    contract.startDate,
+    contract.endDate,
+  ]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+
+    // 붙여넣기·모바일 키패드는 키 입력 차단을 지나쳐 오므로 여기서 다시 걸러 냅니다.
+    const errors = validateAmounts({ monthlyRent, maintenanceFee, deposit });
+    setAmountErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
     if (endDate <= startDate) {
       setPeriodError('계약 종료일은 시작일보다 뒤여야 합니다.');
       return;
     }
 
     setPeriodError(null);
-    onSave({ monthlyRent: Number(monthlyRent), startDate, endDate });
+    // 책임소재는 required 선택박스라 빈 값으로 여기까지 오지 않습니다.
+    onSave({
+      monthlyRent: Number(monthlyRent),
+      maintenanceFee: Number(maintenanceFee),
+      maintenanceFeePayer: maintenanceFeePayer as MaintenanceFeePayer,
+      deposit: Number(deposit),
+      startDate,
+      endDate,
+    });
   };
 
   // 확정·취소된 계약은 조건을 바꿀 수 없습니다(서버도 같은 규칙으로 막습니다).
@@ -176,22 +217,69 @@ function TermsCard({ contract, isSubmitting, onSave }: TermsCardProps) {
       <h2 className="text-xl font-black text-content">계약 조건</h2>
       <p className="mt-2 text-body-sm text-content-muted">
         {isOwner
-          ? '월세와 계약기간을 입력하고 저장하면 도심 농부도 같은 내용을 봅니다.'
+          ? '금액과 계약기간을 입력하고 저장하면 도심 농부도 같은 내용을 봅니다.'
           : '공간 제공자가 입력한 조건입니다. 수정은 공간 제공자만 할 수 있습니다.'}
       </p>
 
       <form className="mt-5 grid gap-4" onSubmit={submit}>
-        <Input
-          helperText="원 단위로 입력합니다"
-          label="월세"
-          min={0}
-          name="monthlyRent"
-          onChange={(event) => setMonthlyRent(event.target.value)}
-          readOnly={!canEdit}
-          required
-          type="number"
-          value={monthlyRent}
-        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            errorMessage={amountErrors.monthlyRent}
+            label="월세"
+            min={AMOUNT_MIN}
+            name="monthlyRent"
+            onChange={(event) => setMonthlyRent(event.target.value)}
+            onKeyDown={blockNonPositiveIntegerKeys}
+            readOnly={!canEdit}
+            required
+            step={1}
+            type="number"
+            value={monthlyRent}
+          />
+          <Input
+            errorMessage={amountErrors.deposit}
+            label="보증금"
+            min={AMOUNT_MIN}
+            name="deposit"
+            onChange={(event) => setDeposit(event.target.value)}
+            onKeyDown={blockNonPositiveIntegerKeys}
+            readOnly={!canEdit}
+            required
+            step={1}
+            type="number"
+            value={deposit}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            errorMessage={amountErrors.maintenanceFee}
+            label="관리비"
+            min={AMOUNT_MIN}
+            name="maintenanceFee"
+            onChange={(event) => setMaintenanceFee(event.target.value)}
+            onKeyDown={blockNonPositiveIntegerKeys}
+            readOnly={!canEdit}
+            required
+            step={1}
+            type="number"
+            value={maintenanceFee}
+          />
+          {/* 관리비를 내는 쪽은 둘 중 하나라 역할 이름 대신 각자의 닉네임으로 고릅니다. */}
+          <Select
+            disabled={!canEdit}
+            label="관리비 책임소재"
+            name="maintenanceFeePayer"
+            onChange={(event) =>
+              setMaintenanceFeePayer(event.target.value as MaintenanceFeePayer | '')
+            }
+            required
+            value={maintenanceFeePayer}
+          >
+            <option value="">선택해 주세요</option>
+            <option value="OWNER">{contract.ownerNickname}</option>
+            <option value="FARMER">{contract.farmerNickname}</option>
+          </Select>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="계약 시작일"

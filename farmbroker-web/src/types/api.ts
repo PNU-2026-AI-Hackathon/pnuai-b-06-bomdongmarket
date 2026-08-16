@@ -299,8 +299,14 @@ export interface MatchingRequest {
 // 이름을 ContractDetail로 구분한다.
 export type ContractStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELED';
 
+// 계약 당사자는 공간 제공자와 도심 농부 둘뿐이다. 요청자 판정과 관리비 책임소재가 같은 값을 쓴다.
+export type ContractParty = 'OWNER' | 'FARMER';
+
 // 서버가 요청자를 어느 쪽으로 판정했는지. 조건 입력 권한은 이 값 하나로 결정된다.
-export type ContractViewerRole = 'OWNER' | 'FARMER';
+export type ContractViewerRole = ContractParty;
+
+// 관리비를 내는 쪽. 화면에는 이 값 대신 해당 당사자의 닉네임을 보여준다.
+export type MaintenanceFeePayer = ContractParty;
 
 export interface ContractDetail {
   matchingId: number;
@@ -311,6 +317,9 @@ export interface ContractDetail {
   farmerNickname: string;
   // 아직 공간 제공자가 조건을 저장하지 않았으면 null이다.
   monthlyRent: number | null;
+  maintenanceFee: number | null;
+  maintenanceFeePayer: MaintenanceFeePayer | null;
+  deposit: number | null;
   startDate: string | null; // yyyy-MM-dd
   endDate: string | null; // yyyy-MM-dd
   ownerAgreed: boolean;
@@ -321,6 +330,9 @@ export interface ContractDetail {
 
 export interface ContractTermsInput {
   monthlyRent: number;
+  maintenanceFee: number;
+  maintenanceFeePayer: MaintenanceFeePayer;
+  deposit: number;
   startDate: string;
   endDate: string;
 }

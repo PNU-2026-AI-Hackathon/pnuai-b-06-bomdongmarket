@@ -204,7 +204,9 @@ public class MatchingService {
             throw new BusinessException(ErrorCode.CONTRACT_INVALID_PERIOD);
         }
 
-        matching.updateContractTerms(request.getMonthlyRent(), request.getStartDate(), request.getEndDate());
+        matching.updateContractTerms(request.getMonthlyRent(), request.getMaintenanceFee(),
+                request.getMaintenanceFeePayer(), request.getDeposit(),
+                request.getStartDate(), request.getEndDate());
         return ContractResponse.of(matching, true);
     }
 

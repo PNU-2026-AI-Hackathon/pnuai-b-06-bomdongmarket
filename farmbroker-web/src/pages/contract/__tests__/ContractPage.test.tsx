@@ -21,6 +21,9 @@ const session = {
 
 const savedTerms = {
   monthlyRent: 500000,
+  maintenanceFee: 50000,
+  maintenanceFeePayer: 'FARMER' as const,
+  deposit: 3000000,
   startDate: '2026-09-01',
   endDate: '2027-08-31',
 };
@@ -50,9 +53,9 @@ describe('ContractPage', () => {
   it('이름과 주소는 입력받지 않고 기존 정보를 그대로 보여준다', async () => {
     renderPage();
 
-    // 닉네임은 계약 당사자 카드와 동의 현황 카드 양쪽에 나옵니다.
-    expect(await screen.findAllByText('옥상건물주')).toHaveLength(2);
-    expect(screen.getAllByText('도심농부')).toHaveLength(2);
+    // 닉네임은 계약 당사자·동의 현황 카드와 관리비 책임소재 선택지에 나옵니다.
+    expect(await screen.findAllByText('옥상건물주')).toHaveLength(3);
+    expect(screen.getAllByText('도심농부')).toHaveLength(3);
     expect(screen.getByText('부산광역시 금정구 부산대학로 63번길 2')).toBeInTheDocument();
   });
 
@@ -70,10 +73,49 @@ describe('ContractPage', () => {
     renderPage({ viewerRole: 'FARMER', ...savedTerms });
 
     expect(await screen.findByLabelText('월세')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('관리비')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('보증금')).toHaveAttribute('readonly');
+    // 선택박스에는 readOnly가 없어 비활성으로 막습니다.
+    expect(screen.getByLabelText('관리비 책임소재')).toBeDisabled();
     expect(screen.getByLabelText('계약 시작일')).toHaveAttribute('readonly');
     expect(screen.getByLabelText('계약 종료일')).toHaveAttribute('readonly');
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument();
   });
+
+  it('관리비 책임소재는 양측 닉네임 중 하나로 고른다', async () => {
+    const user = userEvent.setup();
+    renderPage({ viewerRole: 'OWNER', ...savedTerms });
+
+    const payer = await screen.findByLabelText('관리비 책임소재');
+    expect(payer).toHaveValue('FARMER');
+    expect(
+      within(payer as HTMLSelectElement)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['선택해 주세요', '옥상건물주', '도심농부']);
+
+    await user.selectOptions(payer, '옥상건물주');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() => expect(screen.getByLabelText('관리비 책임소재')).toHaveValue('OWNER'));
+  });
+
+  it('금액 칸은 1 이상의 정수만 받는다', async () => {
+    const user = userEvent.setup();
+    renderPage({ viewerRole: 'OWNER', ...savedTerms });
+
+    // 음수·소수·지수 표기는 키 입력 단계에서 막습니다.
+    const maintenanceFee = await screen.findByLabelText('관리비');
+    await user.clear(maintenanceFee);
+    await user.type(maintenanceFee, '-1.5e3');
+    expect(maintenanceFee).toHaveValue(153);
+
+    for (const label of ['월세', '관리비', '보증금']) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('min', '1');
+      expect(screen.getByLabelText(label)).toHaveAttribute('step', '1');
+    }
+  });
+
 
   it('공간 제공자가 조건을 저장하면 이미 받은 동의가 풀린다', async () => {
     const user = userEvent.setup();

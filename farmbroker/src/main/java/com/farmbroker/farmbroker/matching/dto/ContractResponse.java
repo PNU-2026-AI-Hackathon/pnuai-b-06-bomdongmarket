@@ -1,6 +1,7 @@
 package com.farmbroker.farmbroker.matching.dto;
 
 import com.farmbroker.farmbroker.matching.domain.ContractStatus;
+import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import lombok.Getter;
 
@@ -19,6 +20,9 @@ public class ContractResponse {
     private final String ownerNickname;
     private final String farmerNickname;
     private final Integer monthlyRent;
+    private final Integer maintenanceFee;
+    private final MaintenanceFeePayer maintenanceFeePayer;
+    private final Integer deposit;
     private final LocalDate startDate;
     private final LocalDate endDate;
     private final boolean ownerAgreed;
@@ -28,7 +32,9 @@ public class ContractResponse {
 
     private ContractResponse(Long matchingId, Long spaceId, String address,
                              String ownerNickname, String farmerNickname,
-                             Integer monthlyRent, LocalDate startDate, LocalDate endDate,
+                             Integer monthlyRent, Integer maintenanceFee,
+                             MaintenanceFeePayer maintenanceFeePayer, Integer deposit,
+                             LocalDate startDate, LocalDate endDate,
                              boolean ownerAgreed, boolean farmerAgreed,
                              ContractStatus status, String viewerRole) {
         this.matchingId = matchingId;
@@ -37,6 +43,9 @@ public class ContractResponse {
         this.ownerNickname = ownerNickname;
         this.farmerNickname = farmerNickname;
         this.monthlyRent = monthlyRent;
+        this.maintenanceFee = maintenanceFee;
+        this.maintenanceFeePayer = maintenanceFeePayer;
+        this.deposit = deposit;
         this.startDate = startDate;
         this.endDate = endDate;
         this.ownerAgreed = ownerAgreed;
@@ -55,6 +64,9 @@ public class ContractResponse {
                 matching.getSpace().getOwner().getNickname(),
                 matching.getFarmer().getNickname(),
                 matching.getContractMonthlyRent(),
+                matching.getContractMaintenanceFee(),
+                matching.getContractMaintenanceFeePayer(),
+                matching.getContractDeposit(),
                 matching.getContractStartDate(),
                 matching.getContractEndDate(),
                 matching.getOwnerAgreedAt() != null,
