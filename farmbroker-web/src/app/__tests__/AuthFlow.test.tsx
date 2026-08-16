@@ -20,7 +20,7 @@ describe('인증 후 원래 위치 복귀', () => {
     renderWithProviders(<AppRouter />, { route: '/spaces/new' });
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
 
     await login(user);
@@ -30,15 +30,15 @@ describe('인증 후 원래 위치 복귀', () => {
     ).toBeInTheDocument();
   });
 
-  it('비로그인 구매 요청을 로그인으로 보내고 상품 상세로 복귀시킨다', async () => {
+  it('비로그인 담기 요청을 로그인으로 보내고 상품 상세로 복귀시킨다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<AppRouter />, { route: '/market/1' });
 
-    const purchaseButton = await screen.findByRole('button', { name: /구매하기/i });
+    const purchaseButton = await screen.findByRole('button', { name: /장바구니에 담기/i });
     await user.click(purchaseButton);
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
 
     await login(user);
@@ -58,7 +58,7 @@ describe('인증 후 원래 위치 복귀', () => {
     await user.click(addToCartButton);
 
     expect(
-      await screen.findByRole('heading', { name: '봄동마켓 로그인' }),
+      await screen.findByRole('heading', { name: 'FarmBroker 로그인' }),
     ).toBeInTheDocument();
 
     await login(user);
@@ -73,12 +73,14 @@ describe('인증 후 원래 위치 복귀', () => {
   it('로그인 상태에서는 대시보드를 바로 보여준다', async () => {
     renderWithProviders(<AppRouter />, { authenticated: true, route: '/dashboard' });
 
-    expect(await screen.findByText('등록 공간')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '내가 등록한 공간' }),
+    ).toBeInTheDocument();
   });
 
   it.each([
-    { route: '/login', authHeading: '봄동마켓 로그인' },
-    { route: '/signup', authHeading: '봄동마켓 회원가입' },
+    { route: '/login', authHeading: 'FarmBroker 로그인' },
+    { route: '/signup', authHeading: 'FarmBroker 회원가입' },
   ])('저장된 로그인 상태에서 $route 접근 시 홈으로 이동한다', async ({ route, authHeading }) => {
     saveAuthSession({
       userId: 2,

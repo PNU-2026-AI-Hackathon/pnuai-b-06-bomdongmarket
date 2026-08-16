@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 // 도심 농부(farmer)가 특정 공간(space)에 보내는 매칭 신청 1건 = 1행.
@@ -41,6 +42,13 @@ public class Matching {
     @Column(nullable = false, length = 500)
     private String message;
 
+    // 신청 유형(수익/취미). 요청 단계에서 @NotNull로 강제하지만 컬럼은 nullable로 둔다 —
+    // ddl-auto=update는 기존 행이 있는 테이블에 NOT NULL 컬럼을 추가하지 못하므로
+    // 유형 도입 이전에 쌓인 신청은 null(미지정)로 남는다.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MatchingType type;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private MatchingStatus status;
@@ -52,11 +60,45 @@ public class Matching {
     // 수락/거절 시각. REQUESTED 상태에서는 null
     private LocalDateTime respondedAt;
 
+    // 공간 소유자가 검토를 마친 신청을 받은 목록에서 치운 시각. 안 치웠으면 null.
+    // 신청 자체는 그대로 남고 신청자 화면(my-requests)에는 계속 보인다 —
+    // 소유자 목록에서만 감추는 표시라 상태(status) 전이와는 별개다.
+    private LocalDateTime ownerDismissedAt;
+
+    // ── 계약서 ───────────────────────────────────────────────────────────────
+    // 매칭 1건당 계약서 1건이라 별도 테이블을 두지 않고 같은 행에 담는다.
+    // 신청 시점에는 아무것도 정해지지 않았으므로 전부 nullable이며,
+    // ddl-auto=update가 기존 행이 있는 테이블에 NOT NULL 컬럼을 추가하지 못하는 제약과도 맞는다.
+    // 조건 입력은 공간 소유자만 가능하고(권한 검증은 서비스), 저장된 값은 양측이 함께 본다.
+    private Integer contractMonthlyRent;
+
+    private Integer contractMaintenanceFee;
+
+    // 관리비를 내는 쪽. 금액과 짝이라 관리비와 함께 저장된다.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MaintenanceFeePayer contractMaintenanceFeePayer;
+
+    private Integer contractDeposit;
+
+    private LocalDate contractStartDate;
+
+    private LocalDate contractEndDate;
+
+    // 계약 동의 시각. 양측이 모두 채워지면 확정이다.
+    private LocalDateTime ownerAgreedAt;
+
+    private LocalDateTime farmerAgreedAt;
+
+    // 한쪽이라도 취소하면 채워진다. 취소는 되돌릴 수 없다.
+    private LocalDateTime contractCanceledAt;
+
     @Builder
-    public Matching(Space space, User farmer, String message) {
+    public Matching(Space space, User farmer, String message, MatchingType type) {
         this.space = space;
         this.farmer = farmer;
         this.message = message;
+        this.type = type;
         this.status = MatchingStatus.REQUESTED;
     }
 
@@ -70,5 +112,67 @@ public class Matching {
     public void reject() {
         this.status = MatchingStatus.REJECTED;
         this.respondedAt = LocalDateTime.now();
+    }
+
+    // 신청자 본인 취소. 행을 지우지 않고 CANCELED로 남겨 신청 이력을 보존한다.
+    public void cancel() {
+        this.status = MatchingStatus.CANCELED;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    // 소유자가 받은 목록에서 감추기. 상태는 건드리지 않는다(전제 검증은 서비스).
+    public void dismissByOwner() {
+        this.ownerDismissedAt = LocalDateTime.now();
+    }
+
+    // ── 계약서 (전제 검증은 서비스) ──────────────────────────────────────────
+
+    // 조건을 바꾸면 양측 동의를 함께 지운다 —
+    // 동의를 남겨두면 상대가 동의한 적 없는 금액·기간으로 계약이 확정될 수 있다.
+    public void updateContractTerms(Integer monthlyRent, Integer maintenanceFee,
+                                    MaintenanceFeePayer maintenanceFeePayer, Integer deposit,
+                                    LocalDate startDate, LocalDate endDate) {
+        this.contractMonthlyRent = monthlyRent;
+        this.contractMaintenanceFee = maintenanceFee;
+        this.contractMaintenanceFeePayer = maintenanceFeePayer;
+        this.contractDeposit = deposit;
+        this.contractStartDate = startDate;
+        this.contractEndDate = endDate;
+        this.ownerAgreedAt = null;
+        this.farmerAgreedAt = null;
+    }
+
+    // 이미 동의했으면 시각을 유지한다 — 같은 버튼을 두 번 눌러도 결과가 같다.
+    // 계약 확정에 따르는 매칭 상태 전이는 공간·역할 변경까지 함께 일어나야 해서 서비스가 수행한다.
+    public void agreeContractAsOwner() {
+        if (this.ownerAgreedAt == null) {
+            this.ownerAgreedAt = LocalDateTime.now();
+        }
+    }
+
+    public void agreeContractAsFarmer() {
+        if (this.farmerAgreedAt == null) {
+            this.farmerAgreedAt = LocalDateTime.now();
+        }
+    }
+
+    public void cancelContract() {
+        this.contractCanceledAt = LocalDateTime.now();
+    }
+
+    public boolean hasContractTerms() {
+        return contractMonthlyRent != null && contractMaintenanceFee != null
+                && contractMaintenanceFeePayer != null && contractDeposit != null
+                && contractStartDate != null && contractEndDate != null;
+    }
+
+    public ContractStatus getContractStatus() {
+        if (contractCanceledAt != null) {
+            return ContractStatus.CANCELED;
+        }
+        if (ownerAgreedAt != null && farmerAgreedAt != null) {
+            return ContractStatus.CONFIRMED;
+        }
+        return ContractStatus.DRAFT;
     }
 }

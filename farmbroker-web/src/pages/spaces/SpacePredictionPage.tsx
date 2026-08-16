@@ -24,14 +24,15 @@ export function SpacePredictionPage() {
     return <Navigate replace to={ROUTES.newSpace} />;
   }
 
-  return <PredictionStep input={state.input} />;
+  return <PredictionStep addressParts={state.addressParts} input={state.input} />;
 }
 
 interface PredictionStepProps {
   input: SpaceCreateInput;
+  addressParts: SpaceCreateLocationState['addressParts'];
 }
 
-function PredictionStep({ input }: PredictionStepProps) {
+function PredictionStep({ input, addressParts }: PredictionStepProps) {
   const { estimates, predictionStatus, saveStatus, saveError, reloadPrediction, submit } =
     useSpaceRegistration(input);
 
@@ -65,8 +66,12 @@ function PredictionStep({ input }: PredictionStepProps) {
   return (
     <PageContainer narrow>
       <Link
-        className={buttonStyles({ className: 'mb-5 -ml-3', size: 'sm', variant: 'ghost' })}
-        state={{ input }}
+        className={buttonStyles({
+          className: '-ml-3 mb-5',
+          size: 'sm',
+          variant: 'ghost',
+        })}
+        state={{ addressParts, input }}
         to={ROUTES.newSpace}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />

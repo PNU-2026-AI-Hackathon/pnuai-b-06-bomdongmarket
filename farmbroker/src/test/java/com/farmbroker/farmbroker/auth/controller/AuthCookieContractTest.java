@@ -7,7 +7,9 @@ import com.farmbroker.farmbroker.security.JwtAuthenticationFilter;
 import com.farmbroker.farmbroker.security.JwtTokenProvider;
 import com.farmbroker.farmbroker.security.SecurityConfig;
 import com.farmbroker.farmbroker.user.domain.User;
+import com.farmbroker.farmbroker.user.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,14 @@ class AuthCookieContractTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @BeforeEach
+    void allowActiveUserTokens() {
+        given(userRepository.existsByIdAndWithdrawnAtIsNull(1L)).willReturn(true);
+    }
+
     @Test
     @DisplayName("로그인 성공 시 httpOnly Access Token 쿠키를 발급하고, 본문에는 토큰을 넣지 않는다")
     void login_issuesHttpOnlyCookie_andBodyHasNoToken() throws Exception {
@@ -81,6 +91,17 @@ class AuthCookieContractTest {
         mockMvc.perform(post("/auth/logout")
                         .cookie(new Cookie("accessToken", token)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("탈퇴한 사용자의 기존 인증 쿠키는 보호 API에서 401로 차단된다")
+    void withdrawnUserCookie_isRejected() throws Exception {
+        String token = jwtTokenProvider.generateToken(1L);
+        given(userRepository.existsByIdAndWithdrawnAtIsNull(1L)).willReturn(false);
+
+        mockMvc.perform(post("/auth/logout")
+                        .cookie(new Cookie("accessToken", token)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

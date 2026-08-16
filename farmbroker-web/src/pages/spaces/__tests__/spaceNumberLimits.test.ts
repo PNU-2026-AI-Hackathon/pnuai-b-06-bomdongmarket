@@ -32,6 +32,13 @@ describe('validateSpaceNumbers', () => {
     expect(validateSpaceNumbers({ ...valid, floor: -10 })).toEqual({});
   });
 
+  // 건물에 0층은 없다. 입력은 막지 않고 제출 시점에 이 검증이 걸러낸다.
+  it('층수 0을 거른다', () => {
+    expect(validateSpaceNumbers({ ...valid, floor: 0 }).floor).toBe(
+      '올바른 숫자를 입력해주세요.',
+    );
+  });
+
   it('상식을 벗어난 층수는 거른다', () => {
     expect(validateSpaceNumbers({ ...valid, floor: -11 }).floor).toBeDefined();
     expect(validateSpaceNumbers({ ...valid, floor: 201 }).floor).toBeDefined();

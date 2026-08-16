@@ -50,8 +50,7 @@ public class ProductService {
     // 상품 등록 — FARMER 역할 보유자만. sellerId는 항상 인증 컨텍스트의 userId를 쓴다.
     @Transactional
     public ProductDetailResponse create(Long userId, ProductCreateRequest request) {
-        User seller = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User seller = getActiveUserForUpdate(userId);
         if (!seller.hasRole(UserRole.FARMER)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_ROLE);
         }
@@ -117,9 +116,13 @@ public class ProductService {
     // 상품 부분수정 — 등록자 본인만. events가 오면 이력을 전량 교체한다.
     @Transactional
     public ProductDetailResponse update(Long userId, Long productId, ProductUpdateRequest request) {
-        Product product = productRepository.findByIdAndDeletedFalse(productId)
+        getActiveUserForUpdate(userId);
+        Product product = productRepository.findForUpdate(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         validateOwner(product, userId);
+        if (request.getImageUrl() != null && Boolean.TRUE.equals(request.getRemoveImageUrl())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
 
         ProductCategory category = request.getCategory() == null ? null : parseCategory(request.getCategory());
         ProductStatus status = request.getStatus() == null ? null : parseStatus(request.getStatus());
@@ -129,6 +132,13 @@ public class ProductService {
                 request.getHarvestDate(), null, request.getProductionLocation(),
                 request.getAddress(), request.getLatitude(), request.getLongitude(),
                 request.getSpaceId(), request.getFoodMileageKm(), status);
+        if (Boolean.TRUE.equals(request.getRemoveImageUrl())) {
+            product.clearImageUrl();
+        }
+        // 재고를 함께 보충하는 요청은 허용하되, 적용 결과가 0이면 공개 판매를 재개할 수 없다.
+        if (status == ProductStatus.ON_SALE && product.getStock() <= 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
 
         List<ProductTraceabilityEvent> events;
         if (request.getEvents() != null) {
@@ -147,6 +157,7 @@ public class ProductService {
     // 상품 삭제 — Soft Delete. 등록자 본인만.
     @Transactional
     public ProductDeleteResponse delete(Long userId, Long productId) {
+        getActiveUserForUpdate(userId);
         Product product = productRepository.findByIdAndDeletedFalse(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         validateOwner(product, userId);
@@ -160,6 +171,11 @@ public class ProductService {
         if (!product.getSeller().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.NOT_PRODUCT_OWNER);
         }
+    }
+
+    private User getActiveUserForUpdate(Long userId) {
+        return userRepository.findActiveByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     // 등록/수정용 카테고리 파싱 — 유효하지 않으면 400.

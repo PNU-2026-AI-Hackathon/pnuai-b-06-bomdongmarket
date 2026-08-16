@@ -30,7 +30,6 @@ public record ProfitEstimateResponse(
         @Schema(description = "kg당 판매단가(KRW)", example = "8000") long pricePerKgKrw,
         @Schema(description = "단가 출처. SEED=서버 작물 백과사전 기준값, KAMIS=농산물유통정보 시세", example = "SEED") String priceSource,
         @Schema(description = "단가 기준일", example = "2026-07-04") LocalDate priceBasisDate,
-        @Schema(description = "단가 갱신이 지연된 값인지 여부", example = "false") boolean priceStale,
         @Schema(description = "예상 월 매출(KRW)", example = "3420000") long monthlyRevenueKrw,
 
         // ── 비용 ──
@@ -69,7 +68,6 @@ public record ProfitEstimateResponse(
                 Math.round(e.price().pricePerKgKrw()),
                 e.price().source().name(),
                 e.price().basisDate(),
-                e.price().stale(),
                 Math.round(e.monthlyRevenueKrw()),
                 Math.round(e.electricityCostKrw()),
                 Math.round(e.waterCostKrw()),

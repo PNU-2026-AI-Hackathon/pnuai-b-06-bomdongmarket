@@ -4,6 +4,7 @@ import com.farmbroker.farmbroker.space.domain.SpaceImage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import org.springframework.data.jpa.repository.Query;
 
 public interface SpaceImageRepository extends JpaRepository<SpaceImage, Long> {
 
@@ -15,4 +16,7 @@ public interface SpaceImageRepository extends JpaRepository<SpaceImage, Long> {
 
     // 이미지 전체 교체(replace) 시 기존 이미지 삭제. 쓰기 트랜잭션 안에서만 호출할 것
     void deleteBySpaceId(Long spaceId);
+
+    @Query("SELECT i.imageUrl FROM SpaceImage i")
+    List<String> findAllImageUrls();
 }

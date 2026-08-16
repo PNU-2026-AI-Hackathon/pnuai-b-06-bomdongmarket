@@ -6,6 +6,7 @@ export const ENDPOINTS = {
   },
   users: {
     me: '/users/me',
+    withdrawalEligibility: '/users/me/withdrawal-eligibility',
   },
   spaces: {
     list: '/spaces',
@@ -25,10 +26,22 @@ export const ENDPOINTS = {
   },
   matchings: {
     create: '/matchings',
-    myRequests: '/matchings/my-requests',
+    // spaceId를 주면 해당 공간에 보낸 내 신청만 — 신청 상세 화면이 목록 전체를 받지 않도록.
+    myRequests: (spaceId?: number) =>
+      spaceId === undefined
+        ? '/matchings/my-requests'
+        : `/matchings/my-requests?spaceId=${spaceId}`,
     received: '/matchings/received',
     accept: (matchingId: number | string) => `/matchings/${matchingId}/accept`,
     reject: (matchingId: number | string) => `/matchings/${matchingId}/reject`,
+    cancel: (matchingId: number | string) => `/matchings/${matchingId}/cancel`,
+    dismiss: (matchingId: number | string) => `/matchings/${matchingId}/dismiss`,
+    // 계약서는 매칭 1건에 붙습니다. 조건 저장이 PATCH인 것은 CORS 허용 메서드에 PUT이 없기 때문입니다.
+    contract: (matchingId: number | string) => `/matchings/${matchingId}/contract`,
+    contractAgree: (matchingId: number | string) =>
+      `/matchings/${matchingId}/contract/agree`,
+    contractCancel: (matchingId: number | string) =>
+      `/matchings/${matchingId}/contract/cancel`,
   },
   crops: {
     list: '/crops',
@@ -39,5 +52,13 @@ export const ENDPOINTS = {
     my: '/products/my',
     create: '/products',
     detail: (productId: number | string) => `/products/${productId}`,
+  },
+  cart: {
+    detail: '/cart',
+    items: '/cart/items',
+    item: (productId: number | string) => `/cart/items/${productId}`,
+  },
+  orders: {
+    checkout: '/orders',
   },
 } as const;

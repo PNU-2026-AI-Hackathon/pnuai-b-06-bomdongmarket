@@ -1,25 +1,54 @@
-import { Send } from 'lucide-react';
-import { useState } from 'react';
+import { FileText, MessageCircle, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
-import { Textarea } from '@/components/common/Textarea';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { ROUTES } from '@/constants/routes';
-import { useMatchingApplication } from '@/pages/space-detail/hooks/useMatchingApplication';
+import { useDisclosure } from '@/hooks/useDisclosure';
+import { findActiveApplication } from '@/pages/space-apply/hooks/useSpaceApplication';
+import { cancelMatching, getMyMatchings } from '@/services/matchingService';
+import type { MyMatching } from '@/types/api';
+import type { AsyncStatus } from '@/types/common';
+import { getMatchingProgressLabel } from '@/utils/labels';
 
 interface SpaceMatchingRequestCardProps {
   spaceId: number;
 }
 
-// 공간 상세에서 로그인한 사용자가 바로 상담을 신청할 수 있는 카드입니다.
+// 공간 상세에서 매칭 신청 화면으로 넘어가는 진입점이자, 이미 신청한 공간이면 후속 행동을 모으는 카드입니다.
+// 상세 조회 응답에는 내 신청 정보가 없어 my-requests를 이 카드에서 따로 조회합니다.
 export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardProps) {
   const { isAuthenticated } = useAuth();
-  const [message, setMessage] = useState(
-    '이 공간에서 스마트팜을 운영하고 싶습니다. 매칭 상담을 요청드립니다.',
-  );
-  const { status, error, result, submit } = useMatchingApplication(spaceId, isAuthenticated);
+  const [application, setApplication] = useState<MyMatching | null>(null);
+  const [status, setStatus] = useState<AsyncStatus>('idle');
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const confirmation = useDisclosure();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let isCurrent = true;
+    setStatus('loading');
+    getMyMatchings(spaceId)
+      .then((matchings) => {
+        if (!isCurrent) return;
+        setApplication(findActiveApplication(matchings));
+        setStatus('success');
+      })
+      .catch(() => {
+        // 신청 이력을 못 불러와도 신청 화면 진입까지 막지는 않습니다.
+        if (isCurrent) setStatus('error');
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [isAuthenticated, spaceId]);
 
   if (!isAuthenticated) {
     return (
@@ -29,60 +58,116 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
           로그인하면 이 공간의 매칭 상담을 신청할 수 있습니다. 신청이 수락되면 도심 농부
           역할이 추가됩니다.
         </p>
-        <Link
-          className="mt-5 inline-flex text-sm font-bold text-action"
-          to={ROUTES.login}
-        >
+        <Link className="mt-5 inline-flex text-sm font-bold text-action" to={ROUTES.login}>
           로그인하고 매칭 신청하기
         </Link>
       </Card>
     );
   }
 
-  const apply = async () => {
-    if (!message.trim()) return;
-    const succeeded = await submit(message.trim());
-    if (succeeded) setMessage('');
-  };
+  if (status === 'idle' || status === 'loading') {
+    return (
+      <Card padding="lg">
+        <h2 className="text-xl font-black text-content">공간 매칭 신청</h2>
+        <p className="mt-5 text-body-sm text-content-muted" role="status">
+          이 공간에 보낸 신청이 있는지 확인하는 중입니다
+        </p>
+      </Card>
+    );
+  }
+
+  if (application) {
+    // 취소는 아직 응답받지 않은 신청만 가능합니다(수락·거절 뒤에는 서버가 409로 막습니다).
+    const canCancel = application.status === 'REQUESTED';
+
+    const cancel = async () => {
+      setIsCanceling(true);
+      setCancelError(null);
+      try {
+        await cancelMatching(application.matchingId);
+        // 취소하면 같은 공간에 다시 신청할 수 있으므로 신청 전 상태로 되돌립니다.
+        setApplication(null);
+      } catch (caught) {
+        setCancelError(
+          caught instanceof Error ? caught.message : '매칭 신청을 취소하지 못했습니다.',
+        );
+      } finally {
+        setIsCanceling(false);
+      }
+    };
+
+    return (
+      <Card padding="lg">
+        <h2 className="text-xl font-black text-content">내 매칭 신청</h2>
+        <p className="mt-2 text-body-sm text-content-muted">
+          이미 이 공간에 매칭을 신청했습니다. 현재 상태는{' '}
+          {getMatchingProgressLabel(application.status)}입니다.
+        </p>
+
+        {cancelError ? (
+          <p className="mt-4 text-sm font-semibold text-feedback-danger" role="alert">
+            {cancelError}
+          </p>
+        ) : null}
+
+        <div className="mt-5 grid gap-2">
+          {/* 채팅은 화면만 먼저 만든 자리로, 아직 연결된 기능이 없습니다. */}
+          <Button className="w-full">
+            <MessageCircle className="h-5 w-5" aria-hidden />
+            채팅
+          </Button>
+          <Link
+            className={buttonStyles({ variant: 'outline', className: 'w-full' })}
+            to={ROUTES.contract(application.matchingId)}
+          >
+            <FileText className="h-5 w-5" aria-hidden />
+            계약서
+          </Link>
+          {canCancel ? (
+            <Button
+              className="w-full"
+              disabled={isCanceling}
+              onClick={confirmation.open}
+              variant="danger"
+            >
+              {isCanceling ? '취소 중...' : '신청 취소'}
+            </Button>
+          ) : null}
+        </div>
+
+        {canCancel ? (
+          <ConfirmDialog
+            confirmLabel="신청 취소"
+            description="공간 제공자에게 보낸 신청이 철회됩니다. 취소한 뒤에도 같은 공간에 다시 신청할 수 있습니다."
+            isOpen={confirmation.isOpen}
+            isPending={isCanceling}
+            onCancel={confirmation.close}
+            onConfirm={() => {
+              confirmation.close();
+              void cancel();
+            }}
+            title="신청을 취소하시겠습니까?"
+            tone="danger"
+          />
+        ) : null}
+      </Card>
+    );
+  }
 
   return (
     <Card padding="lg">
       <h2 className="text-xl font-black text-content">공간 매칭 신청</h2>
       <p className="mt-2 text-body-sm text-content-muted">
-        운영 계획을 간단히 적어 공간 제공자에게 매칭 상담을 요청하세요.
+        재배 목적과 운영 계획을 적어 공간 제공자에게 매칭 상담을 요청하세요. 이미 신청한
+        공간이면 진행 상태를 확인하고 취소할 수 있습니다.
       </p>
-      <div className="mt-5">
-        <Textarea
-          helperText="최대 500자까지 입력할 수 있습니다. 신청 결과는 대시보드에서 확인하세요."
-          label="매칭 신청 메시지"
-          maxLength={500}
-          required
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-        />
-      </div>
-      {error ? (
-        <div className="mt-4" role="alert">
-          <p className="text-sm font-semibold text-feedback-danger">{error}</p>
-          <Button className="mt-3" onClick={() => void apply()} variant="outline">
-            매칭 신청 다시 시도
-          </Button>
-        </div>
-      ) : null}
-      {result ? (
-        <p className="mt-4 text-sm font-semibold text-feedback-success" role="status">
-          매칭 신청이 완료되었습니다. 신청 번호 {result.matchingId}의 결과는 대시보드에서
-          확인하세요.
-        </p>
-      ) : null}
-      <Button
-        className="mt-5 w-full"
-        disabled={!message.trim() || status === 'loading'}
-        onClick={() => void apply()}
+      <Link
+        className={buttonStyles({ className: 'mt-5 w-full' })}
+        to={ROUTES.spaceApply(spaceId)}
       >
         <Send className="h-5 w-5" aria-hidden />
-        {status === 'loading' ? '매칭 신청 중...' : '매칭 신청 보내기'}
-      </Button>
+        매칭 신청하기
+      </Link>
     </Card>
   );
 }

@@ -15,6 +15,8 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+    INVALID_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST, "현재 비밀번호가 올바르지 않습니다."),
+    ACTIVE_CONTRACT_EXISTS(HttpStatus.CONFLICT, "진행 중인 계약이 있어 회원 탈퇴할 수 없습니다."),
 
     // ── space ────────────────────────────────────────────────────────────────
     SPACE_NOT_FOUND(HttpStatus.NOT_FOUND, "공간을 찾을 수 없습니다."),
@@ -40,8 +42,14 @@ public enum ErrorCode {
     MATCHING_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 신청입니다."),
     MATCHING_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 매칭에 대한 권한이 없습니다."),
     MATCHING_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 매칭 신청입니다."),
+    MATCHING_NOT_PROCESSED(HttpStatus.CONFLICT, "아직 응답하지 않은 매칭 신청입니다."),
     MATCHING_DUPLICATED(HttpStatus.CONFLICT, "이미 신청한 공간입니다."),
     MATCHING_SELF_APPLY(HttpStatus.BAD_REQUEST, "본인 소유 공간에는 신청할 수 없습니다."),
+
+    // ── contract (매칭 1건에 붙는 계약서) ────────────────────────────────────
+    CONTRACT_CLOSED(HttpStatus.CONFLICT, "이미 확정되었거나 취소된 계약입니다."),
+    CONTRACT_TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "월세와 계약기간을 먼저 입력해야 합니다."),
+    CONTRACT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "계약 종료일은 시작일보다 뒤여야 합니다."),
 
     // ── ai (소유: 백엔드 3) ──────────────────────────────────────────────────
     AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다."),
@@ -54,6 +62,12 @@ public enum ErrorCode {
     // ── product (로컬마켓) ───────────────────────────────────────────────────
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
     NOT_PRODUCT_OWNER(HttpStatus.FORBIDDEN, "본인이 등록한 상품이 아닙니다."),
+
+    // ── order (장바구니·결제) ────────────────────────────────────────────────
+    CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니에 담기지 않은 상품입니다."),
+    CART_EMPTY(HttpStatus.BAD_REQUEST, "장바구니가 비어 있습니다."),
+    PRODUCT_NOT_ON_SALE(HttpStatus.CONFLICT, "판매 중인 상품이 아닙니다."),
+    OUT_OF_STOCK(HttpStatus.CONFLICT, "재고가 부족합니다."),
 
     // ── chat ─────────────────────────────────────────────────────────────────
     CHAT_CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),

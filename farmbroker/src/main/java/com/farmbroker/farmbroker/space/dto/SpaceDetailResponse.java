@@ -23,6 +23,8 @@ public class SpaceDetailResponse {
     private final boolean hasElectricity;
     private final boolean hasVentilation;
     private final String description;
+    private final Double latitude;
+    private final Double longitude;
     private final List<String> imageUrls;
     private final List<String> floorPlanUrls;
     private final String status;
@@ -41,6 +43,8 @@ public class SpaceDetailResponse {
         this.hasElectricity = space.isHasElectricity();
         this.hasVentilation = space.isHasVentilation();
         this.description = space.getDescription();
+        this.latitude = space.getLatitude();
+        this.longitude = space.getLongitude();
         this.imageUrls = imageUrls;
         this.floorPlanUrls = floorPlanUrls;
         this.status = space.getStatus().name();

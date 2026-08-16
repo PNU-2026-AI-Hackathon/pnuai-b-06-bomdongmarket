@@ -9,7 +9,7 @@ describe('LoginPage', () => {
   it('이메일 로그인 폼만 렌더링한다', () => {
     renderWithProviders(<LoginPage />);
 
-    expect(screen.getByRole('heading', { name: '봄동마켓 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'FarmBroker 로그인' })).toBeInTheDocument();
     expect(screen.getByLabelText(/이메일/i)).toHaveValue('');
     expect(screen.getByPlaceholderText('email@example.com')).toBeInTheDocument();
     expect(screen.getByLabelText(/비밀번호/i)).toHaveValue('');

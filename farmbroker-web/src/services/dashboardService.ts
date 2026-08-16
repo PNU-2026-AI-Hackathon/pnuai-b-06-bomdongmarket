@@ -1,129 +1,104 @@
-import { USE_MOCKS } from '@/api/client';
-import { mockDelay } from '@/mocks/handlers';
-import {
-  mockContracts,
-  mockDashboardMetrics,
-  mockMatchingRequests,
-} from '@/mocks/mockDashboard';
+import { getCart } from '@/services/cartService';
 import { getMyMatchings, getReceivedMatchings } from '@/services/matchingService';
 import { getMySpaces } from '@/services/spaceService';
 import type {
+  CartLine,
   ContractSummary,
-  DashboardMetric,
+  ContractedSpaceSummary,
   MatchingRequest,
-  MatchingStatus,
   MyMatching,
+  SpaceSummary,
 } from '@/types/api';
 
 export interface DashboardData {
-  metrics: DashboardMetric[];
-  matchings: MatchingRequest[];
-  sentMatchings: MyMatching[];
-  contracts: ContractSummary[];
+  ownedSpaces: SpaceSummary[];
+  contractedSpaces: ContractedSpaceSummary[];
+  receivedApplications: MatchingRequest[];
+  sentApplications: ContractSummary[];
+  cartItems: CartLine[];
 }
 
-function toContractStatus(status: MatchingStatus): ContractSummary['status'] {
-  if (status === 'ACCEPTED') return '완료';
-  if (status === 'REQUESTED') return '신청';
-  return '검토';
-}
-
-function receivedToContract(
-  matching: MatchingRequest,
-  monthlyRent: number,
-): ContractSummary {
-  return {
-    contractId: matching.matchingId,
-    spaceName: matching.spaceTitle,
-    counterparty: matching.farmerNickname,
-    status: toContractStatus(matching.status),
-    monthlyRent,
-    period: matching.status === 'ACCEPTED' ? '협의 완료' : '협의 전',
-  };
-}
-
+// 알림 모달에서 쓰는 보낸 신청 요약으로 API 응답을 변환합니다.
 function sentToContract(matching: MyMatching): ContractSummary {
   return {
     contractId: matching.matchingId,
+    spaceId: matching.spaceId,
     spaceName: matching.spaceTitle,
     counterparty: matching.ownerNickname,
-    status: toContractStatus(matching.status),
+    status: matching.status,
     monthlyRent: matching.monthlyRent,
-    period: matching.status === 'ACCEPTED' ? '협의 완료' : '협의 전',
+    type: matching.type,
+    imageUrl: matching.spaceImageUrl,
   };
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
-  if (USE_MOCKS) {
-    await mockDelay();
-    return {
-      metrics: mockDashboardMetrics,
-      matchings: mockMatchingRequests,
-      sentMatchings: mockMatchingRequests.map((matching) => ({
+// 사용자가 공간 제공자이자 신청자일 수 있어, 양쪽에서 수락된 같은 공간은 한 번만 보여줍니다.
+export function buildContractedSpaces(
+  received: MatchingRequest[],
+  sent: MyMatching[],
+): ContractedSpaceSummary[] {
+  const bySpaceId = new Map<number, ContractedSpaceSummary>();
+
+  const add = (space: ContractedSpaceSummary) => {
+    const existing = bySpaceId.get(space.spaceId);
+    if (!existing || (!existing.imageUrl && space.imageUrl)) {
+      bySpaceId.set(space.spaceId, space);
+    }
+  };
+
+  received
+    .filter((matching) => matching.status === 'ACCEPTED')
+    .forEach((matching) =>
+      add({
         matchingId: matching.matchingId,
         spaceId: matching.spaceId,
-        spaceTitle: matching.spaceTitle,
-        spaceImageUrl: matching.spaceImageUrl ?? null,
-        monthlyRent: matching.monthlyRent ?? 0,
-        ownerNickname: matching.ownerNickname ?? '공간 제공자',
-        status: matching.status,
-        createdAt: matching.createdAt,
-        respondedAt: matching.respondedAt,
-      })),
-      contracts: mockContracts,
-    };
-  }
+        spaceName: matching.spaceTitle,
+        imageUrl: matching.spaceImageUrl ?? null,
+        status: 'ACCEPTED',
+      }),
+    );
 
-  const [spaces, received, sent] = await Promise.all([
+  sent
+    .filter((matching) => matching.status === 'ACCEPTED')
+    .forEach((matching) =>
+      add({
+        matchingId: matching.matchingId,
+        spaceId: matching.spaceId,
+        spaceName: matching.spaceTitle,
+        imageUrl: matching.spaceImageUrl,
+        status: 'ACCEPTED',
+      }),
+    );
+
+  return [...bySpaceId.values()];
+}
+
+// 대시보드의 네 데이터 소스를 함께 불러와 화면별 요약으로 정리합니다.
+export async function getDashboardData(): Promise<DashboardData> {
+  const [ownedSpaces, received, sent, cart] = await Promise.all([
     getMySpaces(),
     getReceivedMatchings(),
     getMyMatchings(),
+    getCart(),
   ]);
-  const spacesById = new Map(spaces.map((space) => [space.spaceId, space]));
-  const enrichedReceived = received.map((matching) => {
+  const spacesById = new Map(ownedSpaces.map((space) => [space.spaceId, space]));
+  const receivedApplications = received.map((matching) => {
     const space = spacesById.get(matching.spaceId);
     return {
       ...matching,
-      spaceImageUrl: space?.imageUrl ?? null,
-      monthlyRent: space?.monthlyRent,
+      spaceImageUrl: matching.spaceImageUrl ?? space?.imageUrl ?? null,
+      monthlyRent: matching.monthlyRent ?? space?.monthlyRent,
     };
   });
-  const receivedIds = new Set(received.map((matching) => matching.matchingId));
-  const contracts = [
-    ...enrichedReceived.map((matching) =>
-      receivedToContract(matching, matching.monthlyRent ?? 0),
-    ),
-    ...sent
-      .filter((matching) => !receivedIds.has(matching.matchingId))
-      .map(sentToContract),
-  ];
-  const allStatuses = [...received, ...sent].map((matching) => matching.status);
-  const requestedCount = allStatuses.filter((status) => status === 'REQUESTED').length;
-  const acceptedCount = allStatuses.filter((status) => status === 'ACCEPTED').length;
+  const sentApplications = sent
+    .filter((matching) => matching.status !== 'CANCELED')
+    .map(sentToContract);
 
   return {
-    metrics: [
-      {
-        label: '등록 공간',
-        value: String(spaces.length),
-        helper: `매칭 가능 ${spaces.filter((space) => space.status === 'AVAILABLE').length}개`,
-        trend: '',
-      },
-      {
-        label: '매칭 신청',
-        value: String(allStatuses.length),
-        helper: `검토 대기 ${requestedCount}건`,
-        trend: '',
-      },
-      {
-        label: '매칭 완료',
-        value: String(acceptedCount),
-        helper: '수락된 신청',
-        trend: '',
-      },
-    ],
-    matchings: enrichedReceived,
-    sentMatchings: sent,
-    contracts,
+    ownedSpaces,
+    contractedSpaces: buildContractedSpaces(receivedApplications, sent),
+    receivedApplications,
+    sentApplications,
+    cartItems: cart.items,
   };
 }

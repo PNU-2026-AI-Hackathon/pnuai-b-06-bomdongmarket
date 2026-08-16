@@ -1,0 +1,71 @@
+import { loadKakaoMaps } from '@/utils/kakaoSdk';
+
+export interface Coords {
+  lat: number;
+  lng: number;
+}
+
+// 위/경도 두 점 사이의 대원거리(km). 반경 필터·거리정렬에 쓰는 순수 함수.
+export function haversineKm(a: Coords, b: Coords): number {
+  const R = 6371; // 지구 반지름(km)
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// 성공한 결과만 캐시한다(실패를 캐시하면 일시적 오류가 영구화됨).
+const cache = new Map<string, Coords>();
+
+/** 테스트 전용 — 캐시 초기화. */
+export function __resetGeocodeCache() {
+  cache.clear();
+}
+
+/** 주소 → 좌표. 실패 시 null. 성공 결과는 캐시한다. */
+export async function geocodeAddress(address: string): Promise<Coords | null> {
+  const key = address.trim();
+  if (!key) return null;
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const maps = await loadKakaoMaps();
+  return new Promise<Coords | null>((resolve) => {
+    new maps.services.Geocoder().addressSearch(key, (results, status) => {
+      // 상태를 먼저 본다 — 실패(ERROR)에는 results가 비어 있거나 undefined일 수 있다.
+      const found = status === maps.services.Status.OK ? results?.[0] : undefined;
+      if (!found) {
+        resolve(null);
+        return;
+      }
+      // 지오코더는 x=경도, y=위도이며 문자열로 온다.
+      const coords: Coords = { lat: Number(found.y), lng: Number(found.x) };
+      cache.set(key, coords);
+      resolve(coords);
+    });
+  });
+}
+
+/**
+ * 좌표 → 사람이 읽는 주소 라벨(역지오코딩). 실패 시 null.
+ * 도로명주소를 우선하고, 없으면 지번주소로 폴백한다. 지도 클릭 위치의 이름표에 쓴다.
+ */
+export async function reverseGeocode(coords: Coords): Promise<string | null> {
+  const maps = await loadKakaoMaps();
+  return new Promise<string | null>((resolve) => {
+    // coord2Address 인자 순서는 (경도, 위도)다.
+    new maps.services.Geocoder().coord2Address(coords.lng, coords.lat, (results, status) => {
+      const found = status === maps.services.Status.OK ? results?.[0] : undefined;
+      if (!found) {
+        resolve(null);
+        return;
+      }
+      resolve(found.road_address?.address_name ?? found.address?.address_name ?? null);
+    });
+  });
+}

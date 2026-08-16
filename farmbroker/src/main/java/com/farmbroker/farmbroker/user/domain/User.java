@@ -50,6 +50,9 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column
+    private LocalDateTime withdrawnAt;
+
     @Builder
     public User(String email, String password, String nickname, Set<UserRole> roles) {
         this.email = email;
@@ -80,5 +83,20 @@ public class User {
         Set<UserRole> updated = EnumSet.copyOf(roles);
         updated.add(role);
         this.roles = updated;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void withdraw(String anonymizedEmail, String anonymizedPassword) {
+        this.email = anonymizedEmail;
+        this.nickname = "탈퇴한 사용자";
+        this.password = anonymizedPassword;
+        this.withdrawnAt = LocalDateTime.now();
     }
 }

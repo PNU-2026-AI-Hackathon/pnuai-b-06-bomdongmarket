@@ -4,6 +4,9 @@ export type SpaceStatus = 'AVAILABLE' | 'MATCHED' | 'CLOSED';
 
 export type MatchingStatus = 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | 'CANCELED';
 
+// 농부가 공간을 어떤 목적으로 쓰려는지. 유형 도입 이전 신청은 null로 내려옵니다.
+export type MatchingType = 'PROFIT' | 'HOBBY';
+
 export type CropDifficulty = 'EASY' | 'NORMAL' | 'HARD';
 
 export type LightRequirement = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -28,6 +31,25 @@ export interface User {
   // 역할은 가입 시 고르는 값이 아니라 활동에 따라 누적된다.
   // 가입 시 CONSUMER, 공간을 등록하면 OWNER, 매칭이 수락되면 FARMER가 더해진다.
   roles: UserRole[];
+}
+
+export interface UserUpdateInput {
+  nickname: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export type WithdrawalBlockReason = 'ACTIVE_CONTRACT_EXISTS';
+
+export interface WithdrawalEligibility {
+  withdrawable: boolean;
+  activeContractCount: number;
+  reason: WithdrawalBlockReason | null;
+}
+
+export interface UserWithdrawalInput {
+  currentPassword: string;
+  agreement: true;
 }
 
 export interface LoginInput {
@@ -65,6 +87,9 @@ export interface SpaceSummary {
   monthlyRent: number;
   status: SpaceStatus;
   imageUrl: string | null;
+  // 지도 검색용 좌표. 등록 시 프론트가 주소를 지오코딩해 저장하며, 없으면 프론트가 폴백 지오코딩한다.
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface SpaceDetail extends SpaceSummary {
@@ -102,6 +127,9 @@ export interface SpaceCreateInput {
   imageUrls?: string[];
   // 도면은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
   floorPlanUrls: string[];
+  // 지도용 좌표(선택). 폼에서 주소를 지오코딩해 함께 보낸다(실패 시 null).
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export type SpaceUpdateInput = Partial<SpaceCreateInput> & {
@@ -225,6 +253,7 @@ export interface AiRecommendationInput {
 
 export interface MatchingApplyInput {
   spaceId: number;
+  type: MatchingType;
   message: string;
 }
 
@@ -249,6 +278,8 @@ export interface MyMatching {
   spaceImageUrl: string | null;
   monthlyRent: number;
   ownerNickname: string;
+  type: MatchingType | null;
+  message: string;
   status: MatchingStatus;
   createdAt: string;
   respondedAt: string | null;
@@ -263,10 +294,53 @@ export interface MatchingRequest {
   ownerNickname?: string;
   farmerId: number;
   farmerNickname: string;
+  type: MatchingType | null;
   message: string;
   status: MatchingStatus;
   createdAt: string;
   respondedAt: string | null;
+}
+
+// 매칭 1건에 붙는 계약서. 대시보드의 ContractSummary(매칭 요약의 별칭)와는 다른 화면이라
+// 이름을 ContractDetail로 구분한다.
+export type ContractStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELED';
+
+// 계약 당사자는 공간 제공자와 도심 농부 둘뿐이다. 요청자 판정과 관리비 책임소재가 같은 값을 쓴다.
+export type ContractParty = 'OWNER' | 'FARMER';
+
+// 서버가 요청자를 어느 쪽으로 판정했는지. 조건 입력 권한은 이 값 하나로 결정된다.
+export type ContractViewerRole = ContractParty;
+
+// 관리비를 내는 쪽. 화면에는 이 값 대신 해당 당사자의 닉네임을 보여준다.
+export type MaintenanceFeePayer = ContractParty;
+
+export interface ContractDetail {
+  matchingId: number;
+  spaceId: number;
+  // 이름·주소는 입력받지 않고 기존 정보(양측 닉네임, 공간 주소)를 그대로 싣는다.
+  address: string;
+  ownerNickname: string;
+  farmerNickname: string;
+  // 아직 공간 제공자가 조건을 저장하지 않았으면 null이다.
+  monthlyRent: number | null;
+  maintenanceFee: number | null;
+  maintenanceFeePayer: MaintenanceFeePayer | null;
+  deposit: number | null;
+  startDate: string | null; // yyyy-MM-dd
+  endDate: string | null; // yyyy-MM-dd
+  ownerAgreed: boolean;
+  farmerAgreed: boolean;
+  status: ContractStatus;
+  viewerRole: ContractViewerRole;
+}
+
+export interface ContractTermsInput {
+  monthlyRent: number;
+  maintenanceFee: number;
+  maintenanceFeePayer: MaintenanceFeePayer;
+  deposit: number;
+  startDate: string;
+  endDate: string;
 }
 
 // 생산 이력 이벤트(상품 상세에서 내려옴). 등록/수정 시 백엔드에 배열로 함께 전달한다.
@@ -293,30 +367,103 @@ export interface MarketItem {
   // 위경도·마일리지는 지도(Task 3) 전까지 백엔드에서 null로 내려올 수 있어 렌더 시 guard가 필요하다.
   foodMileageKm: number | null;
   stock: number;
-  // 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  // 판매 상태(ON_SALE/CLOSED)는 목록·상세 양쪽에 내려온다.
+  // 공개 목록은 ON_SALE·재고>0만 나오지만 판매자 본인 목록(GET /products/my)은 마감·품절도 포함한다.
   status?: string;
-  sellerNickname?: string;
-  description?: string | null;
+  // 주소·위경도는 지도 검색을 위해 목록·상세 양쪽에 내려온다(등록 시 저장, 없으면 프론트가 폴백 지오코딩).
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  // 아래는 상세(GET /products/{id})에서만 추가로 내려오는 필드 — 목록 응답에는 없다.
+  sellerNickname?: string;
+  description?: string | null;
   spaceId?: number | null;
   createdAt?: string;
   traceabilityEvents?: MarketTraceabilityEvent[];
 }
 
-export interface DashboardMetric {
-  label: string;
-  value: string;
-  helper: string;
-  trend: string;
+// 상품 등록(POST /products)·수정(PATCH /products/{id}) 요청 바디.
+// 서버가 정하는 값(sellerNickname·freshnessTags·status)은 보내지 않는다.
+// 위경도는 폼에서 주소를 지오코딩해 함께 보낸다(실패 시 null). 푸드 마일리지는 서버가 채운다.
+export interface ProductEventInput {
+  stage: string;
+  description?: string | null;
+  occurredAt: string;
+  sortOrder?: number;
 }
 
+export interface ProductInput {
+  name: string;
+  category: string;
+  price: number;
+  unit: string;
+  stock: number;
+  imageUrl?: string | null;
+  description?: string | null;
+  harvestDate: string;
+  // producerName은 요청에 없습니다 — 서버가 판매자 닉네임으로 고정합니다(#56 리뷰 반영).
+  productionLocation: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  // '작업장에서 가져오기'로 채운 경우에만 값이 있는 느슨한 스냅샷(FK 아님)
+  spaceId?: number | null;
+  events?: ProductEventInput[];
+}
+
+// 장바구니 한 줄. purchasable은 담아 둔 뒤 판매자가 품절·마감했을 수 있어 서버가 매번 다시 계산해 준다.
+export interface CartLine {
+  productId: number;
+  name: string;
+  unit: string;
+  price: number;
+  quantity: number;
+  linePrice: number;
+  imageUrl: string | null;
+  stock: number;
+  purchasable: boolean;
+}
+
+export interface Cart {
+  items: CartLine[];
+  // 지금 구매 가능한 줄만 더한 금액이라 화면에서 다시 계산하지 않는다.
+  totalPrice: number;
+}
+
+// 주문 줄은 주문 시점 값으로 고정된다 — 판매자가 나중에 가격을 바꿔도 내역은 그대로다.
+export interface OrderLine {
+  productId: number;
+  name: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+  linePrice: number;
+}
+
+export interface Order {
+  orderId: number;
+  totalPrice: number;
+  createdAt: string;
+  items: OrderLine[];
+}
+// 대시보드·계약 화면이 쓰는 "내가 보낸 신청" 한 건의 요약.
+// contractId는 매칭 ID와 같고, spaceId는 신청 상세(/spaces/:spaceId/apply) 링크를 만드는 데 씁니다.
 export interface ContractSummary {
   contractId: number;
+  spaceId: number;
   spaceName: string;
   counterparty: string;
-  status: '신청' | '협의' | '검토' | '완료';
+  status: MatchingStatus;
   monthlyRent: number;
-  period: string;
+  type: MatchingType | null;
+  imageUrl: string | null;
+}
+
+// 받은/보낸 신청 중 수락된 공간을 대시보드 카드로 합친 요약입니다.
+export interface ContractedSpaceSummary {
+  matchingId: number;
+  spaceId: number;
+  spaceName: string;
+  imageUrl: string | null;
+  status: Extract<MatchingStatus, 'ACCEPTED'>;
 }

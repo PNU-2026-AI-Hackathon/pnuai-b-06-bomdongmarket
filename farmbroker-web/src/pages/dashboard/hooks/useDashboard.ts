@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getDashboardData } from '@/services/dashboardService';
-import { acceptMatching, rejectMatching } from '@/services/matchingService';
+import {
+  acceptMatching,
+  dismissReceivedMatching,
+  rejectMatching,
+} from '@/services/matchingService';
 import type {
+  CartLine,
   ContractSummary,
-  DashboardMetric,
+  ContractedSpaceSummary,
   MatchingRequest,
-  MyMatching,
+  SpaceSummary,
 } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
-// 대시보드에 필요한 세 데이터 묶음을 병렬로 로드해 페이지 렌더링을 단순화합니다.
+// 대시보드의 공간·신청·장바구니 데이터와 받은 신청 처리 상태를 관리합니다.
 export function useDashboard() {
-  const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
-  const [matchings, setMatchings] = useState<MatchingRequest[]>([]);
-  const [sentMatchings, setSentMatchings] = useState<MyMatching[]>([]);
-  const [contracts, setContracts] = useState<ContractSummary[]>([]);
+  const [ownedSpaces, setOwnedSpaces] = useState<SpaceSummary[]>([]);
+  const [contractedSpaces, setContractedSpaces] = useState<ContractedSpaceSummary[]>([]);
+  const [receivedApplications, setReceivedApplications] = useState<MatchingRequest[]>([]);
+  const [sentApplications, setSentApplications] = useState<ContractSummary[]>([]);
+  const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -27,10 +33,11 @@ export function useDashboard() {
 
     try {
       const result = await getDashboardData();
-      setMetrics(result.metrics);
-      setMatchings(result.matchings);
-      setSentMatchings(result.sentMatchings);
-      setContracts(result.contracts);
+      setOwnedSpaces(result.ownedSpaces);
+      setContractedSpaces(result.contractedSpaces);
+      setReceivedApplications(result.receivedApplications);
+      setSentApplications(result.sentApplications);
+      setCartItems(result.cartItems);
       setStatus('success');
     } catch (caught) {
       setError(
@@ -48,12 +55,16 @@ export function useDashboard() {
     async (matchingId: number, action: 'accept' | 'reject') => {
       setUpdatingMatchingId(matchingId);
       setActionError(null);
+      const application = receivedApplications.find(
+        (matching) => matching.matchingId === matchingId,
+      );
+
       try {
         const result =
           action === 'accept'
             ? await acceptMatching(matchingId)
             : await rejectMatching(matchingId);
-        setMatchings((current) =>
+        setReceivedApplications((current) =>
           current.map((matching) =>
             matching.matchingId === matchingId
               ? {
@@ -64,17 +75,23 @@ export function useDashboard() {
               : matching,
           ),
         );
-        setContracts((current) =>
-          current.map((contract) =>
-            contract.contractId === matchingId
-              ? {
-                  ...contract,
-                  status: action === 'accept' ? '완료' : '검토',
-                  period: action === 'accept' ? '협의 완료' : contract.period,
-                }
-              : contract,
-          ),
-        );
+        if (action === 'accept' && application) {
+          setContractedSpaces((current) => {
+            if (current.some((space) => space.spaceId === application.spaceId)) {
+              return current;
+            }
+            return [
+              ...current,
+              {
+                matchingId: application.matchingId,
+                spaceId: application.spaceId,
+                spaceName: application.spaceTitle,
+                imageUrl: application.spaceImageUrl ?? null,
+                status: 'ACCEPTED',
+              },
+            ];
+          });
+        }
       } catch (caught) {
         setActionError(
           caught instanceof Error ? caught.message : '매칭 처리에 실패했습니다.',
@@ -83,19 +100,43 @@ export function useDashboard() {
         setUpdatingMatchingId(null);
       }
     },
-    [],
+    [receivedApplications],
+  );
+
+  // 검토가 끝난 신청은 알림 목록에서만 치우고, 이미 만들어진 계약 공간은 유지합니다.
+  const dismissMatching = useCallback(
+    async (matchingId: number) => {
+      setActionError(null);
+      const previousApplications = receivedApplications;
+
+      setReceivedApplications((current) =>
+        current.filter((matching) => matching.matchingId !== matchingId),
+      );
+
+      try {
+        await dismissReceivedMatching(matchingId);
+      } catch (caught) {
+        setReceivedApplications(previousApplications);
+        setActionError(
+          caught instanceof Error ? caught.message : '신청을 목록에서 지우지 못했습니다.',
+        );
+      }
+    },
+    [receivedApplications],
   );
 
   return {
-    metrics,
-    matchings,
-    sentMatchings,
-    contracts,
+    ownedSpaces,
+    contractedSpaces,
+    receivedApplications,
+    sentApplications,
+    cartItems,
     status,
     error,
     actionError,
     updatingMatchingId,
     reload: load,
     respondToMatching,
+    dismissMatching,
   };
 }

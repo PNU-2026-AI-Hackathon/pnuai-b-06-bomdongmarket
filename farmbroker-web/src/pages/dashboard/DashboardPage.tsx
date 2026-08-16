@@ -1,54 +1,93 @@
 import { Bell, UserRound } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
 import { hasRole } from '@/auth/roles';
+import type { BadgeTone } from '@/components/common/Badge';
+import { Button } from '@/components/common/Button';
+import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
-import { ContractCard } from '@/pages/dashboard/components/ContractCard';
-import { MatchingRequestCard } from '@/pages/dashboard/components/MatchingRequestCard';
-import { MetricCard } from '@/pages/dashboard/components/MetricCard';
-import { SentMatchingResults } from '@/pages/dashboard/components/SentMatchingResults';
+import { useDisclosure } from '@/hooks/useDisclosure';
+import { ApplicationNotificationsDialog } from '@/pages/dashboard/components/ApplicationNotificationsDialog';
+import { DashboardCarousel } from '@/pages/dashboard/components/DashboardCarousel';
+import { DashboardCartItemCard } from '@/pages/dashboard/components/DashboardCartItemCard';
+import { DashboardSpaceCard } from '@/pages/dashboard/components/DashboardSpaceCard';
 import { useDashboard } from '@/pages/dashboard/hooks/useDashboard';
+import type { SpaceStatus } from '@/types/api';
+import { getSpaceStatusLabel } from '@/utils/labels';
 
-// 로그인 이후의 홈 대시보드로, 소유자 관점의 요약과 신청 검토 흐름을 제공합니다.
+const spaceStatusTones: Record<SpaceStatus, BadgeTone> = {
+  AVAILABLE: 'green',
+  MATCHED: 'blue',
+  CLOSED: 'slate',
+};
+
+// 로그인 이후의 공간·계약·장바구니 현황과 신청 알림을 한 곳에서 제공합니다.
 export function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const notifications = useDisclosure();
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const {
-    metrics,
-    matchings,
-    sentMatchings,
-    contracts,
+    ownedSpaces,
+    contractedSpaces,
+    receivedApplications,
+    sentApplications,
+    cartItems,
     status,
     error,
     actionError,
     updatingMatchingId,
     reload,
     respondToMatching,
+    dismissMatching,
   } = useDashboard();
   const isOwner = hasRole(user, 'OWNER');
-  const isFarmer = hasRole(user, 'FARMER');
+  const pendingCount =
+    (isOwner
+      ? receivedApplications.filter((application) => application.status === 'REQUESTED')
+          .length
+      : 0) +
+    sentApplications.filter((application) => application.status === 'REQUESTED').length;
 
   return (
     <PageContainer>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p className="text-sm font-semibold text-slate-500">다시 만나서 반가워요</p>
-          <h1 className="mt-1 text-3xl font-black text-ink-900">대시보드</h1>
+          <p className="text-sm font-semibold text-content-subtle">
+            다시 만나서 반가워요
+          </p>
+          <h1 className="mt-1 text-page-title text-content sm:text-page-title-lg">
+            대시보드
+          </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            aria-label="알림"
-            className="flex h-11 w-11 items-center justify-center rounded-app border border-leaf-100 bg-white text-leaf-700"
-            type="button"
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <Button
+            aria-label={
+              pendingCount > 0 ? '알림, 응답 대기 ' + pendingCount + '건' : '알림'
+            }
+            className="relative h-11 w-11 px-0"
+            onClick={notifications.open}
+            ref={notificationButtonRef}
+            variant="outline"
           >
             <Bell className="h-5 w-5" aria-hidden />
-          </button>
+            {pendingCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-feedback-danger px-1 text-xs font-bold text-content-inverse">
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            ) : null}
+          </Button>
           <Link
             aria-label="마이페이지"
-            className="flex h-11 w-11 items-center justify-center rounded-app bg-leaf-700 text-white"
+            className={buttonStyles({
+              className: 'h-11 w-11 px-0',
+            })}
             to={ROUTES.myPage}
           >
             <UserRound className="h-5 w-5" aria-hidden />
@@ -58,7 +97,7 @@ export function DashboardPage() {
 
       {status === 'loading' || status === 'idle' ? (
         <div className="mt-6">
-          <LoadingState label="대시보드를 불러오는 중입니다" />
+          <LoadingState label="대시보드 공간과 상품을 불러오는 중입니다" />
         </div>
       ) : null}
       {status === 'error' ? (
@@ -69,100 +108,89 @@ export function DashboardPage() {
           />
         </div>
       ) : null}
-      {actionError ? (
-        <div
-          className="mt-6 rounded-app border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
-          role="alert"
-        >
-          {actionError}
-        </div>
-      ) : null}
 
       {status === 'success' ? (
         <>
-          <section className="mt-6 grid gap-4 md:grid-cols-3" aria-label="요약 카드">
-            {metrics.map((metric) => (
-              <MetricCard key={metric.label} metric={metric} />
-            ))}
-          </section>
-
-          <section className="mt-8" aria-labelledby="dashboard-actions">
-            <h2 id="dashboard-actions" className="text-2xl font-black text-ink-900">
-              빠른 실행
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                ['공간 등록', ROUTES.newSpace],
-                ['수익 시뮬레이션', ROUTES.newSpace],
-                ['매칭 찾기', ROUTES.spaces],
-                ['마켓 열기', ROUTES.market],
-              ].map(([label, href]) => (
-                <Link
-                  key={label}
-                  className="rounded-app border border-leaf-100 bg-white p-4 text-sm font-bold text-ink-900 shadow-card transition hover:border-leaf-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-                  to={href}
-                >
-                  {label}
-                </Link>
+          <div className="mt-8">
+            <DashboardCarousel
+              emptyState={
+                <EmptyState
+                  actionLabel="공간 등록"
+                  description="새 공간을 등록하면 이곳에서 바로 관리할 수 있습니다."
+                  onAction={() => navigate(ROUTES.newSpace)}
+                  title="등록한 공간이 없습니다"
+                />
+              }
+              title="내가 등록한 공간"
+            >
+              {ownedSpaces.map((space) => (
+                <DashboardSpaceCard
+                  imageUrl={space.imageUrl}
+                  key={space.spaceId}
+                  spaceId={space.spaceId}
+                  statusLabel={getSpaceStatusLabel(space.status)}
+                  statusTone={spaceStatusTones[space.status]}
+                  title={space.title}
+                />
               ))}
-            </div>
-          </section>
+            </DashboardCarousel>
+          </div>
 
-          {isFarmer ? (
-            <section className="mt-8" aria-labelledby="sent-matchings-title">
-              <h2 id="sent-matchings-title" className="text-2xl font-black text-ink-900">
-                농장 매칭 신청
-              </h2>
-              <div className="mt-4">
-                <SentMatchingResults matchings={sentMatchings} />
-              </div>
-            </section>
-          ) : null}
-          {isOwner ? (
-            <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-              <section aria-labelledby="received-matchings-title">
-                <h2
-                  id="received-matchings-title"
-                  className="text-2xl font-black text-ink-900"
-                >
-                  받은 매칭 신청
-                </h2>
-                <div className="mt-4 grid gap-4">
-                  {matchings.map((request) => (
-                    <MatchingRequestCard
-                      isUpdating={updatingMatchingId === request.matchingId}
-                      key={request.matchingId}
-                      onAccept={() =>
-                        void respondToMatching(request.matchingId, 'accept')
-                      }
-                      onReject={() =>
-                        void respondToMatching(request.matchingId, 'reject')
-                      }
-                      request={request}
-                    />
-                  ))}
-                </div>
-              </section>
-              <section aria-labelledby="contract-preview-title">
-                <div className="flex items-center justify-between gap-3">
-                  <h2
-                    id="contract-preview-title"
-                    className="text-2xl font-black text-ink-900"
-                  >
-                    계약
-                  </h2>
-                  <Link className="text-sm font-bold text-leaf-700" to={ROUTES.contracts}>
-                    전체 보기
-                  </Link>
-                </div>
-                <div className="mt-4 grid gap-4">
-                  {contracts.slice(0, 2).map((contract) => (
-                    <ContractCard contract={contract} key={contract.contractId} />
-                  ))}
-                </div>
-              </section>
-            </div>
-          ) : null}
+          <div className="mt-8 scroll-mt-24" id="contracted-spaces">
+            <DashboardCarousel
+              emptyState={
+                <EmptyState
+                  actionLabel="공간 둘러보기"
+                  description="공간의 매칭 신청이 수락되면 계약한 공간으로 표시됩니다."
+                  onAction={() => navigate(ROUTES.spaces)}
+                  title="계약한 공간이 없습니다"
+                />
+              }
+              title="계약한 공간"
+            >
+              {contractedSpaces.map((space) => (
+                <DashboardSpaceCard
+                  imageUrl={space.imageUrl}
+                  key={space.matchingId}
+                  spaceId={space.spaceId}
+                  statusLabel="계약 확정"
+                  title={space.spaceName}
+                />
+              ))}
+            </DashboardCarousel>
+          </div>
+
+          <div className="mt-8">
+            <DashboardCarousel
+              emptyState={
+                <EmptyState
+                  actionLabel="마켓 둘러보기"
+                  description="로컬 마켓에서 마음에 드는 상품을 장바구니에 담아보세요."
+                  onAction={() => navigate(ROUTES.market)}
+                  title="찜한 상품이 없습니다"
+                />
+              }
+              title="찜한 상품"
+            >
+              {cartItems.map((item) => (
+                <DashboardCartItemCard item={item} key={item.productId} />
+              ))}
+            </DashboardCarousel>
+          </div>
+
+          <ApplicationNotificationsDialog
+            actionError={actionError}
+            isOpen={notifications.isOpen}
+            isOwner={isOwner}
+            onAccept={(matchingId) => void respondToMatching(matchingId, 'accept')}
+            onClose={notifications.close}
+            onDismiss={(matchingId) => void dismissMatching(matchingId)}
+            onReject={(matchingId) => void respondToMatching(matchingId, 'reject')}
+            receivedApplications={receivedApplications}
+            returnFocusRef={notificationButtonRef}
+            sentApplications={sentApplications}
+            updatingMatchingId={updatingMatchingId}
+          />
         </>
       ) : null}
     </PageContainer>

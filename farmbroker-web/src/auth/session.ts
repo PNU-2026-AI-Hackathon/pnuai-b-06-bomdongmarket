@@ -31,7 +31,11 @@ export function updateStoredUser(user: User) {
   window.sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
 }
 
-export function clearAuthSession() {
+export function clearStoredUser() {
   window.sessionStorage.removeItem(AUTH_USER_KEY);
+}
+
+export function clearAuthSession() {
+  clearStoredUser();
   notifySessionChanged();
 }

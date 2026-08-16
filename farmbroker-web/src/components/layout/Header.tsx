@@ -1,4 +1,4 @@
-import { Leaf, LogIn, UserRound } from 'lucide-react';
+import { LogIn, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
@@ -16,17 +16,20 @@ export function Header() {
       className="sticky top-0 z-20 border-b border-leaf-200 bg-white/[0.97] shadow-[0_10px_30px_-24px_rgba(16,32,22,0.45)] backdrop-blur-md"
       data-build="auth-header-v2"
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:gap-5">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6 lg:gap-5">
         <Link
-          className="flex items-center gap-2"
+          className="flex min-w-0 items-center gap-1.5 sm:gap-2"
           to={ROUTES.home}
-          aria-label="홈으로 이동"
+          aria-label={`${APP_INFO.name} 홈으로 이동`}
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-app bg-leaf-800 text-white">
-            <Leaf className="h-5 w-5" aria-hidden />
-          </span>
+          <img
+            alt=""
+            aria-hidden
+            className="h-10 w-10 shrink-0 sm:h-11 sm:w-11"
+            src="/brand/farmbroker-symbol.png"
+          />
           <span>
-            <span className="block text-base font-extrabold text-ink-900">
+            <span className="block text-sm font-extrabold text-ink-900 sm:text-base">
               {APP_INFO.name}
             </span>
             <span className="hidden text-xs font-semibold text-slate-500 sm:block">

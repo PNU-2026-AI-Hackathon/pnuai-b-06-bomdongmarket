@@ -6,6 +6,7 @@ import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { PageHeader } from '@/components/common/PageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { APP_INFO } from '@/constants/appInfo';
 import { ROUTES } from '@/constants/routes';
 import { useSignupForm } from '@/pages/auth/hooks/useSignupForm';
 import { signup } from '@/services/authService';
@@ -32,8 +33,8 @@ export function SignupPage() {
         <PageHeader
           align="center"
           description="도심 스마트팜 여정을 시작하세요."
-          eyebrow="Join Farm Broker"
-          title="봄동마켓 회원가입"
+          eyebrow={`Join ${APP_INFO.name}`}
+          title={`${APP_INFO.name} 회원가입`}
         />
 
         <Card className="mt-6 p-6 shadow-lift sm:p-8">

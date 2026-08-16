@@ -4,6 +4,7 @@ import com.farmbroker.farmbroker.ai.domain.AiRecommendation;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.List;
 
 // AI 추천 이력 레포지토리.
 // - findTopBySpaceIdOrderByCreatedAtDesc: Gemini 장애/쿼터 초과 시
@@ -11,4 +12,6 @@ import java.util.Optional;
 public interface AiRecommendationRepository extends JpaRepository<AiRecommendation, Long> {
 
     Optional<AiRecommendation> findTopBySpaceIdOrderByCreatedAtDesc(Long spaceId);
+
+    List<AiRecommendation> findAllByUserId(Long userId);
 }

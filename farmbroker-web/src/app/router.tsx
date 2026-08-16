@@ -5,9 +5,19 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ROUTES } from '@/constants/routes';
 import { LoginPage, SignupPage } from '@/pages/auth';
-import { ContractsPage, DashboardPage, MyPage } from '@/pages/dashboard';
+import { ContractPage } from '@/pages/contract';
+import { DashboardPage } from '@/pages/dashboard';
 import { HomePage } from '@/pages/home';
-import { MarketPage, ProductDetailPage } from '@/pages/market';
+import {
+  CartPage,
+  MarketPage,
+  MyProductsPage,
+  OrderCompletePage,
+  ProductDetailPage,
+  ProductFormPage,
+} from '@/pages/market';
+import { MyPage, ProfileEditPage, WithdrawPage } from '@/pages/mypage';
+import { SpaceApplyPage } from '@/pages/space-apply';
 import { SpaceDetailPage } from '@/pages/space-detail';
 import { SpaceCreatePage, SpacePredictionPage, SpacesPage } from '@/pages/spaces';
 
@@ -30,8 +40,19 @@ export function AppRouter() {
           <Route element={<DashboardPage />} path={ROUTES.dashboard} />
           <Route element={<SpaceCreatePage />} path={ROUTES.newSpace} />
           <Route element={<SpacePredictionPage />} path={ROUTES.newSpacePrediction} />
-          <Route element={<ContractsPage />} path={ROUTES.contracts} />
+          {/* 정적 세그먼트가 우선 매칭되므로 /spaces/new와 충돌하지 않습니다. */}
+          <Route element={<SpaceApplyPage />} path="/spaces/:spaceId/apply" />
+          {/* 계약서는 매칭 당사자 둘만 볼 수 있어 서버가 권한을 판정합니다. */}
+          <Route element={<ContractPage />} path="/matchings/:matchingId/contract" />
           <Route element={<MyPage />} path={ROUTES.myPage} />
+          <Route element={<ProfileEditPage />} path={ROUTES.myPageProfile} />
+          <Route element={<WithdrawPage />} path={ROUTES.myPageWithdraw} />
+          {/* 판매자 전용 — 정적 경로라 /market/:productId 보다 먼저 매칭됩니다. */}
+          <Route element={<CartPage />} path={ROUTES.cart} />
+          <Route element={<OrderCompletePage />} path={ROUTES.orderComplete} />
+          <Route element={<MyProductsPage />} path={ROUTES.myProducts} />
+          <Route element={<ProductFormPage />} path={ROUTES.newProduct} />
+          <Route element={<ProductFormPage />} path="/market/:productId/edit" />
         </Route>
         <Route element={<Navigate replace to={ROUTES.home} />} path="*" />
       </Route>
