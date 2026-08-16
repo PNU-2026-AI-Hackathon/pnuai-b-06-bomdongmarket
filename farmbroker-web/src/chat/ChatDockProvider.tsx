@@ -118,7 +118,7 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
                   ) : (
                     <ul className="grid gap-2">
                       {conversations.map((conversation) => (
-                        <li key={conversation.conversationId}>
+                        <li className="min-w-0" key={conversation.conversationId}>
                           <ConversationRow
                             conversation={conversation}
                             onOpen={() => setActiveId(conversation.conversationId)}

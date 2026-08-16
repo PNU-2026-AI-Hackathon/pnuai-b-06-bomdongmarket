@@ -88,10 +88,12 @@ export function ChatListPage() {
         />
       ) : null}
 
+      {/* 그리드 항목은 min-width:auto 라 내용보다 작아지지 않는다.
+          아래 li 의 min-w-0 이 없으면 긴 미리보기가 줄을 밀어 화면 밖으로 넘친다. */}
       {visible.length > 0 ? (
         <ul className="grid gap-3">
           {visible.map((conversation) => (
-            <li key={conversation.conversationId}>
+            <li className="min-w-0" key={conversation.conversationId}>
               <ConversationRow
                 conversation={conversation}
                 onOpen={() => navigate(ROUTES.chatRoom(conversation.conversationId))}

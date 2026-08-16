@@ -15,9 +15,9 @@ export function ConversationRow({ conversation, onOpen }: ConversationRowProps) 
   const hasUnread = conversation.unreadCount > 0;
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="w-full overflow-hidden">
       <button
-        className="flex w-full items-center gap-3 p-3 text-left transition duration-ui hover:bg-leaf-50"
+        className="flex w-full min-w-0 items-center gap-3 p-3 text-left transition duration-ui hover:bg-leaf-50"
         onClick={onOpen}
         type="button"
       >
@@ -31,7 +31,7 @@ export function ConversationRow({ conversation, onOpen }: ConversationRowProps) 
             <Badge tone={conversation.contextType === 'SPACE' ? 'yellow' : 'green'}>
               {contextLabel(conversation.contextType)}
             </Badge>
-            <span className="truncate font-bold text-ink-900">
+            <span className="min-w-0 truncate font-bold text-ink-900">
               {conversation.otherUserNickname}
             </span>
             {conversation.lastMessageAt ? (
