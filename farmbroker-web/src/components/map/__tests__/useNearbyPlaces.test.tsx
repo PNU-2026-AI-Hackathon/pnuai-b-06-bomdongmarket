@@ -41,10 +41,21 @@ describe('useNearbyPlaces', () => {
     expect(geocodeAddress).toHaveBeenCalledWith('부산 어딘가');
   });
 
-  it('좌표·주소 모두 없으면 visible엔 남고 지도엔 없음', async () => {
-    const row: Row = { id: 4, lat: null, lng: null, addr: null };
-    const { result } = renderHook(() => useNearbyPlaces([row], center, 5, adapter));
-    await waitFor(() => expect(result.current.visibleItems.map((r) => r.id)).toEqual([4]));
+  it('좌표·주소 모두 없으면 반경 결과(지도·목록)에서 모두 제외한다', async () => {
+    const located: Row = { id: 1, lat: 35.18, lng: 129.076, addr: null };
+    const noLoc: Row = { id: 4, lat: null, lng: null, addr: null };
+    const { result } = renderHook(() => useNearbyPlaces([located, noLoc], center, 5, adapter));
+    await waitFor(() => expect(result.current.mapItems).toHaveLength(1));
+    // 위치 미확정 항목은 "반경 km" 목록에 노출되지 않는다 — 지도 마커 수와 목록 수가 일치.
+    expect(result.current.visibleItems.map((r) => r.id)).toEqual([1]);
+  });
+
+  it('지오코딩이 실패한 항목은 반경 결과에서 제외한다', async () => {
+    geocodeAddress.mockResolvedValue(null);
+    const failing: Row = { id: 5, lat: null, lng: null, addr: '못 찾는 주소' };
+    const { result } = renderHook(() => useNearbyPlaces([failing], center, 5, adapter));
+    await waitFor(() => expect(geocodeAddress).toHaveBeenCalled());
     expect(result.current.mapItems).toHaveLength(0);
+    expect(result.current.visibleItems).toHaveLength(0);
   });
 });

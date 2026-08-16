@@ -18,7 +18,9 @@ export interface NearbyMapItem<T> {
 interface NearbyResult<T> {
   // 지도에 찍을 반경 내 항목(좌표 확정). 거리 오름차순.
   mapItems: NearbyMapItem<T>[];
-  // 그리드에 보일 항목 = 반경 내(거리순) + 좌표 없는 항목(뒤에). 좌표 있고 반경 밖은 제외.
+  // 반경 검색 시 목록에 보일 항목 = 반경 내(거리순)만. "반경 km" 결과의 신뢰를 위해
+  // 좌표를 확정하지 못한 항목(좌표·주소 없음 또는 지오코딩 실패/진행 중)은 넣지 않는다 —
+  // 지도 마커 수와 목록 수가 일치한다. (앱키 없어 반경 개념이 없을 땐 페이지가 서버 목록을 그대로 쓴다.)
   visibleItems: T[];
   // id → 중심에서의 거리(km). 카드 거리 표시에 쓴다.
   distances: Map<number, number>;
@@ -64,21 +66,18 @@ export function useNearbyPlaces<T>(
 
   return useMemo(() => {
     const mapItems: NearbyMapItem<T>[] = [];
-    const unlocated: T[] = [];
 
     for (const it of items) {
       const coords = adapter.getDirectCoords(it) ?? resolved.get(adapter.getId(it)) ?? null;
-      if (!coords) {
-        unlocated.push(it);
-        continue;
-      }
+      // 위치를 확정하지 못한 항목은 "반경 km" 결과에 포함하지 않는다(반경 밖 취급).
+      if (!coords) continue;
       const distanceKm = haversineKm(center, coords);
       if (distanceKm <= radiusKm) mapItems.push({ item: it, coords, distanceKm });
     }
 
     mapItems.sort((a, b) => a.distanceKm - b.distanceKm);
     const distances = new Map(mapItems.map((m) => [adapter.getId(m.item), m.distanceKm]));
-    const visibleItems = [...mapItems.map((m) => m.item), ...unlocated];
+    const visibleItems = mapItems.map((m) => m.item);
 
     return { mapItems, visibleItems, distances };
   }, [items, center, radiusKm, resolved, adapter]);
