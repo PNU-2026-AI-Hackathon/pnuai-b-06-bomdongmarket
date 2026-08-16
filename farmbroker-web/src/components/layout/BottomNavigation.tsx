@@ -10,7 +10,7 @@ export function BottomNavigation() {
       className="fixed inset-x-0 bottom-0 z-30 border-t border-leaf-100 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-16px_40px_-28px_rgba(16,32,22,0.6)] backdrop-blur lg:hidden"
       aria-label="모바일 내비게이션"
     >
-      <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
         {MOBILE_NAVIGATION.map((item) => (
           <NavLink
             key={item.href}
