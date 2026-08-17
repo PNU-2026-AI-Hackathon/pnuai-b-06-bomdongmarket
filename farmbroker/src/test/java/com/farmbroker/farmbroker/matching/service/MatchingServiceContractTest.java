@@ -2,7 +2,6 @@ package com.farmbroker.farmbroker.matching.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
-import com.farmbroker.farmbroker.matching.domain.ContractStatus;
 import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
@@ -34,11 +33,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
 
 // 계약서(매칭에 붙는 월세·계약기간·양측 동의)의 권한과 상태 전이를 검증한다.
 // 지켜야 할 규칙: 조건 입력은 공간 제공자만, 확정은 양측 모두 동의해야, 취소는 한쪽만 눌러도 된다.
@@ -115,7 +112,7 @@ class MatchingServiceContractTest {
         assertThat(response.getFarmerNickname()).isEqualTo("도심농부");
         assertThat(response.getAddress()).isEqualTo("부산광역시 금정구 부산대학로 63번길 2");
         assertThat(response.getViewerRole()).isEqualTo("FARMER");
-        assertThat(response.getStatus()).isEqualTo(ContractStatus.DRAFT);
+        assertThat(response.getStatus()).isEqualTo(MatchingStatus.REQUESTED);
     }
 
     @Test
@@ -236,15 +233,15 @@ class MatchingServiceContractTest {
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
 
         ContractResponse afterOwner = matchingService.agreeContract(MATCHING_ID, OWNER_ID, 1);
-        assertThat(afterOwner.getStatus()).isEqualTo(ContractStatus.DRAFT);
+        assertThat(afterOwner.getStatus()).isEqualTo(MatchingStatus.REQUESTED);
         // 한쪽만 동의한 단계에서는 매칭이 아직 신청 상태 그대로여야 한다.
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REQUESTED);
 
         ContractResponse afterFarmer = matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1);
-        assertThat(afterFarmer.getStatus()).isEqualTo(ContractStatus.CONFIRMED);
+        assertThat(afterFarmer.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
         assertThat(matching.getRespondedAt()).isNotNull();
-        // 확정은 소유자의 수락과 똑같은 후속 처리를 일으켜야 한다.
+        // 확정은 공간 상태·역할 변경까지 함께 일으켜야 한다.
         assertThat(matching.getFarmer().getRoles()).contains(UserRole.FARMER);
         then(spaceContractAdapter).should().markMatched(SPACE_ID);
         then(matchingRepository).should()
@@ -252,23 +249,6 @@ class MatchingServiceContractTest {
         // 확정 응답은 벌크 UPDATE 전에 조립되므로 LAZY 필드가 그대로 담겨 있어야 한다.
         assertThat(afterFarmer.getOwnerNickname()).isEqualTo("공간주");
         assertThat(afterFarmer.getAddress()).isNotBlank();
-    }
-
-    @Test
-    @DisplayName("소유자가 이미 수락한 매칭이면 확정 시 후속 처리를 다시 하지 않는다")
-    void alreadyAcceptedMatchingSkipsAcceptanceSideEffects() {
-        // 수락/거절 flow로 이미 공간이 MATCHED가 된 상태다 — 다시 markMatched를 부르면 409가 난다.
-        Matching matching = matching();
-        matching.accept();
-        givenLockedMatching(matching);
-        matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
-        matchingService.agreeContract(MATCHING_ID, OWNER_ID, 1);
-
-        ContractResponse response = matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1);
-
-        assertThat(response.getStatus()).isEqualTo(ContractStatus.CONFIRMED);
-        assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
-        then(spaceContractAdapter).should(never()).markMatched(anyLong());
     }
 
     @Test
@@ -297,7 +277,7 @@ class MatchingServiceContractTest {
 
         ContractResponse response = matchingService.cancelContract(MATCHING_ID, FARMER_ID);
 
-        assertThat(response.getStatus()).isEqualTo(ContractStatus.CANCELED);
+        assertThat(response.getStatus()).isEqualTo(MatchingStatus.REJECTED);
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REJECTED);
         assertThat(matching.getRespondedAt()).isNotNull();
         assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1))

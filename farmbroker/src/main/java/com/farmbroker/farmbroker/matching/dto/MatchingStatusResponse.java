@@ -6,7 +6,7 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-// 매칭 수락/거절(PATCH /matchings/{id}/accept·reject) 응답 DTO.
+// 매칭 신청 취소(PATCH /matchings/{id}/cancel) 응답 DTO.
 @Getter
 public class MatchingStatusResponse {
 

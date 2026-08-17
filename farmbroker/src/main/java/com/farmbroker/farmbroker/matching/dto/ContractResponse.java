@@ -1,8 +1,8 @@
 package com.farmbroker.farmbroker.matching.dto;
 
-import com.farmbroker.farmbroker.matching.domain.ContractStatus;
 import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
 import com.farmbroker.farmbroker.matching.domain.Matching;
+import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import lombok.Getter;
 
 import java.time.LocalDate;
@@ -29,7 +29,7 @@ public class ContractResponse {
     private final int termsVersion;
     private final boolean ownerAgreed;
     private final boolean farmerAgreed;
-    private final ContractStatus status;
+    private final MatchingStatus status;
     private final String viewerRole;
 
     private ContractResponse(Long matchingId, Long spaceId, String address,
@@ -38,7 +38,7 @@ public class ContractResponse {
                              MaintenanceFeePayer maintenanceFeePayer, Integer deposit,
                              LocalDate startDate, LocalDate endDate, int termsVersion,
                              boolean ownerAgreed, boolean farmerAgreed,
-                             ContractStatus status, String viewerRole) {
+                             MatchingStatus status, String viewerRole) {
         this.matchingId = matchingId;
         this.spaceId = spaceId;
         this.address = address;
@@ -75,7 +75,7 @@ public class ContractResponse {
                 matching.getTermsVersion(),
                 matching.getOwnerAgreedAt() != null,
                 matching.getFarmerAgreedAt() != null,
-                matching.getContractStatus(),
+                matching.getStatus(),
                 isOwner ? "OWNER" : "FARMER"
         );
     }

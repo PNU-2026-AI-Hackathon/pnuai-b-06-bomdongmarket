@@ -9,6 +9,7 @@
 
 **FarmBroker** — 도심 공실 소유자·도심 농부·지역 소비자를 연결하는 스마트팜 매칭 플랫폼.
 공실 제공자가 스마트팜 전환 가능한 공간을 등록하면, 도심 농부가 조회 후 **수익 예측·AI 작물 추천**을 확인하고 매칭을 신청하는 흐름.
+매칭 이후는 **매칭 신청 → 채팅 협의 → 계약서 작성(제공자) → 양측 동의 → 최종 계약** 한 갈래뿐이고, 진행 상태는 `matchings.status` 하나로 관리한다 (`REQUESTED`/`ACCEPTED`/`REJECTED`/`CANCELED`). 공간 제공자가 신청을 일방적으로 수락·거절하는 경로는 없다.
 
 - **클라이언트: React 웹 SPA** (`farmbroker-web/`, Vite). → **CORS는 백엔드 책임** (아래 8번).
 - **서버: Spring Boot REST API** (`farmbroker/`).
@@ -45,7 +46,7 @@
 | `auth` | 회원가입·로그인·로그아웃 | 강범수 (백엔드 1) |
 | `user` | `User`, `UserRole`, `UserRoleSetConverter`, 내 정보 조회 | 강범수 (백엔드 1) |
 | `space` | 공간 CRUD, 소유자 권한, 상태 관리 | 강민규 |
-| `matching` | 매칭 신청/수락/거절, 공간 계약 연동 | 백엔드 3 |
+| `matching` | 매칭 신청, 계약서 협의·동의, 공간 계약 연동 | 백엔드 3 |
 | `ai` | Gemini 기반 작물 추천 (`GeminiClient`, 프롬프트 빌더) | 백엔드 3 |
 | `crop` | 작물 백과사전 (초기 데이터 시딩 포함) | 백엔드 3 |
 | `profit` | 수익 예측 계산기 (CSV 기준데이터 기반) | 비전공자 로직 이관 |
@@ -117,7 +118,7 @@
 | `createdAt` | LocalDateTime | `@CreatedDate` (JpaAuditing) |
 
 - **`UserRole`**: `OWNER`, `FARMER`, `CONSUMER`. **한 회원이 여러 역할 동시 보유 가능.**
-- 역할은 가입 시 고르는 게 아니라 **활동에 따라 누적**: 가입 시 `CONSUMER`로 시작 → 공간 등록 시 `OWNER` 추가 → 매칭 수락 시 `FARMER` 추가 (`User.addRole`).
+- 역할은 가입 시 고르는 게 아니라 **활동에 따라 누적**: 가입 시 `CONSUMER`로 시작 → 공간 등록 시 `OWNER` 추가 → 계약 확정(양측 동의) 시 `FARMER` 추가 (`User.addRole`).
 - DB 저장: `users.role` **한 컬럼에 콤마로 이어 붙여** 저장 (`UserRoleSetConverter`). `@Enumerated`와 `@Convert`는 병행 불가라 `@Convert`만 사용.
 - `UserRole` enum 선언 순서가 직렬화 순서 = 새 역할은 **뒤에 추가**할 것 (중간 삽입 시 기존 행 문자열과 어긋나 무의미한 UPDATE 발생).
 - `addRole`은 컬렉션을 제자리 수정하지 않고 새 `EnumSet`으로 교체 (더티 체킹 누락 방지).
@@ -143,7 +144,8 @@ context-path `/api` 접두 (예: `http://localhost:8080/api/auth/signup`). 컨�
 | auth | `POST /auth/logout` | ✓ |
 | user | `GET /users/me` | ✓ |
 | space | `POST /spaces` / `GET /spaces` / `GET /spaces/my` / `GET /spaces/{id}` / `PATCH /spaces/{id}` / `DELETE /spaces/{id}` | 목록·상세 ✕, 그 외 ✓ |
-| matching | `POST /matchings` / `GET /matchings/my-requests?spaceId=` / `GET /matchings/received` / `PATCH /matchings/{id}/accept` / `PATCH /matchings/{id}/reject` / `PATCH /matchings/{id}/cancel` / `PATCH /matchings/{id}/dismiss` | ✓ |
+| matching | `POST /matchings` / `GET /matchings/my-requests?spaceId=` / `GET /matchings/received` / `PATCH /matchings/{id}/cancel` / `PATCH /matchings/{id}/dismiss` | ✓ |
+| matching(계약서) | `GET /matchings/{id}/contract` / `PATCH /matchings/{id}/contract` / `PATCH /matchings/{id}/contract/agree` / `PATCH /matchings/{id}/contract/cancel` | ✓ |
 | ai | `POST /ai/recommend` | ✓ |
 | crop | `GET /crops` / `GET /crops/{cropId}` | ✕ |
 | product | `GET /products` / `GET /products/{id}` / `GET /products/my` / `POST /products` / `PATCH /products/{id}` / `DELETE /products/{id}` | 목록·상세 ✕, 그 외 ✓ |
