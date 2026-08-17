@@ -13,7 +13,7 @@ import { findActiveApplication } from '@/pages/space-apply/hooks/useSpaceApplica
 import { cancelMatching, getMyMatchings } from '@/services/matchingService';
 import type { MyMatching } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
-import { getMatchingProgressLabel } from '@/utils/labels';
+import { getMatchingStatusLabel } from '@/utils/labels';
 
 interface SpaceMatchingRequestCardProps {
   spaceId: number;
@@ -55,8 +55,8 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
       <Card padding="lg">
         <h2 className="text-xl font-black text-content">공간 매칭 신청</h2>
         <p className="mt-2 text-body-sm text-content-muted">
-          로그인하면 이 공간의 매칭 상담을 신청할 수 있습니다. 신청이 수락되면 도심 농부
-          역할이 추가됩니다.
+          로그인하면 이 공간의 매칭 상담을 신청할 수 있습니다. 양측이 계약에 동의하면 도심
+          농부 역할이 추가됩니다.
         </p>
         <Link className="mt-5 inline-flex text-sm font-bold text-action" to={ROUTES.login}>
           로그인하고 매칭 신청하기
@@ -77,7 +77,7 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
   }
 
   if (application) {
-    // 취소는 아직 응답받지 않은 신청만 가능합니다(수락·거절 뒤에는 서버가 409로 막습니다).
+    // 취소는 협의 중인 신청만 가능합니다(계약 확정·취소 뒤에는 서버가 409로 막습니다).
     const canCancel = application.status === 'REQUESTED';
 
     const cancel = async () => {
@@ -101,7 +101,7 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
         <h2 className="text-xl font-black text-content">내 매칭 신청</h2>
         <p className="mt-2 text-body-sm text-content-muted">
           이미 이 공간에 매칭을 신청했습니다. 현재 상태는{' '}
-          {getMatchingProgressLabel(application.status)}입니다.
+          {getMatchingStatusLabel(application.status)}입니다.
         </p>
 
         {cancelError ? (

@@ -18,7 +18,7 @@ const initialContract: ContractDetail = {
   termsVersion: 0,
   ownerAgreed: false,
   farmerAgreed: false,
-  status: 'DRAFT',
+  status: 'REQUESTED',
   viewerRole: 'FARMER',
 };
 
@@ -43,7 +43,7 @@ export function saveMockContractTerms(
     termsVersion: mockContract.termsVersion + 1,
     ownerAgreed: false,
     farmerAgreed: false,
-    status: 'DRAFT',
+    status: 'REQUESTED',
   };
   return readMockContract(matchingId);
 }
@@ -63,12 +63,12 @@ export function agreeMockContract(matchingId: number, termsVersion: number): Con
   const next = { ...mockContract, ...agreed };
   mockContract = {
     ...next,
-    status: next.ownerAgreed && next.farmerAgreed ? 'CONFIRMED' : 'DRAFT',
+    status: next.ownerAgreed && next.farmerAgreed ? 'ACCEPTED' : 'REQUESTED',
   };
   return readMockContract(matchingId);
 }
 
 export function cancelMockContract(matchingId: number): ContractDetail {
-  mockContract = { ...mockContract, status: 'CANCELED' };
+  mockContract = { ...mockContract, status: 'REJECTED' };
   return readMockContract(matchingId);
 }
