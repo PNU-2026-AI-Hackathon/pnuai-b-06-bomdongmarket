@@ -14,6 +14,13 @@ import type { ChatContextType } from '@/types/api';
 
 type DockState = 'hidden' | 'minimized' | 'open';
 
+// 도크는 lg(1024px) 이상에서만 뜹니다. 좁은 화면에서 방만 열면 화면에 아무것도 나오지
+// 않아 "판매자와 채팅"을 눌러도 무반응으로 보입니다 — 그때는 채팅방 화면으로 보냅니다.
+function isNarrowScreen(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(max-width: 1023px)').matches;
+}
+
 // 화면 어디서나 채팅을 이어 볼 수 있는 우측 하단 위젯입니다.
 // 라우트 안에 두면 페이지를 옮길 때 대화가 끊겨서 레이아웃 수준에 둡니다.
 //
@@ -29,10 +36,17 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  const openConversation = useCallback((conversationId: number) => {
-    setActiveId(conversationId);
-    setDockState('open');
-  }, []);
+  const openConversation = useCallback(
+    (conversationId: number) => {
+      if (isNarrowScreen()) {
+        navigate(ROUTES.chatRoom(conversationId));
+        return;
+      }
+      setActiveId(conversationId);
+      setDockState('open');
+    },
+    [navigate],
+  );
 
   const handleIncoming = useCallback(
     (message: IncomingMessage) => {
@@ -50,7 +64,10 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
     [openConversation],
   );
 
-  const { conversations, totalUnread, refresh } = useChatSocket(isAuthenticated, handleIncoming);
+  const { conversations, status, lastEvent, totalUnread, refresh } = useChatSocket(
+    isAuthenticated,
+    handleIncoming,
+  );
 
   const openContext = useCallback(
     async (contextType: ChatContextType, contextId: number) => {
@@ -62,8 +79,16 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<ChatDockValue>(
-    () => ({ openConversation, openContext, totalUnread, refresh }),
-    [openConversation, openContext, totalUnread, refresh],
+    () => ({
+      openConversation,
+      openContext,
+      conversations,
+      conversationsStatus: status,
+      lastEvent,
+      totalUnread,
+      refresh,
+    }),
+    [openConversation, openContext, conversations, status, lastEvent, totalUnread, refresh],
   );
 
   return (

@@ -2,9 +2,38 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { ChatDockContext, type ChatDockValue } from '@/chat/chatDockContext';
 import { ChatConversationPanel } from '@/pages/chat/components/ChatConversationPanel';
 import { getConversations } from '@/services/chatService';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import type { ChatMessage } from '@/types/api';
+
+// 소켓은 도크에 하나만 열려 있고 대화 화면은 컨텍스트로 이벤트를 받는다.
+// 여기서는 그 컨텍스트만 흉내 내 실제 연결 없이 수신 동작을 검증한다.
+function dockValue(lastEvent: ChatDockValue['lastEvent']): ChatDockValue {
+  return {
+    openConversation: () => undefined,
+    openContext: async () => undefined,
+    conversations: [],
+    conversationsStatus: 'success',
+    lastEvent,
+    totalUnread: 0,
+    refresh: () => undefined,
+  };
+}
+
+function incoming(messageId: number, text: string, senderId: number): ChatMessage {
+  return {
+    messageId,
+    conversationId: 1,
+    senderId,
+    type: 'TEXT',
+    text,
+    imagePath: null,
+    imageContentType: null,
+    createdAt: '2026-08-17T10:00:00',
+  };
+}
 
 // 목업 1번 방에는 내(1번) 메시지와 상대(20번) 메시지가 한 건씩 들어 있다.
 describe('ChatConversationPanel', () => {
@@ -85,5 +114,55 @@ describe('ChatConversationPanel', () => {
 
     expect(await screen.findByText(/차단된 상대와는 대화할 수 없습니다/)).toBeInTheDocument();
     expect(screen.queryByLabelText('메시지 입력')).not.toBeInTheDocument();
+  });
+
+  // 방을 켜 놓고 있는데 상대 메시지가 토스트로만 뜨고 대화에는 안 나타나면,
+  // 나갔다 다시 들어와야 보인다.
+  it('보고 있는 방에 온 실시간 메시지가 대화에 붙는다', async () => {
+    function panel(lastEvent: ChatDockValue['lastEvent']) {
+      return (
+        <ChatDockContext.Provider value={dockValue(lastEvent)}>
+          <ChatConversationPanel conversationId={1} myUserId={1} />
+        </ChatDockContext.Provider>
+      );
+    }
+
+    const { rerender } = renderWithProviders(panel(null));
+    await screen.findByText('상추 아직 남아 있나요?');
+
+    rerender(
+      panel({
+        type: 'MESSAGE',
+        conversationId: 1,
+        message: incoming(9001, '지금 막 수확했어요.', 20),
+        unreadCount: 1,
+      }),
+    );
+
+    expect(await screen.findByText('지금 막 수확했어요.')).toBeInTheDocument();
+  });
+
+  it('다른 방 이벤트는 무시한다', async () => {
+    function panel(lastEvent: ChatDockValue['lastEvent']) {
+      return (
+        <ChatDockContext.Provider value={dockValue(lastEvent)}>
+          <ChatConversationPanel conversationId={1} myUserId={1} />
+        </ChatDockContext.Provider>
+      );
+    }
+
+    const { rerender } = renderWithProviders(panel(null));
+    await screen.findByText('상추 아직 남아 있나요?');
+
+    rerender(
+      panel({
+        type: 'MESSAGE',
+        conversationId: 2,
+        message: { ...incoming(9002, '다른 방 메시지', 30), conversationId: 2 },
+        unreadCount: 1,
+      }),
+    );
+
+    expect(screen.queryByText('다른 방 메시지')).not.toBeInTheDocument();
   });
 });

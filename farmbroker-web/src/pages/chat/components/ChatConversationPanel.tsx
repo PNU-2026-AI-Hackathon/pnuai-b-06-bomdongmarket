@@ -1,6 +1,7 @@
 import { ImagePlus, Send, Ban, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
+import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -55,6 +56,7 @@ export function ChatConversationPanel({
   const [isBlocking, setIsBlocking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { lastEvent, refresh: refreshConversations } = useChatDock();
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -77,6 +79,26 @@ export function ChatConversationPanel({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // 보고 있는 방에 새 메시지가 오면 바로 붙입니다.
+  // 소켓은 도크에 하나만 열려 있어 이벤트를 컨텍스트로 받아 내 방 것만 고릅니다.
+  // 내가 보낸 메시지도 같은 큐로 돌아오므로 messageId 로 중복을 막습니다.
+  useEffect(() => {
+    if (!lastEvent || lastEvent.conversationId !== conversationId) return;
+    const incoming = lastEvent.message;
+    if (!incoming) return;
+
+    setMessages((prev) =>
+      prev.some((message) => message.messageId === incoming.messageId) ? prev : [...prev, incoming],
+    );
+
+    // 지금 보고 있는 방이므로 읽음으로 처리합니다 — 아니면 안읽음 배지가 계속 올라갑니다.
+    // 내가 보낸 메시지에는 부르지 않습니다(읽을 것이 없습니다).
+    if (myUserId != null && incoming.senderId === myUserId) return;
+    void markRead(conversationId)
+      .then(() => refreshConversations())
+      .catch(() => undefined);
+  }, [conversationId, lastEvent, myUserId, refreshConversations]);
 
   // 새 메시지가 붙으면 항상 아래를 보여 줍니다.
   // jsdom에는 scrollIntoView가 없어 존재를 확인하고 부릅니다(테스트 환경 보호).

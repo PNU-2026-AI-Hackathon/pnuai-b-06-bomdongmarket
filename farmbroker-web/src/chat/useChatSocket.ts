@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { APP_INFO } from '@/constants/appInfo';
 import { getConversations } from '@/services/chatService';
 import type { ChatMessage, Conversation } from '@/types/api';
+import type { AsyncStatus } from '@/types/common';
 
 export interface IncomingMessage {
   conversationId: number;
@@ -12,7 +13,7 @@ export interface IncomingMessage {
 }
 
 // 서버가 사용자별 큐로 밀어 주는 이벤트입니다(ChatRealtimePublisher).
-interface ChatRealtimeEvent {
+export interface ChatRealtimeEvent {
   type: string;
   conversationId: number;
   message: ChatMessage | null;
@@ -39,6 +40,10 @@ function resolveSocketUrl(): string {
 // 이후로는 이벤트로만 갱신하고, 연결이 끊겼다 붙으면 놓친 사이를 메우려 다시 받습니다.
 export function useChatSocket(enabled: boolean, onIncoming: (message: IncomingMessage) => void) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [status, setStatus] = useState<AsyncStatus>('idle');
+  // 열려 있는 대화 화면이 자기 방 메시지를 골라 붙일 수 있도록 마지막 이벤트를 그대로 내보냅니다.
+  // 소켓을 화면마다 따로 열면 연결이 여러 개 생기고 읽음 처리도 어긋납니다.
+  const [lastEvent, setLastEvent] = useState<ChatRealtimeEvent | null>(null);
   const onIncomingRef = useRef(onIncoming);
   onIncomingRef.current = onIncoming;
   // 이벤트 처리 중 최신 목록이 필요해 ref 로도 들고 있습니다(구독 콜백이 상태를 닫아 버립니다).
@@ -49,12 +54,16 @@ export function useChatSocket(enabled: boolean, onIncoming: (message: IncomingMe
     try {
       const result = await getConversations();
       setConversations(result.conversations);
+      setStatus('success');
     } catch {
-      // 목록 조회 실패는 조용히 넘깁니다 — 다음 이벤트나 재연결에서 다시 맞춰집니다.
+      // 한 번이라도 받아 둔 목록이 있으면 화면을 지우지 않습니다 —
+      // 다음 이벤트나 재연결에서 다시 맞춰집니다.
+      setStatus((prev) => (prev === 'success' ? prev : 'error'));
     }
   }, []);
 
   const applyEvent = useCallback((event: ChatRealtimeEvent) => {
+    setLastEvent(event);
     const current = conversationsRef.current;
     const room = current.find((item) => item.conversationId === event.conversationId);
 
@@ -96,9 +105,11 @@ export function useChatSocket(enabled: boolean, onIncoming: (message: IncomingMe
   useEffect(() => {
     if (!enabled) {
       setConversations([]);
+      setStatus('idle');
       return;
     }
 
+    setStatus((prev) => (prev === 'success' ? prev : 'loading'));
     void refresh();
 
     const client = new Client({
@@ -126,5 +137,5 @@ export function useChatSocket(enabled: boolean, onIncoming: (message: IncomingMe
 
   const totalUnread = conversations.reduce((sum, item) => sum + item.unreadCount, 0);
 
-  return { conversations, totalUnread, refresh };
+  return { conversations, status, lastEvent, totalUnread, refresh };
 }

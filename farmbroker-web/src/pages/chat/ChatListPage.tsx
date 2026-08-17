@@ -1,7 +1,8 @@
 import { MessageCircle } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useChatDock } from '@/chat/chatDockContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -10,32 +11,16 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { ConversationRow } from '@/pages/chat/components/ConversationRow';
 import { CHAT_FILTERS, type ChatFilter, matchesFilter } from '@/pages/chat/chatFilters';
-import { getConversations } from '@/services/chatService';
-import type { Conversation } from '@/types/api';
-import type { AsyncStatus } from '@/types/common';
 
 // 내 채팅방을 모아 보는 화면입니다.
 // 공간 문의와 마켓 문의가 한 목록에 섞이면 무엇에 대한 대화인지 헷갈려 탭으로 나눕니다.
+//
+// 목록은 도크가 들고 있는 소켓 목록을 그대로 씁니다. 여기서 따로 받으면 화면을 켜 둔 동안
+// 새 메시지가 와도 미리보기·안읽음·정렬이 그대로 멈춰 있습니다.
 export function ChatListPage() {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [status, setStatus] = useState<AsyncStatus>('idle');
+  const { conversations, conversationsStatus: status, refresh } = useChatDock();
   const [filter, setFilter] = useState<ChatFilter>('ALL');
-
-  const load = useCallback(async () => {
-    setStatus('loading');
-    try {
-      const result = await getConversations();
-      setConversations(result.conversations);
-      setStatus('success');
-    } catch {
-      setStatus('error');
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const visible = conversations.filter((item) => matchesFilter(item, filter));
 
@@ -77,7 +62,9 @@ export function ChatListPage() {
       {status === 'loading' || status === 'idle' ? (
         <LoadingState label="채팅 목록을 불러오는 중입니다" />
       ) : null}
-      {status === 'error' ? <ErrorState message="채팅 목록을 불러오지 못했습니다" /> : null}
+      {status === 'error' ? (
+        <ErrorState message="채팅 목록을 불러오지 못했습니다" onRetry={refresh} />
+      ) : null}
 
       {status === 'success' && visible.length === 0 ? (
         <EmptyState
