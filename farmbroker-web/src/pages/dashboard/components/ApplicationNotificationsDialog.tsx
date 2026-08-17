@@ -13,11 +13,8 @@ interface ApplicationNotificationsDialogProps {
   receivedApplications: MatchingRequest[];
   sentApplications: ContractSummary[];
   actionError: string | null;
-  updatingMatchingId: number | null;
   returnFocusRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
-  onAccept: (matchingId: number) => void;
-  onReject: (matchingId: number) => void;
   onDismiss: (matchingId: number) => void;
 }
 
@@ -45,11 +42,8 @@ export function ApplicationNotificationsDialog({
   receivedApplications,
   sentApplications,
   actionError,
-  updatingMatchingId,
   returnFocusRef,
   onClose,
-  onAccept,
-  onReject,
   onDismiss,
 }: ApplicationNotificationsDialogProps) {
   const titleId = useId();
@@ -164,10 +158,7 @@ export function ApplicationNotificationsDialog({
                     {receivedApplications.map((request) => (
                       <li className="min-w-0" key={request.matchingId}>
                         <MatchingRequestCard
-                          isUpdating={updatingMatchingId === request.matchingId}
-                          onAccept={() => onAccept(request.matchingId)}
                           onDismiss={() => onDismiss(request.matchingId)}
-                          onReject={() => onReject(request.matchingId)}
                           request={request}
                         />
                       </li>

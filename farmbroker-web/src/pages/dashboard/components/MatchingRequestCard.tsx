@@ -1,19 +1,19 @@
-import { Check, X } from 'lucide-react';
+import { FileText, MessageCircle, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { Badge, type BadgeTone } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { RemoteImage } from '@/components/common/RemoteImage';
+import { buttonStyles } from '@/components/common/buttonStyles';
+import { ROUTES } from '@/constants/routes';
 import type { MatchingRequest, MatchingStatus } from '@/types/api';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { getMatchingStatusLabel } from '@/utils/labels';
 
 interface MatchingRequestCardProps {
   request: MatchingRequest;
-  isUpdating?: boolean;
-  onAccept?: () => void;
-  onReject?: () => void;
-  // 검토가 끝난 신청을 목록에서 치웁니다. 응답 대기중인 신청에는 노출하지 않습니다.
+  // 협의가 끝난 신청을 목록에서 치웁니다. 협의 중인 신청에는 노출하지 않습니다.
   onDismiss?: () => void;
 }
 
@@ -24,14 +24,9 @@ const statusTones: Record<MatchingStatus, BadgeTone> = {
   CANCELED: 'red',
 };
 
-// 소유자가 받은 매칭 신청을 카드 단위로 검토하고 수락/거절 액션을 시연합니다.
-export function MatchingRequestCard({
-  request,
-  isUpdating = false,
-  onAccept,
-  onReject,
-  onDismiss,
-}: MatchingRequestCardProps) {
+// 소유자가 받은 매칭 신청을 카드 단위로 확인하고 채팅·계약서로 이어갑니다.
+// 버튼 구성은 공간 상세의 SpaceMatchingRequestCard와 같습니다 — 양측이 같은 흐름을 봅니다.
+export function MatchingRequestCard({ request, onDismiss }: MatchingRequestCardProps) {
   const isWaiting = request.status === 'REQUESTED';
 
   return (
@@ -72,18 +67,20 @@ export function MatchingRequestCard({
         ) : null}
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-600">{request.message}</p>
-      {isWaiting ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          <Button disabled={isUpdating} onClick={onAccept} size="sm">
-            <Check className="h-4 w-4" aria-hidden />
-            {isUpdating ? '처리 중...' : '수락'}
-          </Button>
-          <Button disabled={isUpdating} onClick={onReject} size="sm" variant="outline">
-            <X className="h-4 w-4" aria-hidden />
-            거절
-          </Button>
-        </div>
-      ) : null}
+      <div className="mt-4 grid gap-2">
+        {/* 채팅은 화면만 먼저 만든 자리로, 아직 연결된 기능이 없습니다. */}
+        <Button className="w-full">
+          <MessageCircle className="h-5 w-5" aria-hidden />
+          채팅
+        </Button>
+        <Link
+          className={buttonStyles({ variant: 'outline', className: 'w-full' })}
+          to={ROUTES.contract(request.matchingId)}
+        >
+          <FileText className="h-5 w-5" aria-hidden />
+          계약서
+        </Link>
+      </div>
     </Card>
   );
 }

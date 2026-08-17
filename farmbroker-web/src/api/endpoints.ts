@@ -32,8 +32,6 @@ export const ENDPOINTS = {
         ? '/matchings/my-requests'
         : `/matchings/my-requests?spaceId=${spaceId}`,
     received: '/matchings/received',
-    accept: (matchingId: number | string) => `/matchings/${matchingId}/accept`,
-    reject: (matchingId: number | string) => `/matchings/${matchingId}/reject`,
     cancel: (matchingId: number | string) => `/matchings/${matchingId}/cancel`,
     dismiss: (matchingId: number | string) => `/matchings/${matchingId}/dismiss`,
     // 계약서는 매칭 1건에 붙습니다. 조건 저장이 PATCH인 것은 CORS 허용 메서드에 PUT이 없기 때문입니다.

@@ -6,7 +6,6 @@ import type {
   MatchingApplyInput,
   MatchingApplyResult,
   MatchingRequest,
-  MatchingStatus,
   MatchingStatusResult,
   MyMatching,
 } from '@/types/api';
@@ -69,22 +68,11 @@ export async function getReceivedMatchings(): Promise<MatchingRequest[]> {
   return mockMatchingRequests;
 }
 
-// 세 상태 전이 모두 PATCH /matchings/{id}/{action} + MatchingStatusResult 응답으로 형태가 같습니다.
-const statusByAction: Record<MatchingAction, MatchingStatus> = {
-  accept: 'ACCEPTED',
-  reject: 'REJECTED',
-  cancel: 'CANCELED',
-};
-
-type MatchingAction = 'accept' | 'reject' | 'cancel';
-
-async function updateMatchingStatus(
-  matchingId: number,
-  action: MatchingAction,
-): Promise<MatchingStatusResult> {
+// 신청자 본인이 아직 계약이 확정·취소되지 않은 신청을 거둬들입니다. 취소 후 같은 공간에 재신청할 수 있습니다.
+export async function cancelMatching(matchingId: number): Promise<MatchingStatusResult> {
   if (!USE_MOCKS) {
     const response = await apiRequest<MatchingStatusResult>(
-      ENDPOINTS.matchings[action](matchingId),
+      ENDPOINTS.matchings.cancel(matchingId),
       { method: 'PATCH' },
     );
     return response.data;
@@ -93,26 +81,12 @@ async function updateMatchingStatus(
   await mockDelay();
   return {
     matchingId,
-    status: statusByAction[action],
+    status: 'CANCELED',
     respondedAt: new Date().toISOString(),
   };
 }
 
-export function acceptMatching(matchingId: number) {
-  return updateMatchingStatus(matchingId, 'accept');
-}
-
-export function rejectMatching(matchingId: number) {
-  return updateMatchingStatus(matchingId, 'reject');
-}
-
-// 신청자 본인이 아직 응답받지 않은 신청을 거둬들입니다. 취소 후 같은 공간에 재신청할 수 있습니다.
-export function cancelMatching(matchingId: number) {
-  return updateMatchingStatus(matchingId, 'cancel');
-}
-
-// 공간 소유자가 검토를 마친 신청을 받은 목록에서 감춥니다.
-// 상태를 바꾸지 않으므로 updateMatchingStatus와 묶지 않고, 응답 데이터도 없습니다.
+// 공간 소유자가 협의를 마친 신청을 받은 목록에서 감춥니다. 상태를 바꾸지 않아 응답 데이터도 없습니다.
 export async function dismissReceivedMatching(matchingId: number): Promise<void> {
   if (!USE_MOCKS) {
     await apiRequest<void>(ENDPOINTS.matchings.dismiss(matchingId), { method: 'PATCH' });
