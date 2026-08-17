@@ -17,6 +17,7 @@ import { type NearbyAdapter, useNearbyPlaces } from '@/components/map/useNearbyP
 import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
 import { useMarketItems } from '@/pages/market/hooks/useMarketItems';
+import { useWishedIds } from '@/pages/market/hooks/useWishedIds';
 import type { MarketCategory } from '@/pages/market/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM } from '@/constants/geo';
 import { ROUTES } from '@/constants/routes';
@@ -29,6 +30,8 @@ export function MarketPage() {
   const { keyword, setKeyword, category, setCategory, items, status, error, reload } =
     useMarketItems();
   const { isAuthenticated } = useAuth();
+  // 카드 하트는 이 집합으로 초기 상태를 잡습니다 — 없으면 이미 찜한 상품도 빈 하트로 보입니다.
+  const wishedIds = useWishedIds(isAuthenticated);
 
   const [center, setCenter] = useState<Coords>(DEFAULT_MAP_CENTER);
   const [centerLabel, setCenterLabel] = useState('부산시청');
@@ -193,7 +196,11 @@ export function MarketPage() {
                   selectedId === item.productId ? 'rounded-app ring-2 ring-leaf-500' : undefined
                 }
               >
-                <ProductCard item={item} distanceKm={distances.get(item.productId) ?? null} />
+                <ProductCard
+                  distanceKm={distances.get(item.productId) ?? null}
+                  initiallyWished={wishedIds.has(item.productId)}
+                  item={item}
+                />
               </div>
             ))}
           </div>

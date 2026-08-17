@@ -1,5 +1,5 @@
 import { Heart, Route } from 'lucide-react';
-import { useState, type MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useRequireAuth } from '@/auth/useRequireAuth';
@@ -25,6 +25,12 @@ export function ProductCard({ item, distanceKm, initiallyWished = false }: Produ
   const [wished, setWished] = useState(initiallyWished);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 찜 목록은 상품 목록보다 늦게 도착할 수 있어 useState 초기값만으로는 놓칩니다.
+  // 값이 실제로 바뀔 때만 따라가므로, 여기서 누른 결과를 덮어쓰지는 않습니다.
+  useEffect(() => {
+    setWished(initiallyWished);
+  }, [initiallyWished]);
 
   // 카드 전체가 상세로 가는 링크라 하트 클릭이 이동으로 새지 않게 전파를 막습니다.
   // 비로그인이면 requireAuth가 로그인으로 보내고 찜은 실행되지 않습니다.
