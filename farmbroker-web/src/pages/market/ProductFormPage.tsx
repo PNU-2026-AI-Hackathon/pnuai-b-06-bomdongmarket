@@ -58,8 +58,11 @@ export function ProductFormPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadStatus, setLoadStatus] = useState<AsyncStatus>(isEdit ? 'loading' : 'success');
 
-  const { workplaces } = useMyWorkplaces();
+  const { workplaces, isLoading: isWorkplacesLoading } = useMyWorkplaces();
   const [spaceId, setSpaceId] = useState<number | null>(null);
+  // 평소 주소 칸은 공간 선택으로만 채워지지만(직접 입력 불가), 지오코딩이 실패하면
+  // 그 공간으로는 저장이 막혀 버리므로 그때만 칸을 열어 직접 고쳐 다시 시도하게 한다.
+  const [addressEditable, setAddressEditable] = useState(false);
   const [events, setEvents] = useState<ProductEventInput[]>([]);
   const [discardedUrls, setDiscardedUrls] = useState<string[]>([]);
   const [fields, setFields] = useState({
@@ -123,6 +126,9 @@ export function ProductFormPage() {
       ? `${composedUnit} · ${formatCurrency(Number(fields.price))}`
       : null;
   const pricePerBase = unitPriceHint(fields.price, fields.unitAmount, fields.unitType);
+  // 재배는 계약한 공간에서만 이뤄지므로, 신규 등록은 계약 공간이 하나도 없으면 애초에 막는다.
+  // (수정은 이미 그 공간으로 올린 상품이라 생산 위치가 채워져 있어 허용한다.)
+  const noWorkplaceForNew = !isEdit && !isWorkplacesLoading && workplaces.length === 0;
 
   function importFromSpace(selectedId: string) {
     const picked = workplaces.find((place) => String(place.spaceId) === selectedId);
@@ -131,6 +137,8 @@ export function ProductFormPage() {
       return;
     }
     setSpaceId(picked.spaceId);
+    // 공간을 새로 고르면 주소가 자동 채움으로 돌아가므로 직접 수정 상태를 해제한다.
+    setAddressEditable(false);
     setFields((prev) => ({
       ...prev,
       productionLocation: picked.title,
@@ -175,8 +183,11 @@ export function ProductFormPage() {
       // (수정: 백엔드 PATCH가 null을 '변경 없음'으로 봐 주소만 바뀌고 옛 좌표가 남는다.
       //  등록: 좌표 없이 저장하면 주소 지오코딩이 안 될 때 반경 검색에서 빠져 지도에 안 보인다.)
       if (!coords) {
+        // 주소가 있는데 좌표를 못 구하면 그 공간으로는 저장이 계속 막힌다.
+        // 주소 칸을 열어 사용자가 직접 고쳐(예: 검색되는 형태로) 다시 시도할 수 있게 한다.
+        setAddressEditable(true);
         setError(
-          '주소의 좌표를 확인하지 못했습니다. 주소를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
+          '주소의 좌표를 확인하지 못했습니다. 아래 생산지 주소를 직접 고쳐 다시 시도해 주세요.',
         );
         setIsSaving(false);
         return;
@@ -283,7 +294,7 @@ export function ProductFormPage() {
         >
           {/* 재배는 계약(매칭 수락)한 공간에서만 이뤄지므로 그 공간만 보여 줍니다.
               고르면 생산 위치·주소가 자동으로 채워집니다(직접 입력 불가). */}
-          {workplaces.length > 0 ? (
+          {isWorkplacesLoading ? null : workplaces.length > 0 ? (
             <Select
               helperText="계약한 공간을 고르면 생산 위치와 주소가 자동으로 채워집니다."
               label="어디서 생산했나요"
@@ -401,12 +412,18 @@ export function ProductFormPage() {
               value={fields.productionLocation}
             />
           </div>
-          {/* 주소는 지도에 위치를 찍는 데 쓰이며, 위에서 고른 공간으로 자동 채워집니다. */}
+          {/* 주소는 지도에 위치를 찍는 데 쓰이며, 위에서 고른 공간으로 자동 채워집니다.
+              지오코딩이 실패했을 때만 열려, 검색되는 형태로 직접 고쳐 다시 시도할 수 있습니다. */}
           <Input
-            helperText="위에서 고른 공간의 주소로 자동 채워지며, 이 주소로 지도에 생산지를 표시합니다."
+            helperText={
+              addressEditable
+                ? '좌표를 확인하지 못해 직접 수정할 수 있습니다. 검색되는 주소로 고쳐 다시 저장해 주세요.'
+                : '위에서 고른 공간의 주소로 자동 채워지며, 이 주소로 지도에 생산지를 표시합니다.'
+            }
             label="생산지 주소"
+            onChange={(event) => setField('address', event.target.value)}
             placeholder="공간을 선택하면 채워집니다"
-            readOnly
+            readOnly={!addressEditable}
             value={fields.address}
           />
         </FormSection>
@@ -506,7 +523,18 @@ export function ProductFormPage() {
 
         {/* 폼이 길어 모바일에서 제출 버튼이 화면 밖으로 밀리므로 공간 등록 화면과 같이 하단에 고정합니다. */}
         <div className="sticky bottom-20 z-10 rounded-app border border-leaf-100 bg-white p-3 shadow-lift lg:static lg:p-0 lg:shadow-none">
-          <Button className="w-full" disabled={isSaving} size="lg" type="submit">
+          {/* 계약 공간이 없으면 폼을 다 채운 뒤 막히지 않도록 버튼 단계에서 먼저 이유를 알린다. */}
+          {noWorkplaceForNew ? (
+            <p className="mb-2 text-xs font-semibold text-feedback-danger" role="status">
+              계약된 재배 공간이 없어 상품을 등록할 수 없습니다. 공간 매칭이 수락되면 등록할 수 있습니다.
+            </p>
+          ) : null}
+          <Button
+            className="w-full"
+            disabled={isSaving || noWorkplaceForNew}
+            size="lg"
+            type="submit"
+          >
             {isSaving ? '저장 중...' : isEdit ? '수정 내용 저장' : '상품 등록하기'}
           </Button>
         </div>
