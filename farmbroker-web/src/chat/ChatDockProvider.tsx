@@ -1,6 +1,6 @@
 import { ChevronDown, MessageCircle, X } from 'lucide-react';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
 import { ToastHost, type ToastItem } from '@/components/common/Toast';
@@ -28,6 +28,7 @@ function isNarrowScreen(): boolean {
 export function ChatDockProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [dockState, setDockState] = useState<DockState>('hidden');
   const [activeId, setActiveId] = useState<number | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -48,8 +49,18 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
     [navigate],
   );
 
+  // 지금 화면에 보이고 있는 대화 — 채팅방 경로이거나, 도크가 그 방을 열어 둔 경우입니다.
+  const roomMatch = /^\/chat\/(\d+)$/.exec(location.pathname);
+  const viewingId = roomMatch
+    ? Number(roomMatch[1])
+    : dockState === 'open' && activeId != null
+      ? activeId
+      : null;
+
   const handleIncoming = useCallback(
     (message: IncomingMessage) => {
+      // 읽고 있는 대화의 메시지는 화면에 바로 붙으므로 토스트까지 띄우지 않습니다.
+      if (message.conversationId === viewingId) return;
       setToasts((prev) => [
         ...prev,
         {
@@ -61,7 +72,7 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
         },
       ]);
     },
-    [openConversation],
+    [openConversation, viewingId],
   );
 
   const { conversations, status, lastEvent, totalUnread, refresh } = useChatSocket(

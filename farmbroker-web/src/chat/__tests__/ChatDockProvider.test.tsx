@@ -1,11 +1,34 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Route, Routes, useLocation } from 'react-router-dom';
 
 import { ChatDockProvider } from '@/chat/ChatDockProvider';
 import { useChatDock } from '@/chat/chatDockContext';
+import type { IncomingMessage } from '@/chat/useChatSocket';
 import { renderWithProviders } from '@/test/renderWithProviders';
+
+// 소켓 대신 onIncoming 콜백만 붙잡아 직접 호출한다 — 실제 연결 없이 토스트 규칙을 검증한다.
+const socket: { onIncoming: ((message: IncomingMessage) => void) | null } = { onIncoming: null };
+
+vi.mock('@/chat/useChatSocket', () => ({
+  useChatSocket: (_enabled: boolean, onIncoming: (message: IncomingMessage) => void) => {
+    socket.onIncoming = onIncoming;
+    return {
+      conversations: [],
+      status: 'success',
+      lastEvent: null,
+      totalUnread: 0,
+      refresh: () => undefined,
+    };
+  },
+}));
+
+function arrive(conversationId: number) {
+  act(() => {
+    socket.onIncoming?.({ conversationId, from: '김소비', preview: '상추 남았나요?' });
+  });
+}
 
 // 화면 폭은 matchMedia 로만 판단한다(jsdom 에는 레이아웃이 없다).
 function setNarrow(narrow: boolean) {
@@ -74,5 +97,38 @@ describe('ChatDockProvider 대화 열기', () => {
 
     expect(screen.getByText('현재 경로: /market/1')).toBeInTheDocument();
     expect(await screen.findByLabelText('채팅 최소화')).toBeInTheDocument();
+  });
+});
+
+// 읽고 있는 대화의 메시지는 화면에 바로 붙으므로 토스트가 겹쳐 뜨면 방해가 된다.
+describe('ChatDockProvider 새 메시지 토스트', () => {
+  function renderAt(route: string) {
+    renderWithProviders(
+      <ChatDockProvider>
+        <span>본문</span>
+      </ChatDockProvider>,
+      { authenticated: true, route },
+    );
+  }
+
+  it('보고 있는 채팅방의 메시지는 토스트를 띄우지 않는다', () => {
+    renderAt('/chat/7');
+    arrive(7);
+
+    expect(screen.queryByText('김소비님의 새 메시지')).not.toBeInTheDocument();
+  });
+
+  it('다른 방 메시지는 토스트로 알린다', () => {
+    renderAt('/chat/7');
+    arrive(9);
+
+    expect(screen.getByText('김소비님의 새 메시지')).toBeInTheDocument();
+  });
+
+  it('채팅방이 아닌 화면에서는 토스트로 알린다', () => {
+    renderAt('/market/1');
+    arrive(7);
+
+    expect(screen.getByText('김소비님의 새 메시지')).toBeInTheDocument();
   });
 });
