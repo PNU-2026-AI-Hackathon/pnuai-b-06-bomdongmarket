@@ -73,7 +73,7 @@ export function SpaceInfoPanel({ space }: SpaceInfoPanelProps) {
                 <Icon className="h-4 w-4 text-leaf-700" aria-hidden />
                 <span className="font-semibold text-ink-700">{label}</span>
                 <span className="ml-auto text-xs font-bold text-slate-500">
-                  {enabled ? '가능' : '보완 필요'}
+                  {enabled ? '가능' : '불가능'}
                 </span>
               </div>
             );

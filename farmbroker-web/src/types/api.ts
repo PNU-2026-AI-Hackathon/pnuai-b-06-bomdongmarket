@@ -85,6 +85,10 @@ export interface SpaceSummary {
   address: string;
   area: number;
   monthlyRent: number;
+  // 목록 카드가 실제 등록값대로 시설 아이콘을 보여줘야 해서 요약에도 담깁니다.
+  hasWater: boolean;
+  hasElectricity: boolean;
+  hasVentilation: boolean;
   status: SpaceStatus;
   imageUrl: string | null;
   // 지도 검색용 좌표. 등록 시 프론트가 주소를 지오코딩해 저장하며, 없으면 프론트가 폴백 지오코딩한다.
@@ -94,9 +98,6 @@ export interface SpaceSummary {
 
 export interface SpaceDetail extends SpaceSummary {
   floor: number;
-  hasWater: boolean;
-  hasElectricity: boolean;
-  hasVentilation: boolean;
   description: string;
   imageUrls: string[];
   floorPlanUrls: string[];
@@ -124,9 +125,10 @@ export interface SpaceCreateInput {
   hasElectricity: boolean;
   hasVentilation: boolean;
   description?: string;
-  imageUrls?: string[];
-  // 도면은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
-  floorPlanUrls: string[];
+  // 공간 사진은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
+  imageUrls: string[];
+  // 등록 폼에서는 더 이상 도면을 받지 않습니다. 이미 등록된 공간의 수정 요청에만 쓰입니다.
+  floorPlanUrls?: string[];
   // 지도용 좌표(선택). 폼에서 주소를 지오코딩해 함께 보낸다(실패 시 null).
   latitude?: number | null;
   longitude?: number | null;

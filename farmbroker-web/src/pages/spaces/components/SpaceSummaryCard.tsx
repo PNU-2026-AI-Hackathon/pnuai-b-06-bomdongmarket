@@ -14,37 +14,10 @@ const facilityLabels: [keyof SpaceCreateInput, string][] = [
   ['hasVentilation', '환기 가능'],
 ];
 
-interface ImagePreviewRowProps {
-  heading: string;
-  label: string;
-  imageUrls: string[];
-}
-
-function ImagePreviewRow({ heading, label, imageUrls }: ImagePreviewRowProps) {
-  if (imageUrls.length === 0) return null;
-
-  return (
-    <div className="mt-4">
-      <h3 className="text-sm font-bold text-content">{heading}</h3>
-      <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {imageUrls.map((imageUrl, index) => (
-          <li key={imageUrl} className="overflow-hidden rounded-app border border-line">
-            <RemoteImage
-              alt={`등록할 ${label} ${formatNumber(index + 1)}`}
-              className="h-20 w-full object-cover"
-              src={imageUrl}
-            />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 // 등록 직전에 입력한 공간 정보를 그대로 되짚어 볼 수 있게 요약합니다.
 export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
   const facilities = facilityLabels.filter(([key]) => input[key]);
-  const imageCount = input.imageUrls?.length ?? 0;
+  const imageUrls = input.imageUrls;
 
   return (
     <Card padding="lg">
@@ -57,7 +30,7 @@ export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
           ['전체 면적', formatArea(input.area)],
           ['층수', `${formatNumber(input.floor)}층`],
           ['희망 월세', formatCurrency(input.monthlyRent)],
-          ['등록 사진', `${formatNumber(imageCount)}장`],
+          ['등록 사진', `${formatNumber(imageUrls.length)}장`],
         ].map(([label, value]) => (
           <div key={label} className="rounded-app bg-surface-subtle p-3">
             <dt className="text-xs font-semibold text-content-subtle">{label}</dt>
@@ -82,16 +55,25 @@ export function SpaceSummaryCard({ input }: SpaceSummaryCardProps) {
         )}
       </div>
 
-      <ImagePreviewRow
-        heading="등록할 도면"
-        imageUrls={input.floorPlanUrls}
-        label="도면"
-      />
-      <ImagePreviewRow
-        heading="등록할 사진"
-        imageUrls={input.imageUrls ?? []}
-        label="공간 사진"
-      />
+      {imageUrls.length > 0 ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-bold text-content">등록할 사진</h3>
+          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {imageUrls.map((imageUrl, index) => (
+              <li
+                key={imageUrl}
+                className="overflow-hidden rounded-app border border-line"
+              >
+                <RemoteImage
+                  alt={`등록할 공간 사진 ${formatNumber(index + 1)}`}
+                  className="h-20 w-full object-cover"
+                  src={imageUrl}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {input.description ? (
         <div className="mt-4">
