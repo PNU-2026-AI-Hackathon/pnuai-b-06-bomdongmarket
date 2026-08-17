@@ -328,6 +328,9 @@ export interface ContractDetail {
   deposit: number | null;
   startDate: string | null; // yyyy-MM-dd
   endDate: string | null; // yyyy-MM-dd
+  // 지금 보고 있는 조건의 번호(저장할 때마다 +1). 동의 요청에 그대로 실어 보내면
+  // 서버가 오래 열린 화면에서 온 동의를 409로 거른다.
+  termsVersion: number;
   ownerAgreed: boolean;
   farmerAgreed: boolean;
   status: ContractStatus;
