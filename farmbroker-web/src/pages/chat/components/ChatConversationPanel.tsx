@@ -35,6 +35,15 @@ function imageUrl(messageId: number): string {
   return `${APP_INFO.baseUrl}${ENDPOINTS.chat.messageImage(messageId)}`;
 }
 
+// 내가 보낸 메시지는 두 경로로 들어옵니다 — 전송 API 응답과, 서버가 보낸 사람에게도 주는
+// MESSAGE_CREATED 이벤트(ChatRealtimePublisher 가 참가자 둘 다에게 보냅니다).
+// 어느 쪽이 먼저 도착할지 정해져 있지 않아 양쪽 모두 messageId 로 걸러야 합니다.
+function appendUnique(previous: ChatMessage[], message: ChatMessage): ChatMessage[] {
+  return previous.some((item) => item.messageId === message.messageId)
+    ? previous
+    : [...previous, message];
+}
+
 // 대화 하나를 보여 주고 보내는 패널입니다.
 // 전체 화면(/chat/:id)과 우측 하단 미니 위젯이 이 컴포넌트를 함께 씁니다 —
 // 두 곳에 같은 로직을 두면 한쪽만 고쳐지는 일이 생깁니다.
@@ -88,9 +97,7 @@ export function ChatConversationPanel({
     const incoming = lastEvent.message;
     if (!incoming) return;
 
-    setMessages((prev) =>
-      prev.some((message) => message.messageId === incoming.messageId) ? prev : [...prev, incoming],
-    );
+    setMessages((prev) => appendUnique(prev, incoming));
 
     // 지금 보고 있는 방이므로 읽음으로 처리합니다 — 아니면 안읽음 배지가 계속 올라갑니다.
     // 내가 보낸 메시지에는 부르지 않습니다(읽을 것이 없습니다).
@@ -149,7 +156,8 @@ export function ChatConversationPanel({
     setError(null);
     try {
       const sent = await sendMessage(conversationId, trimmed, image);
-      setMessages((prev) => [...prev, sent]);
+      // 소켓 이벤트가 응답보다 먼저 도착했으면 이미 붙어 있습니다.
+      setMessages((prev) => appendUnique(prev, sent));
       setText('');
       setImage(null);
     } catch (caught) {

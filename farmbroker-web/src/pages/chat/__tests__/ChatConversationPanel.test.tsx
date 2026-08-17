@@ -142,6 +142,42 @@ describe('ChatConversationPanel', () => {
     expect(await screen.findByText('지금 막 수확했어요.')).toBeInTheDocument();
   });
 
+  // 서버는 보낸 사람에게도 MESSAGE_CREATED 를 준다. 소켓 이벤트가 전송 API 응답보다
+  // 먼저 도착하면 같은 메시지가 두 번 붙어 내 말풍선만 두 개로 보인다.
+  it('소켓 이벤트가 전송 응답보다 먼저 와도 한 번만 붙는다', async () => {
+    const user = userEvent.setup();
+    const text = '금요일에 받을 수 있을까요?';
+
+    function panel(lastEvent: ChatDockValue['lastEvent']) {
+      return (
+        <ChatDockContext.Provider value={dockValue(lastEvent)}>
+          <ChatConversationPanel conversationId={1} myUserId={1} />
+        </ChatDockContext.Provider>
+      );
+    }
+
+    const { rerender } = renderWithProviders(panel(null));
+    await screen.findByText('상추 아직 남아 있나요?');
+
+    // 목업 전송이 돌려줄 messageId(100)로 이벤트가 먼저 도착한 상황을 만든다.
+    rerender(
+      panel({
+        type: 'MESSAGE_CREATED',
+        conversationId: 1,
+        message: incoming(100, text, 1),
+        unreadCount: 0,
+      }),
+    );
+    expect(await screen.findByText(text)).toBeInTheDocument();
+
+    // 그 뒤 전송 응답이 같은 메시지를 들고 도착한다.
+    await user.type(screen.getByLabelText('메시지 입력'), text);
+    await user.click(screen.getByRole('button', { name: '보내기' }));
+
+    await waitFor(() => expect(screen.getByLabelText('메시지 입력')).toHaveValue(''));
+    expect(screen.getAllByText(text)).toHaveLength(1);
+  });
+
   it('다른 방 이벤트는 무시한다', async () => {
     function panel(lastEvent: ChatDockValue['lastEvent']) {
       return (
