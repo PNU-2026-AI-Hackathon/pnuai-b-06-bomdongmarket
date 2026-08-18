@@ -1,6 +1,8 @@
 import { FileText, MessageCircle, X } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { useChatDock } from '@/chat/chatDockContext';
 import { Badge, type BadgeTone } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -27,6 +29,8 @@ const statusTones: Record<MatchingStatus, BadgeTone> = {
 // 소유자가 받은 매칭 신청을 카드 단위로 확인하고 채팅·계약서로 이어갑니다.
 // 버튼 구성은 공간 상세의 SpaceMatchingRequestCard와 같습니다 — 양측이 같은 흐름을 봅니다.
 export function MatchingRequestCard({ request, onDismiss }: MatchingRequestCardProps) {
+  const chatDock = useChatDock();
+  const [chatError, setChatError] = useState<string | null>(null);
   const isWaiting = request.status === 'REQUESTED';
 
   return (
@@ -68,11 +72,28 @@ export function MatchingRequestCard({ request, onDismiss }: MatchingRequestCardP
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-600">{request.message}</p>
       <div className="mt-4 grid gap-2">
-        {/* 채팅은 화면만 먼저 만든 자리로, 아직 연결된 기능이 없습니다. */}
-        <Button className="w-full">
+        {/* 신청자와의 공간 문의 방을 엽니다. 이미 있으면 그 방이 열립니다. */}
+        <Button
+          className="w-full"
+          onClick={() => {
+            setChatError(null);
+            void chatDock
+              .openContext('SPACE', request.spaceId, request.farmerId)
+              .catch((caught: unknown) => {
+                setChatError(
+                  caught instanceof Error ? caught.message : '채팅을 열지 못했습니다.',
+                );
+              });
+          }}
+        >
           <MessageCircle className="h-5 w-5" aria-hidden />
           채팅
         </Button>
+        {chatError ? (
+          <p className="text-sm font-semibold text-feedback-danger" role="alert">
+            {chatError}
+          </p>
+        ) : null}
         <Link
           className={buttonStyles({ variant: 'outline', className: 'w-full' })}
           to={ROUTES.contract(request.matchingId)}
