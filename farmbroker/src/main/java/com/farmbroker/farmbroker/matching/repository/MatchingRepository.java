@@ -22,6 +22,10 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
 
     boolean existsBySpaceIdAndFarmerIdAndStatus(Long spaceId, Long farmerId, MatchingStatus status);
 
+    // 공간 주인이 신청자에게 먼저 채팅을 걸 수 있는지 판단할 때 쓴다(chat 도메인).
+    // 상태는 보지 않는다 — 협의가 끝난 뒤에도 이미 오간 대화는 이어갈 수 있어야 한다.
+    boolean existsBySpaceIdAndFarmerId(Long spaceId, Long farmerId);
+
     // 내가 farmer로서 신청한 목록 — 공간 정보는 getSummariesByIds(공간 계약) 배치로 별도 조회
     List<Matching> findAllByFarmerIdOrderByCreatedAtDesc(Long farmerId);
 

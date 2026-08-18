@@ -6,11 +6,13 @@ const spaceStatusLabels: Record<SpaceStatus, string> = {
   CLOSED: '마감',
 };
 
+// 신청부터 최종 계약까지의 진행 단계를 그대로 읽습니다.
+// 공간 제공자가 신청을 일방적으로 수락·거절하는 경로는 없으므로 "수락됨/거절됨"은 쓰지 않습니다.
 const matchingStatusLabels: Record<MatchingStatus, string> = {
-  REQUESTED: '신청 대기',
-  ACCEPTED: '수락됨',
-  REJECTED: '거절됨',
-  CANCELED: '취소됨',
+  REQUESTED: '협의 중',
+  ACCEPTED: '계약 확정',
+  REJECTED: '계약 취소',
+  CANCELED: '신청 취소',
 };
 
 // 백엔드와 주고받는 enum 값은 영어로 유지하고, 화면 표시는 한국어로 변환합니다.
@@ -31,19 +33,4 @@ const matchingTypeLabels: Record<MatchingType, string> = {
 // 유형 도입 이전에 저장된 신청은 type이 null이라 "미지정"으로 표시합니다.
 export function getMatchingTypeLabel(type: MatchingType | null) {
   return type ? matchingTypeLabels[type] : '미지정';
-}
-
-// 신청자 관점의 진행 상황 문구입니다. 배지 한 칸에 들어가야 해서 짧게 씁니다.
-// getMatchingStatusLabel이 공간 제공자가 보는 신청의 상태 이름이라면,
-// 이쪽은 신청을 보낸 사람이 "답변을 받았는가"를 확인하는 문구입니다.
-// 취소한 신청은 목록에서 빠지므로 CANCELED는 타입 완결성을 위한 값입니다.
-const matchingProgressLabels: Record<MatchingStatus, string> = {
-  REQUESTED: '응답 대기중',
-  ACCEPTED: '수락',
-  REJECTED: '거절',
-  CANCELED: '취소',
-};
-
-export function getMatchingProgressLabel(status: MatchingStatus) {
-  return matchingProgressLabels[status];
 }

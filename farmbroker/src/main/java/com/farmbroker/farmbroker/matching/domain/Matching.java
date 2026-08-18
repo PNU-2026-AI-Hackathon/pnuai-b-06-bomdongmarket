@@ -67,6 +67,8 @@ public class Matching {
 
     // ── 계약서 ───────────────────────────────────────────────────────────────
     // 매칭 1건당 계약서 1건이라 별도 테이블을 두지 않고 같은 행에 담는다.
+    // 계약 진행 상태도 별도 컬럼을 두지 않는다 — status가 그대로 나타낸다
+    // (REQUESTED=협의 중, ACCEPTED=확정, REJECTED=계약 취소, CANCELED=신청 철회).
     // 신청 시점에는 아무것도 정해지지 않았으므로 전부 nullable이며,
     // ddl-auto=update가 기존 행이 있는 테이블에 NOT NULL 컬럼을 추가하지 못하는 제약과도 맞는다.
     // 조건 입력은 공간 소유자만 가능하고(권한 검증은 서비스), 저장된 값은 양측이 함께 본다.
@@ -94,9 +96,6 @@ public class Matching {
 
     private LocalDateTime farmerAgreedAt;
 
-    // 한쪽이라도 취소하면 채워진다. 취소는 되돌릴 수 없다.
-    private LocalDateTime contractCanceledAt;
-
     @Builder
     public Matching(Space space, User farmer, String message, MatchingType type) {
         this.space = space;
@@ -108,11 +107,13 @@ public class Matching {
 
     // 상태 전이는 REQUESTED에서만 허용된다 — 전제 검증(권한/현재 상태)은 서비스가 수행
 
+    // 양측이 계약에 동의해 최종 계약이 성립한 상태.
     public void accept() {
         this.status = MatchingStatus.ACCEPTED;
         this.respondedAt = LocalDateTime.now();
     }
 
+    // 한쪽이 계약을 취소한 상태. 되돌릴 수 없다.
     public void reject() {
         this.status = MatchingStatus.REJECTED;
         this.respondedAt = LocalDateTime.now();
@@ -166,23 +167,9 @@ public class Matching {
         }
     }
 
-    public void cancelContract() {
-        this.contractCanceledAt = LocalDateTime.now();
-    }
-
     public boolean hasContractTerms() {
         return contractMonthlyRent != null && contractMaintenanceFee != null
                 && contractMaintenanceFeePayer != null && contractDeposit != null
                 && contractStartDate != null && contractEndDate != null;
-    }
-
-    public ContractStatus getContractStatus() {
-        if (contractCanceledAt != null) {
-            return ContractStatus.CANCELED;
-        }
-        if (ownerAgreedAt != null && farmerAgreedAt != null) {
-            return ContractStatus.CONFIRMED;
-        }
-        return ContractStatus.DRAFT;
     }
 }

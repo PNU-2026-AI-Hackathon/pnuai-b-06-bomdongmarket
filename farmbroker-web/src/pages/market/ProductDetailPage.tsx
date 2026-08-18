@@ -235,12 +235,16 @@ export function ProductDetailPage() {
             </Card>
           ) : null}
 
-          <Card padding="lg">
-            <h2 className="text-xl font-black text-ink-900">생산 이력</h2>
-            <div className="mt-4">
-              <ProductTraceabilityTimeline events={item.traceabilityEvents ?? []} />
-            </div>
-          </Card>
+          {/* 등록 폼에서 입력 UI를 뺀 뒤로 새 상품에는 이력이 붙지 않는다.
+              비어 있으면 카드째 감춰 판매자가 채울 수 없는 빈 자리를 남기지 않는다. */}
+          {item.traceabilityEvents?.length ? (
+            <Card padding="lg">
+              <h2 className="text-xl font-black text-ink-900">생산 이력</h2>
+              <div className="mt-4">
+                <ProductTraceabilityTimeline events={item.traceabilityEvents} />
+              </div>
+            </Card>
+          ) : null}
         </div>
       ) : null}
     </PageContainer>

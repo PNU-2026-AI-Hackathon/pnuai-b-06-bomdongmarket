@@ -81,8 +81,8 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
   );
 
   const openContext = useCallback(
-    async (contextType: ChatContextType, contextId: number) => {
-      const conversation = await createOrGetConversation(contextType, contextId);
+    async (contextType: ChatContextType, contextId: number, otherUserId?: number) => {
+      const conversation = await createOrGetConversation(contextType, contextId, otherUserId);
       openConversation(conversation.conversationId);
       refresh();
     },

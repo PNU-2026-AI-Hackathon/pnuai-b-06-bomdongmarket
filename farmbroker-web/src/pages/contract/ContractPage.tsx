@@ -74,7 +74,7 @@ export function ContractPage() {
               </p>
             ) : null}
 
-            {contract.status === 'DRAFT' ? (
+            {contract.status === 'REQUESTED' ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button
                   disabled={isSubmitting || viewerAgreed(contract) || termsDirty}
@@ -92,7 +92,7 @@ export function ContractPage() {
               </div>
             ) : (
               <p className="text-body-sm font-semibold text-content" role="status">
-                {contract.status === 'CONFIRMED'
+                {contract.status === 'ACCEPTED'
                   ? '계약이 확정되었습니다.'
                   : '이 계약은 취소되었습니다.'}
               </p>
@@ -168,7 +168,7 @@ interface TermsCardProps {
 function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardProps) {
   const isOwner = contract.viewerRole === 'OWNER';
   // 확정·취소된 계약은 조건을 바꿀 수 없습니다(서버도 같은 규칙으로 막습니다).
-  const canEdit = isOwner && contract.status === 'DRAFT';
+  const canEdit = isOwner && contract.status === 'REQUESTED';
   // 조건이 저장되면(내가 저장했든 상대가 저장했든) 입력값을 서버 값에 다시 맞춥니다.
   const [monthlyRent, setMonthlyRent] = useState(contract.monthlyRent?.toString() ?? '');
   const [maintenanceFee, setMaintenanceFee] = useState(
@@ -340,6 +340,11 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
   );
 }
 
+// 계약 취소(REJECTED)든 신청 철회(CANCELED)든 더 기다릴 동의가 없다는 점은 같습니다.
+function isCanceled(contract: ContractDetail) {
+  return contract.status === 'REJECTED' || contract.status === 'CANCELED';
+}
+
 function AgreementCard({ contract }: { contract: ContractDetail }) {
   return (
     <Card padding="lg">
@@ -347,12 +352,12 @@ function AgreementCard({ contract }: { contract: ContractDetail }) {
       <ul className="mt-4 grid gap-3 text-body-sm">
         <AgreementRow
           agreed={contract.ownerAgreed}
-          canceled={contract.status === 'CANCELED'}
+          canceled={isCanceled(contract)}
           label={contract.ownerNickname}
         />
         <AgreementRow
           agreed={contract.farmerAgreed}
-          canceled={contract.status === 'CANCELED'}
+          canceled={isCanceled(contract)}
           label={contract.farmerNickname}
         />
       </ul>

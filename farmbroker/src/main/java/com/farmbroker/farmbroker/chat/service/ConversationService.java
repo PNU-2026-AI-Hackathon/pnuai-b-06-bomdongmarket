@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.chat.service;
 
+import com.farmbroker.farmbroker.chat.domain.ChatContextType;
 import com.farmbroker.farmbroker.chat.domain.Conversation;
 import com.farmbroker.farmbroker.chat.domain.UserBlock;
 import com.farmbroker.farmbroker.chat.dto.ConversationCreateRequest;
@@ -10,6 +11,7 @@ import com.farmbroker.farmbroker.chat.repository.ConversationRepository;
 import com.farmbroker.farmbroker.chat.repository.UserBlockRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,8 @@ public class ConversationService {
     private final UserRepository userRepository;
     private final ChatContextResolver contextResolver;
     private final ChatBlockService blockService;
+    // 공간 주인이 먼저 말을 걸 때, 상대가 실제 신청자인지 확인하는 용도로만 쓴다.
+    private final MatchingRepository matchingRepository;
 
     // 한 트랜잭션에서 재조회하면 REPEATABLE READ 스냅샷 때문에 경쟁자가 넣은 행이 보이지 않는다.
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -51,13 +55,11 @@ public class ConversationService {
         }
         ChatContextResolver.ContextTarget target =
                 contextResolver.resolve(request.getContextType(), request.getContextId());
-        if (target.ownerId().equals(userId)) {
-            throw new BusinessException(ErrorCode.CHAT_SELF_CONVERSATION);
-        }
-        blockService.validateCanChat(userId, target.ownerId());
+        Long counterpartId = resolveCounterpart(userId, target, request.getOtherUserId());
+        blockService.validateCanChat(userId, counterpartId);
 
-        Long participant1Id = Math.min(userId, target.ownerId());
-        Long participant2Id = Math.max(userId, target.ownerId());
+        Long participant1Id = Math.min(userId, counterpartId);
+        Long participant2Id = Math.max(userId, counterpartId);
         Optional<Conversation> found = conversationWriter.find(
                 target.type(), target.id(), participant1Id, participant2Id);
         if (found.isEmpty()) {
@@ -73,6 +75,25 @@ public class ConversationService {
         }
         return toResponse(found.orElseThrow(
                 () -> new BusinessException(ErrorCode.CHAT_CONVERSATION_NOT_FOUND)), userId);
+    }
+
+    // 말을 거는 상대를 정한다.
+    // 문의자가 주인에게 거는 기존 경로에서는 상대가 곧 주인이라 otherUserId를 볼 필요가 없다.
+    // 주인이 먼저 거는 경로만 상대를 지목받고, 지목한 상대가 실제 신청자인지 확인한다 —
+    // 확인 없이 열면 주인이 아무에게나 방을 만들 수 있다.
+    private Long resolveCounterpart(Long userId, ChatContextResolver.ContextTarget target,
+                                    Long otherUserId) {
+        if (!target.ownerId().equals(userId)) {
+            return target.ownerId();
+        }
+        if (otherUserId == null || otherUserId.equals(userId)) {
+            throw new BusinessException(ErrorCode.CHAT_SELF_CONVERSATION);
+        }
+        if (target.type() != ChatContextType.SPACE
+                || !matchingRepository.existsBySpaceIdAndFarmerId(target.id(), otherUserId)) {
+            throw new BusinessException(ErrorCode.CHAT_FORBIDDEN);
+        }
+        return otherUserId;
     }
 
     public ConversationListResponse getConversations(Long userId, int page, int size) {

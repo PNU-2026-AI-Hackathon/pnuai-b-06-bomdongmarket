@@ -42,9 +42,7 @@ export function DashboardPage() {
     status,
     error,
     actionError,
-    updatingMatchingId,
     reload,
-    respondToMatching,
     dismissMatching,
   } = useDashboard();
   const isOwner = hasRole(user, 'OWNER');
@@ -141,7 +139,7 @@ export function DashboardPage() {
               emptyState={
                 <EmptyState
                   actionLabel="공간 둘러보기"
-                  description="공간의 매칭 신청이 수락되면 계약한 공간으로 표시됩니다."
+                  description="양측이 계약에 동의하면 계약한 공간으로 표시됩니다."
                   onAction={() => navigate(ROUTES.spaces)}
                   title="계약한 공간이 없습니다"
                 />
@@ -182,14 +180,11 @@ export function DashboardPage() {
             actionError={actionError}
             isOpen={notifications.isOpen}
             isOwner={isOwner}
-            onAccept={(matchingId) => void respondToMatching(matchingId, 'accept')}
             onClose={notifications.close}
             onDismiss={(matchingId) => void dismissMatching(matchingId)}
-            onReject={(matchingId) => void respondToMatching(matchingId, 'reject')}
             receivedApplications={receivedApplications}
             returnFocusRef={notificationButtonRef}
             sentApplications={sentApplications}
-            updatingMatchingId={updatingMatchingId}
           />
         </>
       ) : null}

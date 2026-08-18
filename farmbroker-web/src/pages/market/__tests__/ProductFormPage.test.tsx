@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { saveAuthSession } from '@/auth/session';
 import { ProductFormPage } from '@/pages/market/ProductFormPage';
-import { deleteImage } from '@/services/fileService';
+import { deleteImage, uploadImages } from '@/services/fileService';
 import { createProduct, getMarketItem, updateProduct } from '@/services/marketService';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { MarketItem } from '@/types/api';
@@ -34,7 +34,7 @@ vi.mock('@/services/marketService', () => ({
 
 vi.mock('@/services/fileService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/fileService')>();
-  return { ...actual, deleteImage: vi.fn() };
+  return { ...actual, deleteImage: vi.fn(), uploadImages: vi.fn() };
 });
 
 vi.mock('@/utils/geocode', async () => {
@@ -71,6 +71,9 @@ describe('ProductFormPage', () => {
       roles: ['CONSUMER', 'FARMER'],
     });
     vi.mocked(getMarketItem).mockResolvedValue(existingProduct);
+    vi.mocked(uploadImages).mockResolvedValue([
+      { url: '/files/new-photo.jpg', originalName: 'new-photo.jpg', size: 1024 },
+    ]);
   });
 
   async function removeImageAndSubmit() {
@@ -90,19 +93,36 @@ describe('ProductFormPage', () => {
     await user.click(screen.getByRole('button', { name: '수정 내용 저장' }));
   }
 
-  it('사진을 비우고 저장하면 removeImageUrl만 전송한다', async () => {
-    vi.mocked(updateProduct).mockResolvedValue({ ...existingProduct, imageUrl: null });
+  // 대표 사진이 필수가 되면서 '비우고 저장'은 막힌다. 버린 사진 정리는 교체 흐름으로 확인한다.
+  async function replaceImageAndSubmit() {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/:productId/edit" />
+      </Routes>,
+      {
+        authenticated: true,
+        route: '/market/10/edit',
+      },
+    );
 
+    await screen.findByRole('heading', { name: '상품 수정' });
+    await user.upload(
+      screen.getByLabelText('대표 사진 선택'),
+      new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
+    );
+    await user.click(screen.getByRole('button', { name: '수정 내용 저장' }));
+  }
+
+  it('사진을 비우면 저장을 막고 안내한다', async () => {
     await removeImageAndSubmit();
 
-    await waitFor(() => expect(updateProduct).toHaveBeenCalledTimes(1));
-    const payload = vi.mocked(updateProduct).mock.calls[0][1];
-    expect(payload).toMatchObject({ removeImageUrl: true });
-    expect(payload).not.toHaveProperty('imageUrl');
-    await waitFor(() => expect(deleteImage).toHaveBeenCalledWith(existingProduct.imageUrl));
+    expect(await screen.findByRole('alert')).toHaveTextContent('대표 사진을 한 장 올려 주세요.');
+    expect(updateProduct).not.toHaveBeenCalled();
+    expect(deleteImage).not.toHaveBeenCalled();
   });
 
-  it('저장이 성공하기 전에는 버린 사진을 삭제하지 않는다', async () => {
+  it('저장이 성공하기 전에는 교체로 버린 사진을 삭제하지 않는다', async () => {
     let resolveUpdate!: (item: MarketItem) => void;
     vi.mocked(updateProduct).mockReturnValue(
       new Promise((resolve) => {
@@ -110,19 +130,19 @@ describe('ProductFormPage', () => {
       }),
     );
 
-    await removeImageAndSubmit();
+    await replaceImageAndSubmit();
 
     await waitFor(() => expect(updateProduct).toHaveBeenCalledTimes(1));
     expect(deleteImage).not.toHaveBeenCalled();
 
-    resolveUpdate({ ...existingProduct, imageUrl: null });
+    resolveUpdate({ ...existingProduct, imageUrl: '/files/new-photo.jpg' });
     await waitFor(() => expect(deleteImage).toHaveBeenCalledWith(existingProduct.imageUrl));
   });
 
-  it('저장이 실패하면 버린 사진을 삭제하지 않는다', async () => {
+  it('저장이 실패하면 교체로 버린 사진을 삭제하지 않는다', async () => {
     vi.mocked(updateProduct).mockRejectedValue(new Error('상품 수정에 실패했습니다.'));
 
-    await removeImageAndSubmit();
+    await replaceImageAndSubmit();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('상품 수정에 실패했습니다.');
     expect(deleteImage).not.toHaveBeenCalled();
@@ -153,6 +173,11 @@ describe('ProductFormPage', () => {
     await user.selectOptions(screen.getByLabelText('어디서 생산했나요'), '5');
     expect(screen.getByLabelText('생산 위치')).toHaveValue('장전 스마트팜');
     expect(screen.getByLabelText('생산지 주소')).toHaveValue('부산광역시 금정구 장전동 30');
+    // 대표 사진도 필수라 올리지 않으면 제출이 막힌다.
+    await user.upload(
+      screen.getByLabelText('대표 사진 선택'),
+      new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
+    );
 
     await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
 
@@ -181,6 +206,11 @@ describe('ProductFormPage', () => {
     await user.type(screen.getByLabelText('가격(원)'), '4300');
     await user.type(screen.getByLabelText('재고 수량'), '24');
     await user.type(screen.getByLabelText('수확일'), '2026-08-08');
+    // 이 PR에서 대표 사진이 필수가 되어, 아래 검증까지 가려면 사진을 먼저 올려야 한다.
+    await user.upload(
+      screen.getByLabelText('대표 사진 선택'),
+      new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
+    );
     // 공간 미선택 → 생산 위치가 비어 제출을 막는다.
     await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
 
@@ -230,6 +260,11 @@ describe('ProductFormPage', () => {
     await user.type(screen.getByLabelText('재고 수량'), '24');
     await user.type(screen.getByLabelText('수확일'), '2026-08-08');
     await user.selectOptions(screen.getByLabelText('어디서 생산했나요'), '5');
+    // 이 PR에서 대표 사진이 필수가 되어, 아래 검증까지 가려면 사진을 먼저 올려야 한다.
+    await user.upload(
+      screen.getByLabelText('대표 사진 선택'),
+      new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
+    );
 
     const address = screen.getByLabelText('생산지 주소');
     expect(address).toHaveAttribute('readonly');

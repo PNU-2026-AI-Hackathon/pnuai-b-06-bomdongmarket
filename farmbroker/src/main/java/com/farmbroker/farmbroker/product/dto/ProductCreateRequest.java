@@ -38,7 +38,8 @@ public class ProductCreateRequest {
     @Min(value = 0, message = "재고는 0 이상이어야 합니다.")
     private Integer stock;
 
-    @NullOrNotBlank(message = "이미지 URL은 공백일 수 없습니다.")
+    // 대표 사진은 필수다. 프런트에서만 막으면 API를 직접 부르는 경로로 사진 없는 상품이 들어온다.
+    @NotBlank(message = "대표 사진은 필수입니다.")
     @Size(max = 500, message = "이미지 URL은 500자 이하여야 합니다.")
     private String imageUrl;
 

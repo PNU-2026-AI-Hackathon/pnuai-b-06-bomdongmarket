@@ -2,7 +2,6 @@ package com.farmbroker.farmbroker.matching.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
-import com.farmbroker.farmbroker.matching.domain.ContractStatus;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.dto.ContractResponse;
@@ -32,12 +31,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// 매칭 신청/조회/수락/거절 비즈니스 로직.
+// 매칭 신청/조회/계약 협의 비즈니스 로직.
 // Space 접근은 협의된 내부 계약(getSummaryById 등 — 현재는 BE3 임시 SpaceContractAdapter)만 사용하고
 // SpaceRepository를 직접 주입하지 않는다 — 엔티티 연관관계 세팅에만 EntityManager.getReference로
 // 프록시를 얻어 불필요한 SELECT 없이 FK만 저장한다.
 // 매칭 신청에는 역할 제한이 없다 — FARMER를 요구하면 "농사를 지어야 농부가 되는데
-// 농부가 아니면 신청을 못 하는" 순환이 생긴다. 대신 신청이 수락되어 실제로 재배가 확정된 시점에
+// 농부가 아니면 신청을 못 하는" 순환이 생긴다. 대신 양측이 계약에 동의해 실제로 재배가 확정된 시점에
 // 신청자에게 FARMER 역할을 부여한다.
 @Service
 @RequiredArgsConstructor
@@ -111,43 +110,6 @@ public class MatchingService {
                 .toList();
     }
 
-    // 수락 — 한 트랜잭션으로 ① 해당 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 신청자에게 FARMER 역할 부여
-    // ④ 나머지 REQUESTED 자동 REJECTED.
-    // 공간 상태 전환은 백엔드 2 제공 markMatched()로만 수행(직접 UPDATE 금지) —
-    // 내부에서 AVAILABLE·미삭제를 검증해 위반 시 SPACE_NOT_AVAILABLE(409)을 던지고 수락 전체가 롤백된다.
-    @Transactional
-    public MatchingStatusResponse accept(Long matchingId, Long userId) {
-        Matching matching = getOwnedRequestedMatching(matchingId, userId);
-        applyAcceptance(matching);
-        return MatchingStatusResponse.from(matching);
-    }
-
-    // 수락 확정 시 함께 일어나야 하는 일들. 소유자의 수락 버튼과 계약 확정이 같은 결과를 내도록
-    // 한 곳에 모아둔다 — 한쪽에만 추가하면 두 경로의 결과가 갈라진다.
-    // 호출 전 참여자·공간·매칭이 모두 잠겨 있어야 한다.
-    private void applyAcceptance(Matching matching) {
-        matching.accept();
-        spaceContractAdapter.markMatched(matching.getSpace().getId());
-
-        // 재배가 확정된 시점에 신청자가 농부가 된다 — 거절(reject)에는 부여하지 않는다.
-        // 반드시 아래 벌크 UPDATE보다 먼저 호출한다: rejectRemainingRequested의 clearAutomatically가
-        // 영속성 컨텍스트를 비우면 아직 초기화되지 않은 farmer LAZY 프록시가 detached 되어
-        // 초기화 시점에 LazyInitializationException이 나고, 예외를 피하더라도 더티 체킹이 유실된다.
-        // 여기서 부여하면 flushAutomatically가 벌크 UPDATE 직전에 이 변경까지 함께 flush한다.
-        matching.getFarmer().addRole(UserRole.FARMER);
-
-        matchingRepository.rejectRemainingRequested(
-                matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
-    }
-
-    // 거절 — 매칭 상태만 변경하고 공간 상태는 건드리지 않는다
-    @Transactional
-    public MatchingStatusResponse reject(Long matchingId, Long userId) {
-        Matching matching = getOwnedRequestedMatching(matchingId, userId);
-        matching.reject();
-        return MatchingStatusResponse.from(matching);
-    }
-
     // 취소 — 신청자 본인이 아직 응답받지 않은 신청을 거둬들인다.
     // 공간 상태 롤백은 필요 없다: markMatched는 수락 시점에만 일어나고 취소는 REQUESTED에서만 허용된다.
     // 행을 지우지 않고 CANCELED로 남기므로 중복 신청 검사(REQUESTED만 확인)를 통과해 재신청이 가능하다.
@@ -166,8 +128,8 @@ public class MatchingService {
         return MatchingStatusResponse.from(matching);
     }
 
-    // 받은 목록에서 감추기 — 소유자가 검토를 마친 건만 대상이다.
-    // 아직 응답하지 않은(REQUESTED) 신청은 수락/거절로 처리해야 하므로 감출 수 없다.
+    // 받은 목록에서 감추기 — 협의가 끝난 건만 대상이다.
+    // 아직 협의 중인(REQUESTED) 신청은 계약 확정/취소로 처리해야 하므로 감출 수 없다.
     // 신청자 목록(my-requests)에는 그대로 남는다 — 소유자 화면에서만 사라진다.
     @Transactional
     public void dismissReceived(Long matchingId, Long userId) {
@@ -184,8 +146,8 @@ public class MatchingService {
     }
 
     // ── 계약서 ───────────────────────────────────────────────────────────────
-    // 매칭 1건에 계약서 1건이 붙는다. 매칭 상태(REQUESTED/ACCEPTED/...)는 보지 않는다 —
-    // 계약 확정 여부는 계약서의 양측 동의로만 판정한다.
+    // 매칭 1건에 계약서 1건이 붙고, 계약 진행 상태는 매칭의 status가 그대로 나타낸다 —
+    // REQUESTED(협의 중) → 양측 동의 시 ACCEPTED(확정) / 한쪽 취소 시 REJECTED.
 
     public ContractResponse getContract(Long matchingId, Long userId) {
         Matching matching = matchingRepository.findById(matchingId)
@@ -210,9 +172,12 @@ public class MatchingService {
         return ContractResponse.of(matching, true);
     }
 
-    // 계약 동의 — 양측이 모두 동의해야 확정(CONFIRMED)된다.
+    // 계약 동의 — 양측이 모두 동의해야 확정(ACCEPTED)된다.
     // 조건이 비어 있으면 무엇에 동의하는지 알 수 없으므로 막는다.
-    // 확정되면 매칭도 수락된 것으로 보고 수락과 똑같은 후속 처리를 수행한다.
+    // 확정되면 한 트랜잭션으로 ① 매칭 ACCEPTED ② 공간 MATCHED 전환 ③ 신청자에게 FARMER 역할 부여
+    // ④ 같은 공간의 나머지 REQUESTED 자동 REJECTED 까지 함께 처리한다.
+    // 공간 상태 전환은 백엔드 2 제공 markMatched()로만 수행(직접 UPDATE 금지) —
+    // 내부에서 AVAILABLE·미삭제를 검증해 위반 시 SPACE_NOT_AVAILABLE(409)을 던지고 확정 전체가 롤백된다.
     @Transactional
     public ContractResponse agreeContract(Long matchingId, Long userId, int termsVersion) {
         Matching matching = getDraftContract(matchingId, userId);
@@ -233,31 +198,43 @@ public class MatchingService {
             matching.agreeContractAsFarmer();
         }
 
-        // 응답을 먼저 조립한다 — applyAcceptance의 벌크 UPDATE가 영속성 컨텍스트를 비우면
+        boolean confirmed = matching.getOwnerAgreedAt() != null && matching.getFarmerAgreedAt() != null;
+        if (confirmed) {
+            // 상태만 바꾼다 — 영속성 컨텍스트를 건드리지 않아 아래 응답 조립이 그대로 안전하다.
+            matching.accept();
+        }
+        // 응답을 여기서 조립한다 — 아래 벌크 UPDATE가 영속성 컨텍스트를 비우면
         // 그 뒤에는 space·farmer LAZY 프록시에서 닉네임·주소를 읽을 수 없다.
         ContractResponse response = ContractResponse.of(matching, isOwner);
-        if (matching.getContractStatus() == ContractStatus.CONFIRMED
-                && matching.getStatus() == MatchingStatus.REQUESTED) {
-            // 이미 수락된 매칭이면 후속 처리가 끝나 있다. 다시 부르면 markMatched가 409를 던진다.
-            applyAcceptance(matching);
+        if (confirmed) {
+            spaceContractAdapter.markMatched(matching.getSpace().getId());
+
+            // 재배가 확정된 시점에 신청자가 농부가 된다 — 계약 취소에는 부여하지 않는다.
+            // 반드시 아래 벌크 UPDATE보다 먼저 호출한다: rejectRemainingRequested의 clearAutomatically가
+            // 영속성 컨텍스트를 비우면 아직 초기화되지 않은 farmer LAZY 프록시가 detached 되어
+            // 초기화 시점에 LazyInitializationException이 나고, 예외를 피하더라도 더티 체킹이 유실된다.
+            // 여기서 부여하면 flushAutomatically가 벌크 UPDATE 직전에 이 변경까지 함께 flush한다.
+            matching.getFarmer().addRole(UserRole.FARMER);
+
+            matchingRepository.rejectRemainingRequested(
+                    matching.getSpace().getId(), matching.getId(), LocalDateTime.now());
         }
         return response;
     }
 
     // 계약 취소 — 둘 중 한 명만 눌러도 취소된다. 되돌릴 수 없다.
-    // 거절은 상태 전이 외에 따르는 후속 처리가 없다(공간 상태는 수락 시점에만 바뀐다).
+    // 상태 전이 외에 따르는 후속 처리가 없다(공간 상태는 확정 시점에만 바뀐다).
     @Transactional
     public ContractResponse cancelContract(Long matchingId, Long userId) {
         Matching matching = getDraftContract(matchingId, userId);
-        matching.cancelContract();
         matching.reject();
         return ContractResponse.of(matching, isContractOwner(matching, userId));
     }
 
-    // 계약서 쓰기 공통 전제: 매칭 존재 → 당사자 본인 → 아직 DRAFT 상태.
+    // 계약서 쓰기 공통 전제: 매칭 존재 → 당사자 본인 → 아직 협의 중(REQUESTED).
     // 양측이 동시에 '계약'을 눌러도 확정 판정이 어긋나지 않도록 행을 잠그고 읽는다.
-    // 확정되면 사용자 역할과 공간 상태까지 바뀌므로 수락과 같은 순서(사용자 → 공간 → 매칭)로 잠근다 —
-    // 순서가 어긋나면 탈퇴·수락 트랜잭션과 교착 상태에 빠진다.
+    // 확정되면 사용자 역할과 공간 상태까지 바뀌므로 탈퇴와 같은 순서(사용자 → 공간 → 매칭)로 잠근다 —
+    // 순서가 어긋나면 탈퇴 트랜잭션과 교착 상태에 빠진다.
     private Matching getDraftContract(Long matchingId, Long userId) {
         MatchingParticipantProjection participants = matchingRepository.findParticipantsById(matchingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
@@ -266,7 +243,7 @@ public class MatchingService {
         Matching matching = matchingRepository.findByIdForUpdate(matchingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
         requireContractParticipant(matching, userId);
-        if (matching.getContractStatus() != ContractStatus.DRAFT) {
+        if (matching.getStatus() != MatchingStatus.REQUESTED) {
             throw new BusinessException(ErrorCode.CONTRACT_CLOSED);
         }
         return matching;
@@ -284,23 +261,6 @@ public class MatchingService {
         if (!isOwner && !isFarmer) {
             throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
         }
-    }
-
-    // 수락/거절 공통 전제: 매칭 존재 → 공간 owner 본인 → 아직 REQUESTED 상태
-    private Matching getOwnedRequestedMatching(Long matchingId, Long userId) {
-        MatchingParticipantProjection participants = matchingRepository.findParticipantsById(matchingId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
-        lockActiveParticipantPair(participants.getOwnerId(), participants.getFarmerId());
-        spaceContractAdapter.getSummaryByIdForUpdate(participants.getSpaceId());
-        Matching matching = matchingRepository.findByIdForUpdate(matchingId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
-        if (!matching.getSpace().getOwner().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
-        }
-        if (matching.getStatus() != MatchingStatus.REQUESTED) {
-            throw new BusinessException(ErrorCode.MATCHING_ALREADY_PROCESSED);
-        }
-        return matching;
     }
 
     private User lockActiveParticipantPair(Long targetUserId, Long otherUserId) {

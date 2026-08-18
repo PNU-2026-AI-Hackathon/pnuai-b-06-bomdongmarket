@@ -8,7 +8,7 @@ import { ROUTES } from '@/constants/routes';
 import type { BadgeTone } from '@/components/common/Badge';
 import type { ContractSummary, MatchingStatus } from '@/types/api';
 import { formatCurrency } from '@/utils/format';
-import { getMatchingProgressLabel, getMatchingTypeLabel } from '@/utils/labels';
+import { getMatchingStatusLabel, getMatchingTypeLabel } from '@/utils/labels';
 
 interface ContractCardProps {
   contract: ContractSummary;
@@ -34,7 +34,7 @@ export function ContractCard({ contract }: ContractCardProps) {
         />
         <div className="min-w-0 flex-1">
           <Badge tone={statusTones[contract.status]}>
-            {getMatchingProgressLabel(contract.status)}
+            {getMatchingStatusLabel(contract.status)}
           </Badge>
           <h3 className="mt-3 truncate text-lg font-black text-ink-900">
             {contract.spaceName}
