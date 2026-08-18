@@ -25,6 +25,8 @@ public class ContractResponse {
     private final Integer deposit;
     private final LocalDate startDate;
     private final LocalDate endDate;
+    // 지금 보고 있는 조건의 번호. 동의 요청에 그대로 실어 보내면 서버가 stale 동의를 걸러 낸다.
+    private final int termsVersion;
     private final boolean ownerAgreed;
     private final boolean farmerAgreed;
     private final ContractStatus status;
@@ -34,7 +36,7 @@ public class ContractResponse {
                              String ownerNickname, String farmerNickname,
                              Integer monthlyRent, Integer maintenanceFee,
                              MaintenanceFeePayer maintenanceFeePayer, Integer deposit,
-                             LocalDate startDate, LocalDate endDate,
+                             LocalDate startDate, LocalDate endDate, int termsVersion,
                              boolean ownerAgreed, boolean farmerAgreed,
                              ContractStatus status, String viewerRole) {
         this.matchingId = matchingId;
@@ -48,6 +50,7 @@ public class ContractResponse {
         this.deposit = deposit;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.termsVersion = termsVersion;
         this.ownerAgreed = ownerAgreed;
         this.farmerAgreed = farmerAgreed;
         this.status = status;
@@ -69,6 +72,7 @@ public class ContractResponse {
                 matching.getContractDeposit(),
                 matching.getContractStartDate(),
                 matching.getContractEndDate(),
+                matching.getTermsVersion(),
                 matching.getOwnerAgreedAt() != null,
                 matching.getFarmerAgreedAt() != null,
                 matching.getContractStatus(),

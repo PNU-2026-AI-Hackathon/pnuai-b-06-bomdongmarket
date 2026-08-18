@@ -29,6 +29,14 @@ async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
 }
 
+// 사진은 등록 필수라 제출까지 가는 테스트는 반드시 한 장 올려야 합니다.
+async function uploadPhoto(user: ReturnType<typeof userEvent.setup>) {
+  await user.upload(screen.getByLabelText('공간 사진 선택'), [imageFile('정면.jpg')]);
+  await waitFor(() => {
+    expect(screen.getByText(/공간 사진 1\/10장 등록됨/)).toBeInTheDocument();
+  });
+}
+
 describe('SpaceCreatePage', () => {
   it('공간 예시를 입력값이 아닌 placeholder로 보여준다', () => {
     renderWithProviders(<SpaceCreatePage />);
@@ -87,10 +95,6 @@ describe('SpaceCreatePage', () => {
     await user.type(screen.getByLabelText('전체 면적(㎡)'), '66');
     await user.type(screen.getByLabelText('층수'), '2');
     await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
 
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
@@ -163,7 +167,8 @@ describe('SpaceCreatePage', () => {
     expect(screen.getByText(/공간 사진 0\/10장 등록됨/)).toBeInTheDocument();
   });
 
-  it('도면 없이 제출하면 막고 안내한다', async () => {
+  // 사진 없이 등록되면 도심 농부가 공간 상태를 확인할 방법이 없다.
+  it('사진 없이 제출하면 막고 안내한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SpaceCreatePage />);
 
@@ -171,8 +176,24 @@ describe('SpaceCreatePage', () => {
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '도면을 최소 1장 등록해야 합니다.',
+      '공간 사진을 최소 1장 등록해야 합니다.',
     );
+  });
+
+  it('사진을 등록하면 안내가 사라진다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SpaceCreatePage />);
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.upload(screen.getByLabelText('공간 사진 선택'), [imageFile('정면.jpg')]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/공간 사진 1\/10장 등록됨/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   // 음수가 들어가면 브라우저 제약 검증(min)이 제출 자체를 막아 다음 단계로 넘어가지 않는다.
@@ -185,10 +206,6 @@ describe('SpaceCreatePage', () => {
     await user.type(screen.getByLabelText('상세 주소'), '3층 302호');
     await user.type(screen.getByLabelText('층수'), '2');
     await user.type(screen.getByLabelText('희망 월세(원)'), '500000');
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
 
     // '-' 키는 막혀 있으므로 붙여넣기 경로를 흉내 내 값을 직접 주입한다.
     const area = screen.getByLabelText('전체 면적(㎡)');
@@ -236,10 +253,6 @@ describe('SpaceCreatePage', () => {
     renderWithProviders(<SpaceCreatePage />);
 
     await fillRequiredFields(user);
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
 
     // 0은 그대로 입력된다 — 키 입력을 막지 않는다.
     const floor = screen.getByLabelText('층수');
@@ -278,10 +291,7 @@ describe('SpaceCreatePage', () => {
     renderWithProviders(<SpaceCreatePage />);
 
     await fillRequiredFields(user);
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
+    await uploadPhoto(user);
 
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
@@ -298,31 +308,12 @@ describe('SpaceCreatePage', () => {
     renderWithProviders(<SpaceCreatePage />);
 
     await fillRequiredFields(user);
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
+    await uploadPhoto(user);
 
     await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
     // 등록 폼에 그대로 머문다(예측 단계로 넘어가지 않음).
     expect(screen.getByLabelText('공간 이름')).toBeInTheDocument();
-  });
-
-  it('도면을 등록하면 안내가 사라진다', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<SpaceCreatePage />);
-
-    await fillRequiredFields(user);
-    await user.click(screen.getByRole('button', { name: /수익 예측 확인/i }));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
-
-    await user.upload(screen.getByLabelText('도면 선택'), [imageFile('도면.png')]);
-
-    await waitFor(() => {
-      expect(screen.getByText(/도면 1\/10장 등록됨/)).toBeInTheDocument();
-    });
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

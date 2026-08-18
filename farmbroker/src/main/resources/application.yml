@@ -22,8 +22,12 @@ spring:
         format_sql: "${JPA_FORMAT_SQL:false}"
 
 server:
+  port: "${PORT:8080}"
   servlet:
     context-path: "${SERVER_CONTEXT_PATH:/api}"
+
+cors:
+  allowed-origins: "${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}"
 
 file:
   # 업로드 이미지 저장 경로. Docker에서는 named volume을 이 경로에 마운트한다.

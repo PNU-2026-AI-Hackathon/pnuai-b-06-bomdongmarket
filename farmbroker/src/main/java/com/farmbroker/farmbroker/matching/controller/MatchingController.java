@@ -1,6 +1,7 @@
 package com.farmbroker.farmbroker.matching.controller;
 
 import com.farmbroker.farmbroker.common.response.ApiResponse;
+import com.farmbroker.farmbroker.matching.dto.ContractAgreeRequest;
 import com.farmbroker.farmbroker.matching.dto.ContractResponse;
 import com.farmbroker.farmbroker.matching.dto.ContractTermsRequest;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
@@ -127,11 +128,13 @@ public class MatchingController {
 
     // PATCH /api/matchings/{matchingId}/contract/agree — 계약 동의 (당사자 둘 다)
     @Operation(summary = "계약 동의 (매칭 당사자 전용)",
-            description = "양측이 모두 동의하면 계약이 확정된다. 조건이 비어 있으면 동의할 수 없다.")
+            description = "양측이 모두 동의하면 계약이 확정된다. 조건이 비어 있으면 동의할 수 없다. "
+                    + "화면에서 조회한 뒤 조건이 바뀌었으면(termsVersion 불일치) 409로 거절하고 재조회를 요구한다.")
     @PatchMapping("/{matchingId}/contract/agree")
     public ApiResponse<ContractResponse> agreeContract(@PathVariable Long matchingId,
+                                                       @RequestBody @Valid ContractAgreeRequest request,
                                                        @AuthenticationPrincipal Long userId) {
-        ContractResponse response = matchingService.agreeContract(matchingId, userId);
+        ContractResponse response = matchingService.agreeContract(matchingId, userId, request.getTermsVersion());
         return ApiResponse.success("계약에 동의했습니다.", response);
     }
 
