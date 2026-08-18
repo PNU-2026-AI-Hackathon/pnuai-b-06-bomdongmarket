@@ -1,4 +1,4 @@
-import { Plus, Search, ShoppingCart, Store } from 'lucide-react';
+import { Heart, Plus, Search, Store } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -17,6 +17,7 @@ import { type NearbyAdapter, useNearbyPlaces } from '@/components/map/useNearbyP
 import { ProductCard } from '@/pages/market/components/ProductCard';
 import { marketCategories } from '@/pages/market/constants/marketOptions';
 import { useMarketItems } from '@/pages/market/hooks/useMarketItems';
+import { useWishedIds } from '@/pages/market/hooks/useWishedIds';
 import type { MarketCategory } from '@/pages/market/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM } from '@/constants/geo';
 import { ROUTES } from '@/constants/routes';
@@ -29,6 +30,8 @@ export function MarketPage() {
   const { keyword, setKeyword, category, setCategory, items, status, error, reload } =
     useMarketItems();
   const { isAuthenticated } = useAuth();
+  // 카드 하트는 이 집합으로 초기 상태를 잡습니다 — 없으면 이미 찜한 상품도 빈 하트로 보입니다.
+  const wishedIds = useWishedIds(isAuthenticated);
 
   const [center, setCenter] = useState<Coords>(DEFAULT_MAP_CENTER);
   const [centerLabel, setCenterLabel] = useState('부산시청');
@@ -77,14 +80,14 @@ export function MarketPage() {
       <PageHeader
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {/* 장바구니는 로그인해야 서버에 담기므로 로그인한 사람에게만 보입니다. */}
+            {/* 찜은 로그인해야 서버에 저장되므로 로그인한 사람에게만 보입니다. */}
             {isAuthenticated ? (
               <Link
                 className={buttonStyles({ size: 'sm', variant: 'outline' })}
-                to={ROUTES.cart}
+                to={ROUTES.wishlist}
               >
-                <ShoppingCart className="h-4 w-4" aria-hidden />
-                장바구니
+                <Heart className="h-4 w-4" aria-hidden />
+                찜
               </Link>
             ) : null}
             {/* 판매 관리는 내 상품이 있어야 의미가 있어 로그인한 사람에게만 보입니다. */}
@@ -106,7 +109,7 @@ export function MarketPage() {
           </div>
         }
         actionBreakpoint="lg"
-        description="수확일, 푸드 마일리지, 생산 이력, 바로 담기 기능으로 로컬 농산물을 비교해보세요."
+        description="수확일, 푸드 마일리지, 생산 이력을 견줘 보고 마음에 들면 찜해 두세요."
         eyebrow="로컬 마켓"
         title="가까운 스마트팜에서 온 신선한 농산물"
       />
@@ -193,7 +196,11 @@ export function MarketPage() {
                   selectedId === item.productId ? 'rounded-app ring-2 ring-leaf-500' : undefined
                 }
               >
-                <ProductCard item={item} distanceKm={distances.get(item.productId) ?? null} />
+                <ProductCard
+                  distanceKm={distances.get(item.productId) ?? null}
+                  initiallyWished={wishedIds.has(item.productId)}
+                  item={item}
+                />
               </div>
             ))}
           </div>

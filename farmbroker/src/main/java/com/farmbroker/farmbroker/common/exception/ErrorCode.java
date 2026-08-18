@@ -64,9 +64,8 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
     NOT_PRODUCT_OWNER(HttpStatus.FORBIDDEN, "본인이 등록한 상품이 아닙니다."),
 
-    // ── order (장바구니·결제) ────────────────────────────────────────────────
-    CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니에 담기지 않은 상품입니다."),
-    CART_EMPTY(HttpStatus.BAD_REQUEST, "장바구니가 비어 있습니다."),
+    // ── 찜·주문 ──────────────────────────────────────────────────────────────
+    WISHLIST_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "찜하지 않은 상품입니다."),
     PRODUCT_NOT_ON_SALE(HttpStatus.CONFLICT, "판매 중인 상품이 아닙니다."),
     OUT_OF_STOCK(HttpStatus.CONFLICT, "재고가 부족합니다."),
 

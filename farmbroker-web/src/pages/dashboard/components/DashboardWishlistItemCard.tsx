@@ -4,15 +4,15 @@ import { Badge } from '@/components/common/Badge';
 import { Card } from '@/components/common/Card';
 import { ROUTES } from '@/constants/routes';
 import { ProductImage } from '@/pages/market/components/ProductImage';
-import type { CartLine } from '@/types/api';
+import type { WishlistLine } from '@/types/api';
 import { formatCurrency } from '@/utils/format';
 
-interface DashboardCartItemCardProps {
-  item: CartLine;
+interface DashboardWishlistItemCardProps {
+  item: WishlistLine;
 }
 
-// 마켓 장바구니 상품을 조회 전용으로 보여주고 상품 상세로 연결합니다.
-export function DashboardCartItemCard({ item }: DashboardCartItemCardProps) {
+// 마켓 찜 상품을 조회 전용으로 보여주고 상품 상세로 연결합니다.
+export function DashboardWishlistItemCard({ item }: DashboardWishlistItemCardProps) {
   return (
     <Link
       aria-label={item.name + ' 상품 상세 보기'}
@@ -27,16 +27,14 @@ export function DashboardCartItemCard({ item }: DashboardCartItemCardProps) {
         />
         <div className="p-4">
           <Badge tone={item.purchasable ? 'green' : 'slate'}>
-            {item.purchasable ? '구매 가능' : '품절·수량 확인'}
+            {item.purchasable ? '구매 가능' : '판매 마감'}
           </Badge>
           <h3 className="mt-3 line-clamp-2 text-lg font-bold text-content">
             {item.name}
           </h3>
           <div className="mt-3 flex items-end justify-between gap-3">
             <span className="font-black text-content">{formatCurrency(item.price)}</span>
-            <span className="text-xs font-semibold text-content-subtle">
-              장바구니 {item.quantity}개
-            </span>
+            <span className="text-xs font-semibold text-content-subtle">/ {item.unit}</span>
           </div>
         </div>
       </Card>

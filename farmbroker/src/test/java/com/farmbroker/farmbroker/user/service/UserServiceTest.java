@@ -4,7 +4,7 @@ import com.farmbroker.farmbroker.ai.repository.AiRecommendationRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
-import com.farmbroker.farmbroker.order.repository.CartItemRepository;
+import com.farmbroker.farmbroker.order.repository.WishlistItemRepository;
 import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.space.repository.SpaceRepository;
@@ -44,7 +44,7 @@ class UserServiceTest {
     @Mock private MatchingRepository matchingRepository;
     @Mock private SpaceRepository spaceRepository;
     @Mock private AiRecommendationRepository aiRecommendationRepository;
-    @Mock private CartItemRepository cartItemRepository;
+    @Mock private WishlistItemRepository wishlistItemRepository;
     @Mock private ProductRepository productRepository;
     @Mock private EntityManager entityManager;
     @Mock private PasswordEncoder passwordEncoder;
@@ -133,13 +133,13 @@ class UserServiceTest {
         verify(matchingRepository).cancelRequestedByFarmerId(anyLong(), any());
         verify(matchingRepository).rejectRequestedBySpaceOwnerId(anyLong(), any());
         verify(aiRecommendationRepository).deleteAll(List.of());
-        verify(cartItemRepository).deleteByUserId(USER_ID);
+        verify(wishlistItemRepository).deleteByUserId(USER_ID);
         verify(productRepository).findActiveBySellerIdForUpdate(USER_ID);
     }
 
     private UserService service() {
         return new UserService(userRepository, matchingRepository, spaceRepository,
-                aiRecommendationRepository, cartItemRepository, productRepository,
+                aiRecommendationRepository, wishlistItemRepository, productRepository,
                 entityManager, passwordEncoder, eventPublisher);
     }
 

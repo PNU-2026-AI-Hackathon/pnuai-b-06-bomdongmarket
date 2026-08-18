@@ -1,8 +1,8 @@
-import { getCart } from '@/services/cartService';
+import { getWishlist } from '@/services/wishlistService';
 import { getMyMatchings, getReceivedMatchings } from '@/services/matchingService';
 import { getMySpaces } from '@/services/spaceService';
 import type {
-  CartLine,
+  WishlistLine,
   ContractSummary,
   ContractedSpaceSummary,
   MatchingRequest,
@@ -15,7 +15,7 @@ export interface DashboardData {
   contractedSpaces: ContractedSpaceSummary[];
   receivedApplications: MatchingRequest[];
   sentApplications: ContractSummary[];
-  cartItems: CartLine[];
+  wishlistItems: WishlistLine[];
 }
 
 // 알림 모달에서 쓰는 보낸 신청 요약으로 API 응답을 변환합니다.
@@ -75,11 +75,11 @@ export function buildContractedSpaces(
 
 // 대시보드의 네 데이터 소스를 함께 불러와 화면별 요약으로 정리합니다.
 export async function getDashboardData(): Promise<DashboardData> {
-  const [ownedSpaces, received, sent, cart] = await Promise.all([
+  const [ownedSpaces, received, sent, wishlist] = await Promise.all([
     getMySpaces(),
     getReceivedMatchings(),
     getMyMatchings(),
-    getCart(),
+    getWishlist(),
   ]);
   const spacesById = new Map(ownedSpaces.map((space) => [space.spaceId, space]));
   const receivedApplications = received.map((matching) => {
@@ -99,6 +99,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     contractedSpaces: buildContractedSpaces(receivedApplications, sent),
     receivedApplications,
     sentApplications,
-    cartItems: cart.items,
+    wishlistItems: wishlist.items,
   };
 }

@@ -94,7 +94,7 @@ export function persistMockStore() {
   }
 }
 
-// 장바구니 목업이 같은 재고를 보고 줄일 수 있도록 내보낸다(실서버에서는 쓰이지 않는다).
+// 찜 목업이 같은 재고를 보고 줄일 수 있도록 내보낸다(실서버에서는 쓰이지 않는다).
 export const mockStore: MarketItem[] = readMockStore();
 
 function toMockProduct(input: ProductInput, productId: number): MarketItem {

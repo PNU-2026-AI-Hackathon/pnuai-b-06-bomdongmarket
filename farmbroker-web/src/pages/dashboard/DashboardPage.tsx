@@ -15,7 +15,7 @@ import { ROUTES } from '@/constants/routes';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { ApplicationNotificationsDialog } from '@/pages/dashboard/components/ApplicationNotificationsDialog';
 import { DashboardCarousel } from '@/pages/dashboard/components/DashboardCarousel';
-import { DashboardCartItemCard } from '@/pages/dashboard/components/DashboardCartItemCard';
+import { DashboardWishlistItemCard } from '@/pages/dashboard/components/DashboardWishlistItemCard';
 import { DashboardSpaceCard } from '@/pages/dashboard/components/DashboardSpaceCard';
 import { useDashboard } from '@/pages/dashboard/hooks/useDashboard';
 import type { SpaceStatus } from '@/types/api';
@@ -27,7 +27,7 @@ const spaceStatusTones: Record<SpaceStatus, BadgeTone> = {
   CLOSED: 'slate',
 };
 
-// 로그인 이후의 공간·계약·장바구니 현황과 신청 알림을 한 곳에서 제공합니다.
+// 로그인 이후의 공간·계약·찜 현황과 신청 알림을 한 곳에서 제공합니다.
 export function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export function DashboardPage() {
     contractedSpaces,
     receivedApplications,
     sentApplications,
-    cartItems,
+    wishlistItems,
     status,
     error,
     actionError,
@@ -163,15 +163,15 @@ export function DashboardPage() {
               emptyState={
                 <EmptyState
                   actionLabel="마켓 둘러보기"
-                  description="로컬 마켓에서 마음에 드는 상품을 장바구니에 담아보세요."
+                  description="로컬 마켓에서 마음에 드는 상품에 하트를 눌러 보세요."
                   onAction={() => navigate(ROUTES.market)}
                   title="찜한 상품이 없습니다"
                 />
               }
               title="찜한 상품"
             >
-              {cartItems.map((item) => (
-                <DashboardCartItemCard item={item} key={item.productId} />
+              {wishlistItems.map((item) => (
+                <DashboardWishlistItemCard item={item} key={item.productId} />
               ))}
             </DashboardCarousel>
           </div>

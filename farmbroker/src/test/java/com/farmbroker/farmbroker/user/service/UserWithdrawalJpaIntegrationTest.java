@@ -8,10 +8,10 @@ import com.farmbroker.farmbroker.common.config.PasswordEncoderConfig;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
-import com.farmbroker.farmbroker.order.domain.CartItem;
+import com.farmbroker.farmbroker.order.domain.WishlistItem;
 import com.farmbroker.farmbroker.order.domain.Order;
 import com.farmbroker.farmbroker.order.domain.OrderItem;
-import com.farmbroker.farmbroker.order.repository.CartItemRepository;
+import com.farmbroker.farmbroker.order.repository.WishlistItemRepository;
 import com.farmbroker.farmbroker.order.repository.OrderRepository;
 import com.farmbroker.farmbroker.product.domain.Product;
 import com.farmbroker.farmbroker.product.domain.ProductCategory;
@@ -55,7 +55,7 @@ class UserWithdrawalJpaIntegrationTest {
     @Autowired private SpaceRepository spaceRepository;
     @Autowired private MatchingRepository matchingRepository;
     @Autowired private AiRecommendationRepository aiRecommendationRepository;
-    @Autowired private CartItemRepository cartItemRepository;
+    @Autowired private WishlistItemRepository wishlistItemRepository;
     @Autowired private OrderRepository orderRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private PasswordEncoder passwordEncoder;
@@ -122,7 +122,7 @@ class UserWithdrawalJpaIntegrationTest {
                     .producerName("판매자")
                     .productionLocation("부산 스마트팜")
                     .build());
-            cartItemRepository.save(CartItem.builder().user(user).product(product).quantity(1).build());
+            wishlistItemRepository.save(WishlistItem.builder().user(user).product(product).build());
             Order order = new Order(user);
             order.addItem(new OrderItem(product, 1));
             orderRepository.save(order);
@@ -132,7 +132,7 @@ class UserWithdrawalJpaIntegrationTest {
         userService.withdraw(ids[0], withdrawalRequest());
 
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            assertThat(cartItemRepository.findByUserIdOrderByCreatedAtAsc(ids[0])).isEmpty();
+            assertThat(wishlistItemRepository.findByUserIdOrderByCreatedAtAsc(ids[0])).isEmpty();
             assertThat(productRepository.findById(ids[1]).orElseThrow().isDeleted()).isTrue();
             assertThat(orderRepository.findByBuyerIdOrderByCreatedAtDesc(ids[0]))
                     .extracting(Order::getId)

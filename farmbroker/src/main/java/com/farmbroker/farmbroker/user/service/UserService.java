@@ -4,7 +4,7 @@ import com.farmbroker.farmbroker.ai.repository.AiRecommendationRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
-import com.farmbroker.farmbroker.order.repository.CartItemRepository;
+import com.farmbroker.farmbroker.order.repository.WishlistItemRepository;
 import com.farmbroker.farmbroker.product.domain.Product;
 import com.farmbroker.farmbroker.product.repository.ProductRepository;
 import com.farmbroker.farmbroker.space.domain.Space;
@@ -36,7 +36,7 @@ public class UserService {
     private final MatchingRepository matchingRepository;
     private final SpaceRepository spaceRepository;
     private final AiRecommendationRepository aiRecommendationRepository;
-    private final CartItemRepository cartItemRepository;
+    private final WishlistItemRepository wishlistItemRepository;
     private final ProductRepository productRepository;
     private final EntityManager entityManager;
     private final PasswordEncoder passwordEncoder;
@@ -93,7 +93,7 @@ public class UserService {
         User withdrawingUser = getActiveUser(userId);
         spaceRepository.findByOwnerIdAndDeletedFalseOrderByCreatedAtDesc(userId)
                 .forEach(Space::softDelete);
-        cartItemRepository.deleteByUserId(userId);
+        wishlistItemRepository.deleteByUserId(userId);
         productRepository.findActiveBySellerIdForUpdate(userId).forEach(Product::softDelete);
         aiRecommendationRepository.deleteAll(aiRecommendationRepository.findAllByUserId(userId));
         withdrawingUser.withdraw("withdrawn-" + withdrawingUser.getId() + "@withdrawn.local",

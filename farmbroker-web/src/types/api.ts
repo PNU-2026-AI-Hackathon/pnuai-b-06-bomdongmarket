@@ -417,23 +417,21 @@ export interface ProductInput {
   events?: ProductEventInput[];
 }
 
-// 장바구니 한 줄. purchasable은 담아 둔 뒤 판매자가 품절·마감했을 수 있어 서버가 매번 다시 계산해 준다.
-export interface CartLine {
+
+// 찜한 상품 한 줄. 수량·합계가 없다 — 찜은 관심 목록이고 수량은 주문할 때 정한다.
+export interface WishlistLine {
   productId: number;
   name: string;
   unit: string;
   price: number;
-  quantity: number;
-  linePrice: number;
   imageUrl: string | null;
   stock: number;
+  // 찜해 둔 사이 품절·마감됐을 수 있어 서버가 매번 다시 계산해 준다.
   purchasable: boolean;
 }
 
-export interface Cart {
-  items: CartLine[];
-  // 지금 구매 가능한 줄만 더한 금액이라 화면에서 다시 계산하지 않는다.
-  totalPrice: number;
+export interface Wishlist {
+  items: WishlistLine[];
 }
 
 // 주문 줄은 주문 시점 값으로 고정된다 — 판매자가 나중에 가격을 바꿔도 내역은 그대로다.

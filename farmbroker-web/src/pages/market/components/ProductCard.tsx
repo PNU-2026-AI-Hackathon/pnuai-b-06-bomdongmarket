@@ -1,5 +1,5 @@
-import { Check, Plus, Route } from 'lucide-react';
-import { useState } from 'react';
+import { Heart, Route } from 'lucide-react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useRequireAuth } from '@/auth/useRequireAuth';
@@ -8,37 +8,45 @@ import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { ROUTES } from '@/constants/routes';
 import { ProductImage } from '@/pages/market/components/ProductImage';
-import { addToCart } from '@/services/cartService';
+import { addWishlist, removeWishlist } from '@/services/wishlistService';
 import type { MarketItem } from '@/types/api';
 import { formatCurrency, formatDate } from '@/utils/format';
 
 interface ProductCardProps {
   item: MarketItem;
   distanceKm?: number | null;
+  // 목록을 받아 온 쪽이 이미 찜한 상품을 알고 있으면 초기 상태로 넘겨 줍니다.
+  initiallyWished?: boolean;
 }
 
-// 마켓 목록의 2열/세로 카드에서 상품 신선도와 구매 액션을 보여줍니다.
-export function ProductCard({ item, distanceKm }: ProductCardProps) {
+// 마켓 목록의 2열/세로 카드에서 상품 신선도와 찜 액션을 보여줍니다.
+export function ProductCard({ item, distanceKm, initiallyWished = false }: ProductCardProps) {
   const requireAuth = useRequireAuth();
-  const [state, setState] = useState<'idle' | 'adding' | 'added'>('idle');
+  const [wished, setWished] = useState(initiallyWished);
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 목록에서는 1개씩 담습니다. 수량 조절은 장바구니와 상세에서 합니다.
-  // 비로그인이면 requireAuth가 로그인으로 보내고 담기는 실행되지 않습니다.
-  function handleAdd() {
+  // 찜 목록은 상품 목록보다 늦게 도착할 수 있어 useState 초기값만으로는 놓칩니다.
+  // 값이 실제로 바뀔 때만 따라가므로, 여기서 누른 결과를 덮어쓰지는 않습니다.
+  useEffect(() => {
+    setWished(initiallyWished);
+  }, [initiallyWished]);
+
+  // 카드 전체가 상세로 가는 링크라 하트 클릭이 이동으로 새지 않게 전파를 막습니다.
+  // 비로그인이면 requireAuth가 로그인으로 보내고 찜은 실행되지 않습니다.
+  function handleToggleWish(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     requireAuth(() => {
-      setState('adding');
+      setIsPending(true);
       setError(null);
-      addToCart(item.productId, 1)
-        .then(() => {
-          setState('added');
-          // 담겼다는 표시만 잠깐 보여 주고 원래 버튼으로 돌아갑니다.
-          window.setTimeout(() => setState('idle'), 1500);
-        })
+      const next = wished ? removeWishlist(item.productId) : addWishlist(item.productId);
+      next
+        .then(() => setWished((value) => !value))
         .catch((caught: unknown) => {
-          setState('idle');
-          setError(caught instanceof Error ? caught.message : '담지 못했습니다.');
-        });
+          setError(caught instanceof Error ? caught.message : '찜을 변경하지 못했습니다.');
+        })
+        .finally(() => setIsPending(false));
     });
   }
 
@@ -72,18 +80,14 @@ export function ProductCard({ item, distanceKm }: ProductCardProps) {
             <span className="text-xs font-semibold text-slate-500"> / {item.unit}</span>
           </span>
           <Button
-            aria-label={`${item.name} 담기`}
-            disabled={state !== 'idle'}
-            onClick={handleAdd}
+            aria-label={wished ? `${item.name} 찜 해제` : `${item.name} 찜하기`}
+            aria-pressed={wished}
+            disabled={isPending}
+            onClick={handleToggleWish}
             size="sm"
-            variant={state === 'added' ? 'outline' : 'primary'}
+            variant={wished ? 'primary' : 'outline'}
           >
-            {state === 'added' ? (
-              <Check className="h-4 w-4" aria-hidden />
-            ) : (
-              <Plus className="h-4 w-4" aria-hidden />
-            )}
-            {state === 'added' ? '담김' : '담기'}
+            <Heart className={wished ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden />
           </Button>
         </div>
         {error ? (

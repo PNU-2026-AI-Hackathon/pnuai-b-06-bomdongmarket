@@ -14,7 +14,7 @@ import { useWithdrawal } from '@/pages/mypage/hooks/useWithdrawal';
 
 const withdrawalEffects = [
   '회원정보는 비식별화되며 기존 계정으로 다시 로그인할 수 없습니다.',
-  '대기 중인 매칭 신청, 등록 공간, 장바구니는 정리됩니다.',
+  '대기 중인 매칭 신청, 등록 공간, 찜는 정리됩니다.',
   '판매 중인 상품은 마켓에서 비공개 처리됩니다.',
   '구매 이력은 정산을 위해 비식별화된 계정과 연결해 보관됩니다.',
 ] as const;

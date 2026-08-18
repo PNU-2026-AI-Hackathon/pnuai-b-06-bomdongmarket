@@ -15,7 +15,7 @@ export const ROUTES = {
   market: '/market',
   // 정적 경로(/market/my·/market/new)가 /market/:productId 보다 우선 매칭됩니다.
   myProducts: '/market/my',
-  cart: '/market/cart',
+  wishlist: '/market/wishlist',
   orderComplete: '/market/order-complete',
   chat: '/chat',
   chatRoom: (conversationId: number | string) => `/chat/${conversationId}`,
