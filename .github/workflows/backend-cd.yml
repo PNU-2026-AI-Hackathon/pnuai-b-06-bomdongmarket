@@ -81,10 +81,17 @@ jobs:
               --power-on
           fi
 
-          avn service wait \
+          if ! avn service wait \
             "$AIVEN_SERVICE_NAME" \
             --project "$AIVEN_PROJECT_NAME" \
-            --timeout 900
+            --timeout 300; then
+            final_state="$(avn service get \
+              "$AIVEN_SERVICE_NAME" \
+              --project "$AIVEN_PROJECT_NAME" \
+              --format '{state}')"
+            echo "::error::Aiven MySQL did not reach RUNNING within 5 minutes. Final state: $final_state"
+            exit 1
+          fi
 
           echo "status=RUNNING" >> "$GITHUB_OUTPUT"
           echo "Aiven MySQL is ready"
