@@ -11,6 +11,7 @@ on:
       - "farmbroker-web/**"
       - "AGENTS.md"
       - ".github/workflows/frontend-ci.yml"
+      - ".github/workflows/frontend-cd.yml"
   push:
     branches:
       - main
@@ -23,6 +24,7 @@ on:
       - "farmbroker-web/**"
       - "AGENTS.md"
       - ".github/workflows/frontend-ci.yml"
+      - ".github/workflows/frontend-cd.yml"
   workflow_dispatch:
 
 permissions:

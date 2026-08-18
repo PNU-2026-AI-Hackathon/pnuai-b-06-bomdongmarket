@@ -214,8 +214,14 @@ public class MatchingService {
     // 조건이 비어 있으면 무엇에 동의하는지 알 수 없으므로 막는다.
     // 확정되면 매칭도 수락된 것으로 보고 수락과 똑같은 후속 처리를 수행한다.
     @Transactional
-    public ContractResponse agreeContract(Long matchingId, Long userId) {
+    public ContractResponse agreeContract(Long matchingId, Long userId, int termsVersion) {
         Matching matching = getDraftContract(matchingId, userId);
+        // 동의자가 화면에서 본 조건과 지금 저장된 조건이 다르면 동의를 받지 않는다 —
+        // 조회 → 소유자 수정 → 동의 순서는 저장 시 동의 초기화(updateContractTerms)만으로 막을 수 없어,
+        // 본 적 없는 금액·기간으로 계약이 확정될 수 있다. 잠긴 행 기준으로 비교한다.
+        if (matching.getTermsVersion() != termsVersion) {
+            throw new BusinessException(ErrorCode.CONTRACT_TERMS_CHANGED);
+        }
         if (!matching.hasContractTerms()) {
             throw new BusinessException(ErrorCode.CONTRACT_TERMS_REQUIRED);
         }

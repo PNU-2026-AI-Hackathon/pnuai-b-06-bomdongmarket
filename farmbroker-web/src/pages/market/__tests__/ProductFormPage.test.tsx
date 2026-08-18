@@ -11,8 +11,19 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 import type { MarketItem } from '@/types/api';
 import { geocodeAddress } from '@/utils/geocode';
 
+// 계약(매칭 수락)한 공간만 리스트업된다 — 고르면 생산 위치·주소가 채워진다.
+// 테스트마다 계약 유무를 바꿔야 해서 홀더에 담아 두고 beforeEach에서 기본값으로 되돌린다.
+const DEFAULT_WORKPLACE = {
+  spaceId: 5,
+  title: '장전 스마트팜',
+  address: '부산광역시 금정구 장전동 30',
+};
+const workplacesMock = vi.hoisted(() => ({
+  value: { workplaces: [] as Array<Record<string, unknown>>, isLoading: false },
+}));
+
 vi.mock('@/pages/market/hooks/useMyWorkplaces', () => ({
-  useMyWorkplaces: () => ({ workplaces: [], isLoading: false }),
+  useMyWorkplaces: () => workplacesMock.value,
 }));
 
 vi.mock('@/services/marketService', () => ({
@@ -45,11 +56,13 @@ const existingProduct: MarketItem = {
   foodMileageKm: null,
   stock: 3,
   status: 'ON_SALE',
+  address: '부산광역시 금정구 장전동 30',
 };
 
 describe('ProductFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    workplacesMock.value = { workplaces: [DEFAULT_WORKPLACE], isLoading: false };
     window.sessionStorage.clear();
     saveAuthSession({
       userId: 1,
@@ -156,9 +169,11 @@ describe('ProductFormPage', () => {
     await user.type(screen.getByLabelText('가격(원)'), '4300');
     await user.type(screen.getByLabelText('재고 수량'), '24');
     await user.type(screen.getByLabelText('수확일'), '2026-08-08');
-    await user.type(screen.getByLabelText('생산 위치'), '장전 스마트팜');
-    await user.type(screen.getByLabelText('생산지 주소'), '부산광역시 금정구 장전동 30');
-    // 대표 사진은 필수라 올리지 않으면 제출이 막힌다.
+    // 생산 위치·주소는 직접 입력이 아니라 계약한 공간을 골라 채운다.
+    await user.selectOptions(screen.getByLabelText('어디서 생산했나요'), '5');
+    expect(screen.getByLabelText('생산 위치')).toHaveValue('장전 스마트팜');
+    expect(screen.getByLabelText('생산지 주소')).toHaveValue('부산광역시 금정구 장전동 30');
+    // 대표 사진도 필수라 올리지 않으면 제출이 막힌다.
     await user.upload(
       screen.getByLabelText('대표 사진 선택'),
       new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
@@ -168,7 +183,39 @@ describe('ProductFormPage', () => {
 
     await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
     const payload = vi.mocked(createProduct).mock.calls[0][0];
-    expect(payload).toMatchObject({ latitude: 35.18, longitude: 129.076 });
+    expect(payload).toMatchObject({
+      productionLocation: '장전 스마트팜',
+      address: '부산광역시 금정구 장전동 30',
+      latitude: 35.18,
+      longitude: 129.076,
+    });
+  });
+
+  it('생산 공간을 고르지 않으면 등록을 막고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/new" />
+      </Routes>,
+      { authenticated: true, route: '/market/new' },
+    );
+
+    await screen.findByRole('heading', { name: '상품 등록' });
+    await user.type(screen.getByLabelText('상품명'), '버터헤드 상추');
+    await user.type(screen.getByLabelText('한 번에 파는 양'), '200');
+    await user.type(screen.getByLabelText('가격(원)'), '4300');
+    await user.type(screen.getByLabelText('재고 수량'), '24');
+    await user.type(screen.getByLabelText('수확일'), '2026-08-08');
+    // 이 PR에서 대표 사진이 필수가 되어, 아래 검증까지 가려면 사진을 먼저 올려야 한다.
+    await user.upload(
+      screen.getByLabelText('대표 사진 선택'),
+      new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
+    );
+    // 공간 미선택 → 생산 위치가 비어 제출을 막는다.
+    await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('공간을 선택해 주세요');
+    expect(createProduct).not.toHaveBeenCalled();
   });
 
   it('수정 시 주소 지오코딩이 실패하면 저장을 막고 안내한다', async () => {
@@ -185,12 +232,76 @@ describe('ProductFormPage', () => {
     );
 
     await screen.findByRole('heading', { name: '상품 수정' });
-    const addressInput = screen.getByLabelText('생산지 주소');
-    await user.clear(addressInput);
-    await user.type(addressInput, '부산광역시 금정구 새 주소 45');
+    // 주소는 상품에서 불러와 채워진 상태(readOnly). 저장 시 지오코딩이 실패하면 차단된다.
     await user.click(screen.getByRole('button', { name: '수정 내용 저장' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
     expect(updateProduct).not.toHaveBeenCalled();
+  });
+
+  it('등록 시 지오코딩이 실패하면 주소 칸을 열어 고쳐 다시 등록할 수 있다', async () => {
+    // 첫 시도는 좌표 확보 실패 → 막히고 readOnly였던 주소 칸이 열린다.
+    // 주소를 검색되는 형태로 고쳐 다시 시도하면 좌표를 얻어 등록된다.
+    vi.mocked(geocodeAddress).mockResolvedValueOnce(null);
+    vi.mocked(createProduct).mockResolvedValue({ ...existingProduct, productId: 21 });
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/new" />
+      </Routes>,
+      { authenticated: true, route: '/market/new' },
+    );
+
+    await screen.findByRole('heading', { name: '상품 등록' });
+    await user.type(screen.getByLabelText('상품명'), '버터헤드 상추');
+    await user.type(screen.getByLabelText('한 번에 파는 양'), '200');
+    await user.type(screen.getByLabelText('가격(원)'), '4300');
+    await user.type(screen.getByLabelText('재고 수량'), '24');
+    await user.type(screen.getByLabelText('수확일'), '2026-08-08');
+    await user.selectOptions(screen.getByLabelText('어디서 생산했나요'), '5');
+    // 이 PR에서 대표 사진이 필수가 되어, 아래 검증까지 가려면 사진을 먼저 올려야 한다.
+    await user.upload(
+      screen.getByLabelText('대표 사진 선택'),
+      new File(['x'], 'new-photo.jpg', { type: 'image/jpeg' }),
+    );
+
+    const address = screen.getByLabelText('생산지 주소');
+    expect(address).toHaveAttribute('readonly');
+
+    await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('좌표를 확인하지 못했습니다');
+    expect(createProduct).not.toHaveBeenCalled();
+    // 주소 칸이 열려 직접 고칠 수 있다.
+    await waitFor(() => expect(address).not.toHaveAttribute('readonly'));
+
+    await user.clear(address);
+    await user.type(address, '부산광역시 금정구 장전온천천로 100');
+    await user.click(screen.getByRole('button', { name: '상품 등록하기' }));
+
+    await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(createProduct).mock.calls[0][0]).toMatchObject({
+      address: '부산광역시 금정구 장전온천천로 100',
+      latitude: 35.18,
+      longitude: 129.076,
+    });
+  });
+
+  it('계약된 공간이 없으면 등록 버튼을 막고 이유를 먼저 알린다', async () => {
+    workplacesMock.value = { workplaces: [], isLoading: false };
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<ProductFormPage />} path="/market/new" />
+      </Routes>,
+      { authenticated: true, route: '/market/new' },
+    );
+
+    await screen.findByRole('heading', { name: '상품 등록' });
+    expect(
+      screen.getByText('계약된 재배 공간이 없어 상품을 등록할 수 없습니다.', { exact: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '상품 등록하기' })).toBeDisabled();
   });
 });

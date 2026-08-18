@@ -1,3 +1,4 @@
+import { ApiError } from '@/api/client';
 import type { ContractDetail, ContractTermsInput } from '@/types/api';
 
 // 목업이 상태를 들고 있어야 "제공자가 저장하면 양측이 같은 값을 본다", "양측이 동의해야 확정된다" 같은
@@ -14,6 +15,7 @@ const initialContract: ContractDetail = {
   deposit: null,
   startDate: null,
   endDate: null,
+  termsVersion: 0,
   ownerAgreed: false,
   farmerAgreed: false,
   status: 'DRAFT',
@@ -34,10 +36,11 @@ export function saveMockContractTerms(
   matchingId: number,
   input: ContractTermsInput,
 ): ContractDetail {
-  // 서버와 같은 규칙: 조건이 바뀌면 이미 받은 동의를 지웁니다.
+  // 서버와 같은 규칙: 조건이 바뀌면 이미 받은 동의를 지우고 조건 번호를 올립니다.
   mockContract = {
     ...mockContract,
     ...input,
+    termsVersion: mockContract.termsVersion + 1,
     ownerAgreed: false,
     farmerAgreed: false,
     status: 'DRAFT',
@@ -45,7 +48,16 @@ export function saveMockContractTerms(
   return readMockContract(matchingId);
 }
 
-export function agreeMockContract(matchingId: number): ContractDetail {
+export function agreeMockContract(matchingId: number, termsVersion: number): ContractDetail {
+  // 서버와 같은 규칙: 동의자가 본 조건이 이미 바뀌었으면 409로 거절하고 재조회시킵니다.
+  if (termsVersion !== mockContract.termsVersion) {
+    throw new ApiError(
+      '계약 조건이 변경되었습니다. 다시 확인해 주세요.',
+      409,
+      'CONTRACT_TERMS_CHANGED',
+    );
+  }
+
   const agreed =
     mockContract.viewerRole === 'OWNER' ? { ownerAgreed: true } : { farmerAgreed: true };
   const next = { ...mockContract, ...agreed };

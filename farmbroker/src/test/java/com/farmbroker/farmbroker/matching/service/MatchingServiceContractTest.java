@@ -163,7 +163,7 @@ class MatchingServiceContractTest {
         Matching matching = matching();
         givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
-        matchingService.agreeContract(MATCHING_ID, FARMER_ID);
+        matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1);
         assertThat(matching.getFarmerAgreedAt()).isNotNull();
 
         ContractResponse response = matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(900_000));
@@ -172,6 +172,36 @@ class MatchingServiceContractTest {
         assertThat(matching.getOwnerAgreedAt()).isNull();
         assertThat(response.getMonthlyRent()).isEqualTo(900_000);
         assertThat(response.isFarmerAgreed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("조건을 저장할 때마다 termsVersion이 올라간다")
+    void updateTermsBumpsVersion() {
+        givenLockedMatching(matching());
+
+        assertThat(matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000)).getTermsVersion())
+                .isEqualTo(1);
+        assertThat(matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(900_000)).getTermsVersion())
+                .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("조회한 뒤 조건이 바뀌었으면 동의가 거절된다")
+    void agreeWithStaleTermsVersionIsRejected() {
+        Matching matching = matching();
+        givenLockedMatching(matching);
+        // 농부가 500,000원짜리 조건(1번)을 조회한 뒤, 소유자가 900,000원(2번)으로 바꾼 상황.
+        matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
+        matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(900_000));
+
+        assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_TERMS_CHANGED);
+        assertThat(matching.getFarmerAgreedAt()).isNull();
+
+        // 바뀐 조건을 다시 조회해 받은 번호로는 동의할 수 있다.
+        matchingService.agreeContract(MATCHING_ID, FARMER_ID, 2);
+        assertThat(matching.getFarmerAgreedAt()).isNotNull();
     }
 
     @Test
@@ -193,7 +223,7 @@ class MatchingServiceContractTest {
     void agreeWithoutTermsIsRejected() {
         givenLockedMatching(matching());
 
-        assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, OWNER_ID))
+        assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, OWNER_ID, 0))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_TERMS_REQUIRED);
     }
@@ -205,12 +235,12 @@ class MatchingServiceContractTest {
         givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
 
-        ContractResponse afterOwner = matchingService.agreeContract(MATCHING_ID, OWNER_ID);
+        ContractResponse afterOwner = matchingService.agreeContract(MATCHING_ID, OWNER_ID, 1);
         assertThat(afterOwner.getStatus()).isEqualTo(ContractStatus.DRAFT);
         // 한쪽만 동의한 단계에서는 매칭이 아직 신청 상태 그대로여야 한다.
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REQUESTED);
 
-        ContractResponse afterFarmer = matchingService.agreeContract(MATCHING_ID, FARMER_ID);
+        ContractResponse afterFarmer = matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1);
         assertThat(afterFarmer.getStatus()).isEqualTo(ContractStatus.CONFIRMED);
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
         assertThat(matching.getRespondedAt()).isNotNull();
@@ -232,9 +262,9 @@ class MatchingServiceContractTest {
         matching.accept();
         givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
-        matchingService.agreeContract(MATCHING_ID, OWNER_ID);
+        matchingService.agreeContract(MATCHING_ID, OWNER_ID, 1);
 
-        ContractResponse response = matchingService.agreeContract(MATCHING_ID, FARMER_ID);
+        ContractResponse response = matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1);
 
         assertThat(response.getStatus()).isEqualTo(ContractStatus.CONFIRMED);
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.ACCEPTED);
@@ -246,8 +276,8 @@ class MatchingServiceContractTest {
     void confirmedContractIsClosed() {
         givenLockedMatching(matching());
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
-        matchingService.agreeContract(MATCHING_ID, OWNER_ID);
-        matchingService.agreeContract(MATCHING_ID, FARMER_ID);
+        matchingService.agreeContract(MATCHING_ID, OWNER_ID, 1);
+        matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1);
 
         assertThatThrownBy(() -> matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(700_000)))
                 .isInstanceOf(BusinessException.class)
@@ -263,14 +293,14 @@ class MatchingServiceContractTest {
         Matching matching = matching();
         givenLockedMatching(matching);
         matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000));
-        matchingService.agreeContract(MATCHING_ID, OWNER_ID);
+        matchingService.agreeContract(MATCHING_ID, OWNER_ID, 1);
 
         ContractResponse response = matchingService.cancelContract(MATCHING_ID, FARMER_ID);
 
         assertThat(response.getStatus()).isEqualTo(ContractStatus.CANCELED);
         assertThat(matching.getStatus()).isEqualTo(MatchingStatus.REJECTED);
         assertThat(matching.getRespondedAt()).isNotNull();
-        assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, FARMER_ID))
+        assertThatThrownBy(() -> matchingService.agreeContract(MATCHING_ID, FARMER_ID, 1))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_CLOSED);
     }
