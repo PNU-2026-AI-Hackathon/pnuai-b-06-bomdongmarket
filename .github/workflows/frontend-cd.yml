@@ -43,15 +43,40 @@ jobs:
           cache: npm
           cache-dependency-path: farmbroker-web/package-lock.json
 
-      - name: Validate deployment secrets
+      - name: Configure Vercel project
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          set -euo pipefail
+
           test -n "$VERCEL_ORG_ID" || { echo "VERCEL_ORG_ID is not configured" >&2; exit 1; }
           test -n "$VERCEL_PROJECT_ID" || { echo "VERCEL_PROJECT_ID is not configured" >&2; exit 1; }
           test -n "$VERCEL_TOKEN" || { echo "VERCEL_TOKEN is not configured" >&2; exit 1; }
+
+          project_status="$(curl --show-error --silent \
+            --request PATCH \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{"rootDirectory":"farmbroker-web"}' \
+            --output /tmp/vercel-project.json \
+            --write-out "%{http_code}" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID")"
+
+          if [ "$project_status" != "200" ]; then
+            echo "::error::Vercel project configuration failed with HTTP $project_status"
+            echo "Check that the token owner belongs to the configured team and that both IDs match the project."
+            exit 1
+          fi
+
+          jq --exit-status \
+            --arg project_id "$VERCEL_PROJECT_ID" \
+            --arg org_id "$VERCEL_ORG_ID" \
+            '.id == $project_id and .accountId == $org_id and .rootDirectory == "farmbroker-web"' \
+            /tmp/vercel-project.json > /dev/null
+
+          echo "Vercel Root Directory is configured as farmbroker-web"
 
       - name: Install dependencies
         working-directory: farmbroker-web
