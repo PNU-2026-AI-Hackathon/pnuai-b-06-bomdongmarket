@@ -38,9 +38,9 @@ import { formatCurrency } from '@/utils/format';
 // 판매자가 로컬마켓 상품을 등록·수정하는 화면입니다.
 // 백엔드 계약(#54 합의사항, #56 구현)에 맞춰 요청 바디를 구성합니다.
 // - category는 계약에 정의된 한글 라벨('잎채소'/'허브'/'과채류')만 전송합니다.
-// - '어디서 생산했나요'는 내가 등록한 공실(GET /spaces/my)과 매칭이 수락돼 재배 중인 공간
-//   (GET /matchings/my-requests 중 ACCEPTED)을 합쳐 보여 주고, 고르면 생산 위치·주소·spaceId를 채웁니다.
-//   spaceId는 FK가 아닌 스냅샷이라 직접 입력만으로도 등록됩니다.
+// - '어디서 생산했나요'는 계약(매칭 수락)한 공간(GET /matchings/my-requests 중 ACCEPTED)만
+//   보여 주고, 고르면 생산 위치·주소·spaceId를 채웁니다. 생산 위치·주소는 직접 입력 대신
+//   선택으로만 채워지도록 readOnly로 둡니다(내가 등록만 한 공실은 재배지가 아니라 제외).
 // - address는 카카오맵으로 생산지를 찍는 데 쓰이므로 접이식 섹션이 아니라 기본 정보에 둡니다.
 // - imageUrl은 POST /files 업로드 결과 URL입니다. 판매자가 사진을 인터넷 어딘가에 먼저
 //   올려 둘 필요가 없도록 URL 입력 대신 로컬 파일 업로드만 받습니다.
@@ -58,10 +58,11 @@ export function ProductFormPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadStatus, setLoadStatus] = useState<AsyncStatus>(isEdit ? 'loading' : 'success');
 
-  const { workplaces } = useMyWorkplaces();
-  const ownedPlaces = workplaces.filter((place) => place.source === 'owned');
-  const farmingPlaces = workplaces.filter((place) => place.source === 'farming');
+  const { workplaces, isLoading: isWorkplacesLoading } = useMyWorkplaces();
   const [spaceId, setSpaceId] = useState<number | null>(null);
+  // 평소 주소 칸은 공간 선택으로만 채워지지만(직접 입력 불가), 지오코딩이 실패하면
+  // 그 공간으로는 저장이 막혀 버리므로 그때만 칸을 열어 직접 고쳐 다시 시도하게 한다.
+  const [addressEditable, setAddressEditable] = useState(false);
   const [events, setEvents] = useState<ProductEventInput[]>([]);
   const [discardedUrls, setDiscardedUrls] = useState<string[]>([]);
   const [fields, setFields] = useState({
@@ -125,6 +126,9 @@ export function ProductFormPage() {
       ? `${composedUnit} · ${formatCurrency(Number(fields.price))}`
       : null;
   const pricePerBase = unitPriceHint(fields.price, fields.unitAmount, fields.unitType);
+  // 재배는 계약한 공간에서만 이뤄지므로, 신규 등록은 계약 공간이 하나도 없으면 애초에 막는다.
+  // (수정은 이미 그 공간으로 올린 상품이라 생산 위치가 채워져 있어 허용한다.)
+  const noWorkplaceForNew = !isEdit && !isWorkplacesLoading && workplaces.length === 0;
 
   function importFromSpace(selectedId: string) {
     const picked = workplaces.find((place) => String(place.spaceId) === selectedId);
@@ -133,6 +137,8 @@ export function ProductFormPage() {
       return;
     }
     setSpaceId(picked.spaceId);
+    // 공간을 새로 고르면 주소가 자동 채움으로 돌아가므로 직접 수정 상태를 해제한다.
+    setAddressEditable(false);
     setFields((prev) => ({
       ...prev,
       productionLocation: picked.title,
@@ -161,6 +167,14 @@ export function ProductFormPage() {
     setIsSaving(true);
     setError(null);
 
+    // 생산 위치·주소는 '어디서 생산했나요'에서 계약한 공간을 고르면 채워진다(readOnly).
+    // 고르지 않으면 생산 위치가 비어 제출을 막는다.
+    if (!fields.productionLocation.trim()) {
+      setError('상품을 생산한 공간을 선택해 주세요.');
+      setIsSaving(false);
+      return;
+    }
+
     const trimmedAddress = fields.address.trim();
     let coords: { lat: number; lng: number } | null = null;
     if (trimmedAddress) {
@@ -169,8 +183,11 @@ export function ProductFormPage() {
       // (수정: 백엔드 PATCH가 null을 '변경 없음'으로 봐 주소만 바뀌고 옛 좌표가 남는다.
       //  등록: 좌표 없이 저장하면 주소 지오코딩이 안 될 때 반경 검색에서 빠져 지도에 안 보인다.)
       if (!coords) {
+        // 주소가 있는데 좌표를 못 구하면 그 공간으로는 저장이 계속 막힌다.
+        // 주소 칸을 열어 사용자가 직접 고쳐(예: 검색되는 형태로) 다시 시도할 수 있게 한다.
+        setAddressEditable(true);
         setError(
-          '주소의 좌표를 확인하지 못했습니다. 주소를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
+          '주소의 좌표를 확인하지 못했습니다. 아래 생산지 주소를 직접 고쳐 다시 시도해 주세요.',
         );
         setIsSaving(false);
         return;
@@ -275,36 +292,33 @@ export function ProductFormPage() {
           icon={<Sprout className="h-8 w-8" aria-hidden />}
           title="기본 정보"
         >
-          {/* 내 공실과 매칭이 수락돼 재배 중인 남의 공간을 함께 보여 줍니다.
-              고르면 생산 위치·주소가 한 번에 채워져 직접 칠 칸이 줄어듭니다. */}
-          {workplaces.length > 0 ? (
+          {/* 재배는 계약(매칭 수락)한 공간에서만 이뤄지므로 그 공간만 보여 줍니다.
+              고르면 생산 위치·주소가 자동으로 채워집니다(직접 입력 불가). */}
+          {isWorkplacesLoading ? null : workplaces.length > 0 ? (
             <Select
-              helperText="고르면 생산 위치와 주소가 자동으로 채워집니다."
+              helperText="계약한 공간을 고르면 생산 위치와 주소가 자동으로 채워집니다."
               label="어디서 생산했나요"
               onChange={(event) => importFromSpace(event.target.value)}
-              value={spaceId === null ? '' : String(spaceId)}
+              value={
+                spaceId !== null && workplaces.some((place) => place.spaceId === spaceId)
+                  ? String(spaceId)
+                  : ''
+              }
             >
-              <option value="">직접 입력할게요</option>
-              {ownedPlaces.length > 0 ? (
-                <optgroup label="내가 등록한 공간">
-                  {ownedPlaces.map((place) => (
-                    <option key={place.spaceId} value={String(place.spaceId)}>
-                      {place.title}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-              {farmingPlaces.length > 0 ? (
-                <optgroup label="내가 재배 중인 공간">
-                  {farmingPlaces.map((place) => (
-                    <option key={place.spaceId} value={String(place.spaceId)}>
-                      {place.title}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
+              <option value="" disabled>
+                생산한 공간을 선택하세요
+              </option>
+              {workplaces.map((place) => (
+                <option key={place.spaceId} value={String(place.spaceId)}>
+                  {place.title}
+                </option>
+              ))}
             </Select>
-          ) : null}
+          ) : (
+            <p className="rounded-app border border-line bg-surface-subtle p-3 text-xs font-medium text-content-subtle">
+              계약된 재배 공간이 없습니다. 공간 매칭이 수락되면 이곳에서 생산 공간을 고를 수 있습니다.
+            </p>
+          )}
           <Input
             label="상품명"
             maxLength={100}
@@ -391,22 +405,25 @@ export function ProductFormPage() {
               value={fields.harvestDate}
             />
             <Input
-              helperText="구매자에게 보이는 이름입니다."
+              helperText="위에서 고른 공간으로 자동 채워집니다."
               label="생산 위치"
-              maxLength={255}
-              onChange={(event) => setField('productionLocation', event.target.value)}
-              placeholder="예: 장전 스마트팜"
-              required
+              placeholder="공간을 선택하면 채워집니다"
+              readOnly
               value={fields.productionLocation}
             />
           </div>
-          {/* 주소는 지도에 위치를 찍는 데 쓰이므로 접어 두지 않고 기본 정보에 둡니다. */}
+          {/* 주소는 지도에 위치를 찍는 데 쓰이며, 위에서 고른 공간으로 자동 채워집니다.
+              지오코딩이 실패했을 때만 열려, 검색되는 형태로 직접 고쳐 다시 시도할 수 있습니다. */}
           <Input
-            helperText="이 주소로 지도에 생산지를 표시합니다. 비워 두면 지도에 나오지 않습니다."
+            helperText={
+              addressEditable
+                ? '좌표를 확인하지 못해 직접 수정할 수 있습니다. 검색되는 주소로 고쳐 다시 저장해 주세요.'
+                : '위에서 고른 공간의 주소로 자동 채워지며, 이 주소로 지도에 생산지를 표시합니다.'
+            }
             label="생산지 주소"
-            maxLength={255}
             onChange={(event) => setField('address', event.target.value)}
-            placeholder="예: 부산광역시 금정구 장전동 30"
+            placeholder="공간을 선택하면 채워집니다"
+            readOnly={!addressEditable}
             value={fields.address}
           />
         </FormSection>
@@ -506,7 +523,18 @@ export function ProductFormPage() {
 
         {/* 폼이 길어 모바일에서 제출 버튼이 화면 밖으로 밀리므로 공간 등록 화면과 같이 하단에 고정합니다. */}
         <div className="sticky bottom-20 z-10 rounded-app border border-leaf-100 bg-white p-3 shadow-lift lg:static lg:p-0 lg:shadow-none">
-          <Button className="w-full" disabled={isSaving} size="lg" type="submit">
+          {/* 계약 공간이 없으면 폼을 다 채운 뒤 막히지 않도록 버튼 단계에서 먼저 이유를 알린다. */}
+          {noWorkplaceForNew ? (
+            <p className="mb-2 text-xs font-semibold text-feedback-danger" role="status">
+              계약된 재배 공간이 없어 상품을 등록할 수 없습니다. 공간 매칭이 수락되면 등록할 수 있습니다.
+            </p>
+          ) : null}
+          <Button
+            className="w-full"
+            disabled={isSaving || noWorkplaceForNew}
+            size="lg"
+            type="submit"
+          >
             {isSaving ? '저장 중...' : isEdit ? '수정 내용 저장' : '상품 등록하기'}
           </Button>
         </div>

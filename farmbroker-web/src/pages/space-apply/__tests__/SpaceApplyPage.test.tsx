@@ -128,8 +128,8 @@ describe('SpaceApplyPage', () => {
     expect(await screen.findByText('협의 중')).toBeInTheDocument();
     expect(screen.getByText('취미')).toBeInTheDocument();
     expect(screen.queryByLabelText('신청 메시지')).not.toBeInTheDocument();
-    // 채팅 자리는 계약 확정을 기다리지 않고 신청 직후부터 노출된다.
-    expect(screen.getByRole('button', { name: /채팅방으로 이동/i })).toBeDisabled();
+    // 채팅은 계약 확정을 기다리지 않고 신청 직후부터 쓸 수 있다.
+    expect(screen.getByRole('button', { name: /채팅방으로 이동/i })).toBeEnabled();
   });
 
   it('응답을 기다리는 신청은 확인 후에만 취소한다', async () => {

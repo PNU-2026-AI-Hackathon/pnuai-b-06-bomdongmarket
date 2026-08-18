@@ -26,9 +26,34 @@ function buildSearchParams(params: SpaceSearchParams) {
 
 function toSummary(space: SpaceDetail): SpaceSummary {
   // 목록 카드에는 상세 필드가 필요 없으므로 API 명세의 요약 DTO 형태로 잘라냅니다.
-  const { spaceId, title, address, area, monthlyRent, status, imageUrl, latitude, longitude } =
-    space;
-  return { spaceId, title, address, area, monthlyRent, status, imageUrl, latitude, longitude };
+  const {
+    spaceId,
+    title,
+    address,
+    area,
+    monthlyRent,
+    hasWater,
+    hasElectricity,
+    hasVentilation,
+    status,
+    imageUrl,
+    latitude,
+    longitude,
+  } = space;
+  return {
+    spaceId,
+    title,
+    address,
+    area,
+    monthlyRent,
+    hasWater,
+    hasElectricity,
+    hasVentilation,
+    status,
+    imageUrl,
+    latitude,
+    longitude,
+  };
 }
 
 function applySearch(spaces: SpaceDetail[], params: SpaceSearchParams = {}) {
@@ -121,7 +146,8 @@ export async function createSpace(input: SpaceCreateInput): Promise<SpaceMutatio
   return {
     ...input,
     spaceId: 99,
-    imageUrls: input.imageUrls ?? [],
+    // 등록 폼은 더 이상 도면을 보내지 않지만 응답 형태는 그대로 유지합니다.
+    floorPlanUrls: input.floorPlanUrls ?? [],
     status: 'AVAILABLE',
     ownerId: 1,
     createdAt: new Date().toISOString(),

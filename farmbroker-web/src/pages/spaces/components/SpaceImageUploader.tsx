@@ -16,24 +16,19 @@ import { formatNumber } from '@/utils/format';
 interface SpaceImageUploaderProps {
   value: string[];
   onChange: (imageUrls: string[]) => void;
-  // 사진·도면 두 섹션이 같은 화면에 있으므로 접근성 이름과 안내 문구를 구분합니다.
-  label: string;
   // 상위 폼이 제출을 막았을 때 이 섹션에 표시할 문구입니다.
   requiredMessage?: string | null;
-  // 첫 장이 목록 카드 썸네일이 되는 공간 사진에만 '대표' 배지를 답니다. 도면은 해당 없음.
-  showsPrimaryBadge?: boolean;
 }
 
 const MAX_IMAGE_SIZE_MB = MAX_IMAGE_SIZE_BYTES / 1024 / 1024;
+const label = '공간 사진';
 
 // 파일을 고르면 곧바로 업로드하고 서버가 돌려준 URL만 상위 폼에 넘깁니다.
 // 이렇게 해야 다음 단계(수익 예측)로 넘어갔다 돌아와도 선택한 파일이 그대로 남습니다.
 export function SpaceImageUploader({
   value,
   onChange,
-  label,
   requiredMessage,
-  showsPrimaryBadge = false,
 }: SpaceImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -134,7 +129,8 @@ export function SpaceImageUploader({
                 className="h-28 w-full object-cover"
                 src={imageUrl}
               />
-              {index === 0 && showsPrimaryBadge ? (
+              {/* 첫 장이 목록 카드의 대표 이미지가 되므로 순서를 눈으로 알 수 있게 표시합니다. */}
+              {index === 0 ? (
                 <span className="absolute left-2 top-2 rounded-full bg-action px-2 py-1 text-xs font-semibold text-content-inverse">
                   대표
                 </span>

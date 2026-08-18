@@ -64,6 +64,8 @@ export function AddressField({
             onClick={() => void openPostcodeSearch()}
             placeholder="예: 장전온천천로123-7"
             readOnly
+            // readOnly 칸은 브라우저 검증에서 빠지므로 required 대신 별표만 붙입니다.
+            requiredMark
             value={roadAddress}
           />
         </div>
@@ -92,6 +94,7 @@ export function AddressField({
         onChange={(event) => onChange({ roadAddress, detail: event.target.value })}
         placeholder="예: 3층 302호"
         required
+        requiredMark
         value={detail}
       />
     </div>

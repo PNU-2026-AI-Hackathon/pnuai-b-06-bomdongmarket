@@ -85,6 +85,10 @@ export interface SpaceSummary {
   address: string;
   area: number;
   monthlyRent: number;
+  // 목록 카드가 실제 등록값대로 시설 아이콘을 보여줘야 해서 요약에도 담깁니다.
+  hasWater: boolean;
+  hasElectricity: boolean;
+  hasVentilation: boolean;
   status: SpaceStatus;
   imageUrl: string | null;
   // 지도 검색용 좌표. 등록 시 프론트가 주소를 지오코딩해 저장하며, 없으면 프론트가 폴백 지오코딩한다.
@@ -94,9 +98,6 @@ export interface SpaceSummary {
 
 export interface SpaceDetail extends SpaceSummary {
   floor: number;
-  hasWater: boolean;
-  hasElectricity: boolean;
-  hasVentilation: boolean;
   description: string;
   imageUrls: string[];
   floorPlanUrls: string[];
@@ -124,9 +125,10 @@ export interface SpaceCreateInput {
   hasElectricity: boolean;
   hasVentilation: boolean;
   description?: string;
-  imageUrls?: string[];
-  // 도면은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
-  floorPlanUrls: string[];
+  // 공간 사진은 최소 1장이 필수입니다 (백엔드 SpaceCreateRequest와 동일).
+  imageUrls: string[];
+  // 등록 폼에서는 더 이상 도면을 받지 않습니다. 이미 등록된 공간의 수정 요청에만 쓰입니다.
+  floorPlanUrls?: string[];
   // 지도용 좌표(선택). 폼에서 주소를 지오코딩해 함께 보낸다(실패 시 null).
   latitude?: number | null;
   longitude?: number | null;
@@ -470,4 +472,56 @@ export interface ContractedSpaceSummary {
   spaceName: string;
   imageUrl: string | null;
   status: Extract<MatchingStatus, 'ACCEPTED'>;
+}
+
+// ── 채팅 ──
+// 방은 (맥락, 두 참여자) 조합으로 유일합니다. 맥락은 공간 문의(SPACE)와 마켓 상품(PRODUCT) 둘입니다.
+export type ChatContextType = 'SPACE' | 'PRODUCT';
+
+export type ChatMessageType = 'TEXT' | 'IMAGE';
+
+export interface Conversation {
+  conversationId: number;
+  contextType: ChatContextType;
+  contextId: number;
+  contextTitle: string;
+  contextImageUrl: string | null;
+  otherUserId: number;
+  otherUserNickname: string;
+  lastMessagePreview: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  // 어느 쪽이든 차단하면 true입니다. 입력창을 막는 데 씁니다.
+  blocked: boolean;
+}
+
+export interface ConversationList {
+  conversations: Conversation[];
+  page: number;
+  size: number;
+  hasNext: boolean;
+}
+
+export interface ChatMessage {
+  messageId: number;
+  conversationId: number;
+  senderId: number;
+  type: ChatMessageType;
+  text: string | null;
+  imagePath: string | null;
+  imageContentType: string | null;
+  createdAt: string;
+}
+
+export interface ChatMessageList {
+  messages: ChatMessage[];
+  // 위로 더 불러올 때 넘기는 커서입니다.
+  nextBeforeId: number | null;
+  hasNext: boolean;
+}
+
+export interface ChatReadResult {
+  conversationId: number;
+  lastReadMessageId: number | null;
+  unreadCount: number;
 }

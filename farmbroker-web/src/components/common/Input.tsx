@@ -7,6 +7,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: ReactNode;
   helperText?: string;
   errorMessage?: string;
+  // 라벨 옆에 빨간 별을 붙여 필수 입력임을 알립니다.
+  // readOnly 주소 칸처럼 브라우저 required 검증이 걸리지 않는 칸에도 붙일 수 있어야 해 required와 분리했습니다.
+  requiredMark?: boolean;
 }
 
 // 검색, 필터, 등록 폼에서 재사용하는 라벨 포함 입력 컴포넌트입니다.
@@ -15,6 +18,7 @@ export function Input({
   icon,
   helperText,
   errorMessage,
+  requiredMark,
   className,
   id,
   ...props
@@ -28,9 +32,15 @@ export function Input({
   return (
     <div className="block text-sm font-medium text-content-muted">
       {label ? (
-        <label className="mb-2 block" htmlFor={inputId}>
-          {label}
-        </label>
+        // 별표는 label 밖에 둡니다. 안에 넣으면 칸의 접근성 이름이 '공간 이름 *'으로 바뀝니다.
+        <span className="mb-2 flex items-center gap-1">
+          <label htmlFor={inputId}>{label}</label>
+          {requiredMark ? (
+            <span aria-hidden className="text-feedback-danger">
+              *
+            </span>
+          ) : null}
+        </span>
       ) : null}
       <span className="relative block">
         {icon ? (
