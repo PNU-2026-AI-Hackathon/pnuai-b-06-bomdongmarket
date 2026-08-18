@@ -470,3 +470,55 @@ export interface ContractedSpaceSummary {
   imageUrl: string | null;
   status: Extract<MatchingStatus, 'ACCEPTED'>;
 }
+
+// ── 채팅 ──
+// 방은 (맥락, 두 참여자) 조합으로 유일합니다. 맥락은 공간 문의(SPACE)와 마켓 상품(PRODUCT) 둘입니다.
+export type ChatContextType = 'SPACE' | 'PRODUCT';
+
+export type ChatMessageType = 'TEXT' | 'IMAGE';
+
+export interface Conversation {
+  conversationId: number;
+  contextType: ChatContextType;
+  contextId: number;
+  contextTitle: string;
+  contextImageUrl: string | null;
+  otherUserId: number;
+  otherUserNickname: string;
+  lastMessagePreview: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  // 어느 쪽이든 차단하면 true입니다. 입력창을 막는 데 씁니다.
+  blocked: boolean;
+}
+
+export interface ConversationList {
+  conversations: Conversation[];
+  page: number;
+  size: number;
+  hasNext: boolean;
+}
+
+export interface ChatMessage {
+  messageId: number;
+  conversationId: number;
+  senderId: number;
+  type: ChatMessageType;
+  text: string | null;
+  imagePath: string | null;
+  imageContentType: string | null;
+  createdAt: string;
+}
+
+export interface ChatMessageList {
+  messages: ChatMessage[];
+  // 위로 더 불러올 때 넘기는 커서입니다.
+  nextBeforeId: number | null;
+  hasNext: boolean;
+}
+
+export interface ChatReadResult {
+  conversationId: number;
+  lastReadMessageId: number | null;
+  unreadCount: number;
+}

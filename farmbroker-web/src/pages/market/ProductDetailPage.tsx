@@ -1,8 +1,9 @@
-import { ArrowLeft, Heart, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useRequireAuth } from '@/auth/useRequireAuth';
+import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { buttonStyles } from '@/components/common/buttonStyles';
@@ -23,6 +24,7 @@ import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTr
 // 거래는 판매자와의 채팅이 기본이고, 바로 사고 싶을 때를 위해 단건 구매를 함께 둡니다.
 export function ProductDetailPage() {
   const requireAuth = useRequireAuth();
+  const chatDock = useChatDock();
   const navigate = useNavigate();
   const { productId } = useParams();
   const [item, setItem] = useState<MarketItem | null>(null);
@@ -65,6 +67,17 @@ export function ProductDetailPage() {
       alive = false;
     };
   }, [item]);
+
+  // 이 마켓의 기본 거래 방식입니다. 방이 없으면 만들고 있으면 그 방을 엽니다.
+  function handleChat() {
+    if (!item) return;
+    requireAuth(() => {
+      setActionError(null);
+      void chatDock.openContext('PRODUCT', item.productId).catch((caught: unknown) => {
+        setActionError(caught instanceof Error ? caught.message : '채팅을 열지 못했습니다.');
+      });
+    });
+  }
 
   function handleToggleWish() {
     if (!item) return;
@@ -173,7 +186,12 @@ export function ProductDetailPage() {
                 </Button>
               </div>
             </div>
-            <div className="mt-5 flex gap-2">
+            {/* 거래는 채팅이 기본이라 구매보다 먼저 눈에 들어오게 둡니다. */}
+            <Button className="mt-5 w-full" onClick={handleChat} variant="outline">
+              <MessageCircle className="h-5 w-5" aria-hidden />
+              판매자와 채팅
+            </Button>
+            <div className="mt-2 flex gap-2">
               {/* 찜은 품절이어도 누를 수 있습니다 — 다시 올라오길 기다리는 것도 관심 표시입니다. */}
               <Button
                 aria-label={wished ? '찜 해제' : '찜하기'}
