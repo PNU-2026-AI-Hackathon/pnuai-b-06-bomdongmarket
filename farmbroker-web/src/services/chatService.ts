@@ -14,18 +14,23 @@ import type {
 // 방은 (맥락, 두 참여자)로 유일해서, 같은 상품·공간에 다시 말을 걸어도 기존 방이 열립니다.
 // 공간 문의와 마켓 문의가 같은 API를 쓰고 contextType 으로만 갈립니다.
 
+// otherUserId는 공간 주인이 신청자에게 먼저 말을 걸 때만 씁니다.
+// 문의자가 주인에게 걸 때는 상대가 자명해서 서버가 알아서 정합니다.
 export async function createOrGetConversation(
   contextType: ChatContextType,
   contextId: number,
+  otherUserId?: number,
 ): Promise<Conversation> {
   if (USE_MOCKS) {
     await mockDelay();
-    return mockCreateOrGet(contextType, contextId);
+    return mockCreateOrGet(contextType, contextId, otherUserId);
   }
 
   const response = await apiRequest<Conversation>(ENDPOINTS.chat.conversations, {
     method: 'POST',
-    body: { contextType, contextId },
+    body: otherUserId === undefined
+      ? { contextType, contextId }
+      : { contextType, contextId, otherUserId },
   });
   return response.data;
 }
@@ -241,10 +246,18 @@ function readMockMessages(conversationId: number): ChatMessage[] {
   return readState().messages[conversationId] ?? [];
 }
 
-function mockCreateOrGet(contextType: ChatContextType, contextId: number): Conversation {
+function mockCreateOrGet(
+  contextType: ChatContextType,
+  contextId: number,
+  otherUserId?: number,
+): Conversation {
   const state = readState();
+  // 상대까지 봐야 같은 공간에 대한 주인 방과 신청자 방이 한 방으로 합쳐지지 않습니다.
   const existing = state.conversations.find(
-    (item) => item.contextType === contextType && item.contextId === contextId,
+    (item) =>
+      item.contextType === contextType &&
+      item.contextId === contextId &&
+      (otherUserId === undefined || item.otherUserId === otherUserId),
   );
   if (existing) return existing;
 
@@ -254,7 +267,7 @@ function mockCreateOrGet(contextType: ChatContextType, contextId: number): Conve
     contextId,
     contextTitle: contextType === 'PRODUCT' ? '상품 문의' : '공간 문의',
     contextImageUrl: null,
-    otherUserId: 99,
+    otherUserId: otherUserId ?? 99,
     otherUserNickname: '판매자',
     lastMessagePreview: null,
     lastMessageAt: null,
