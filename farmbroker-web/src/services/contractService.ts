@@ -40,17 +40,21 @@ export async function saveContractTerms(
   return saveMockContractTerms(matchingId, input);
 }
 
-export async function agreeContract(matchingId: number): Promise<ContractDetail> {
+// termsVersion은 사용자가 화면에서 본 조건의 번호입니다. 그 사이 조건이 바뀌었으면 서버가 409로 거절합니다.
+export async function agreeContract(
+  matchingId: number,
+  termsVersion: number,
+): Promise<ContractDetail> {
   if (!USE_MOCKS) {
     const response = await apiRequest<ContractDetail>(
       ENDPOINTS.matchings.contractAgree(matchingId),
-      { method: 'PATCH' },
+      { method: 'PATCH', body: { termsVersion } },
     );
     return response.data;
   }
 
   await mockDelay();
-  return agreeMockContract(matchingId);
+  return agreeMockContract(matchingId, termsVersion);
 }
 
 export async function cancelContract(matchingId: number): Promise<ContractDetail> {
