@@ -84,12 +84,12 @@ jobs:
           if ! avn service wait \
             "$AIVEN_SERVICE_NAME" \
             --project "$AIVEN_PROJECT_NAME" \
-            --timeout 300; then
+            --timeout 900; then
             final_state="$(avn service get \
               "$AIVEN_SERVICE_NAME" \
               --project "$AIVEN_PROJECT_NAME" \
               --format '{state}')"
-            echo "::error::Aiven MySQL did not reach RUNNING within 5 minutes. Final state: $final_state"
+            echo "::error::Aiven MySQL did not reach RUNNING within 15 minutes. Final state: $final_state"
             exit 1
           fi
 
