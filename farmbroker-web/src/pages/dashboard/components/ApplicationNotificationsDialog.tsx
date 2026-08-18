@@ -158,6 +158,7 @@ export function ApplicationNotificationsDialog({
                     {receivedApplications.map((request) => (
                       <li className="min-w-0" key={request.matchingId}>
                         <MatchingRequestCard
+                          onChatOpen={onClose}
                           onDismiss={() => onDismiss(request.matchingId)}
                           request={request}
                         />

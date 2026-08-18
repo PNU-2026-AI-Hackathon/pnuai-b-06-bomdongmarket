@@ -17,6 +17,8 @@ interface MatchingRequestCardProps {
   request: MatchingRequest;
   // 협의가 끝난 신청을 목록에서 치웁니다. 협의 중인 신청에는 노출하지 않습니다.
   onDismiss?: () => void;
+  // 채팅이 열린 뒤 호출합니다. 이 카드를 감싼 알림 모달이 채팅 도크를 덮으므로 모달을 비켜 줍니다.
+  onChatOpen?: () => void;
 }
 
 const statusTones: Record<MatchingStatus, BadgeTone> = {
@@ -28,7 +30,11 @@ const statusTones: Record<MatchingStatus, BadgeTone> = {
 
 // 소유자가 받은 매칭 신청을 카드 단위로 확인하고 채팅·계약서로 이어갑니다.
 // 버튼 구성은 공간 상세의 SpaceMatchingRequestCard와 같습니다 — 양측이 같은 흐름을 봅니다.
-export function MatchingRequestCard({ request, onDismiss }: MatchingRequestCardProps) {
+export function MatchingRequestCard({
+  request,
+  onDismiss,
+  onChatOpen,
+}: MatchingRequestCardProps) {
   const chatDock = useChatDock();
   const [chatError, setChatError] = useState<string | null>(null);
   const isWaiting = request.status === 'REQUESTED';
@@ -79,6 +85,8 @@ export function MatchingRequestCard({ request, onDismiss }: MatchingRequestCardP
             setChatError(null);
             void chatDock
               .openContext('SPACE', request.spaceId, request.farmerId)
+              // 실패하면 닫지 않습니다 — 모달이 닫히면 아래 오류 문구를 볼 수 없습니다.
+              .then(() => onChatOpen?.())
               .catch((caught: unknown) => {
                 setChatError(
                   caught instanceof Error ? caught.message : '채팅을 열지 못했습니다.',

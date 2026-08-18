@@ -24,7 +24,7 @@ describe('MatchingRequestCard', () => {
     respondedAt: null,
   };
 
-  function renderCard(openContext: ChatDockValue['openContext']) {
+  function renderCard(openContext: ChatDockValue['openContext'], onChatOpen?: () => void) {
     const chatDock = {
       openConversation: () => undefined,
       openContext,
@@ -37,7 +37,7 @@ describe('MatchingRequestCard', () => {
 
     return renderWithProviders(
       <ChatDockContext.Provider value={chatDock}>
-        <MatchingRequestCard request={request} />
+        <MatchingRequestCard onChatOpen={onChatOpen} request={request} />
       </ChatDockContext.Provider>,
     );
   }
@@ -61,14 +61,30 @@ describe('MatchingRequestCard', () => {
     );
   });
 
-  it('채팅을 열지 못하면 이유를 알린다', async () => {
+  // 알림 모달(z-50)이 채팅 도크(z-40)를 덮으므로, 채팅이 열리면 모달이 비켜 줘야 합니다.
+  it('채팅이 열리면 감싼 모달을 닫는다', async () => {
     const user = userEvent.setup();
-    renderCard(vi.fn().mockRejectedValue(new Error('차단된 사용자와는 채팅할 수 없습니다.')));
+    const onChatOpen = vi.fn();
+    renderCard(vi.fn().mockResolvedValue(undefined), onChatOpen);
+
+    await user.click(screen.getByRole('button', { name: '채팅' }));
+
+    expect(onChatOpen).toHaveBeenCalled();
+  });
+
+  it('채팅을 열지 못하면 모달을 닫지 않고 이유를 알린다', async () => {
+    const user = userEvent.setup();
+    const onChatOpen = vi.fn();
+    renderCard(
+      vi.fn().mockRejectedValue(new Error('차단된 사용자와는 채팅할 수 없습니다.')),
+      onChatOpen,
+    );
 
     await user.click(screen.getByRole('button', { name: '채팅' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '차단된 사용자와는 채팅할 수 없습니다.',
     );
+    expect(onChatOpen).not.toHaveBeenCalled();
   });
 });
