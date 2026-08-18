@@ -80,7 +80,8 @@ class ProductControllerSecurityTest {
                                   "unit": "팩",
                                   "stock": 24,
                                   "harvestDate": "2026-07-05",
-                                  "productionLocation": "장전 스마트팜"
+                                  "productionLocation": "장전 스마트팜",
+                                  "imageUrl": "/files/lettuce.jpg"
                                 }
                                 """))
                 .andExpect(status().isUnauthorized());
@@ -111,7 +112,8 @@ class ProductControllerSecurityTest {
                                   "unit": "팩",
                                   "stock": 24,
                                   "harvestDate": "2026-07-05",
-                                  "productionLocation": "장전 스마트팜"
+                                  "productionLocation": "장전 스마트팜",
+                                  "imageUrl": "/files/lettuce.jpg"
                                 }
                                 """))
                 .andExpect(status().isCreated());
