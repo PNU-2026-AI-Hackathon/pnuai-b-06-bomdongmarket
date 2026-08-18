@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.matching.service;
 
+import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
@@ -22,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -33,7 +35,7 @@ import static org.mockito.Mockito.inOrder;
 
 // 매칭의 역할 정책을 검증한다.
 // 신청은 역할을 요구하지 않고(요구하면 농부가 될 방법이 없어진다),
-// 수락되어 재배가 확정되는 시점에 신청자가 FARMER 역할을 얻는다.
+// 양측이 계약에 동의해 재배가 확정되는 시점에 신청자가 FARMER 역할을 얻는다.
 // DB 없이 돌도록 레포지토리·어댑터는 목으로 대체한다.
 @ExtendWith(MockitoExtension.class)
 class MatchingServiceRoleTest {
@@ -76,33 +78,39 @@ class MatchingServiceRoleTest {
         order.verify(userRepository).findActiveByIdForUpdate(OWNER_ID);
         order.verify(spaceContractAdapter).getSummaryByIdForUpdate(SPACE_ID);
 
-        // 신청만으로는 아직 농부가 아니다 — 수락되어야 부여된다.
+        // 신청만으로는 아직 농부가 아니다 — 계약이 확정되어야 부여된다.
         assertThat(applicant.hasRole(UserRole.FARMER)).isFalse();
     }
 
     @Test
-    @DisplayName("매칭을 수락하면 신청자에게 FARMER 역할이 부여된다")
-    void acceptGrantsFarmerRoleToApplicant() {
+    @DisplayName("양측이 계약에 동의하면 신청자에게 FARMER 역할이 부여된다")
+    void contractConfirmationGrantsFarmerRoleToApplicant() {
         User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
         Matching matching = requestedMatching(applicant);
+        withContractTerms(matching);
         givenSecuredRequestedMatching(matching);
         given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
 
-        matchingService.accept(MATCHING_ID, OWNER_ID);
+        matchingService.agreeContract(MATCHING_ID, OWNER_ID, matching.getTermsVersion());
+        // 한쪽만 동의한 시점에는 아직 확정이 아니다.
+        assertThat(applicant.hasRole(UserRole.FARMER)).isFalse();
+
+        matchingService.agreeContract(MATCHING_ID, FARMER_ID, matching.getTermsVersion());
 
         assertThat(applicant.getRoles())
                 .containsExactlyInAnyOrder(UserRole.CONSUMER, UserRole.FARMER);
     }
 
     @Test
-    @DisplayName("매칭을 거절하면 FARMER 역할을 부여하지 않는다")
-    void rejectDoesNotGrantFarmerRole() {
+    @DisplayName("계약을 취소하면 FARMER 역할을 부여하지 않는다")
+    void contractCancelDoesNotGrantFarmerRole() {
         User applicant = newUser("consumer@example.com", "소비자", FARMER_ID);
         Matching matching = requestedMatching(applicant);
+        withContractTerms(matching);
         givenSecuredRequestedMatching(matching);
         given(matchingRepository.findByIdForUpdate(MATCHING_ID)).willReturn(Optional.of(matching));
 
-        matchingService.reject(MATCHING_ID, OWNER_ID);
+        matchingService.cancelContract(MATCHING_ID, OWNER_ID);
 
         assertThat(applicant.hasRole(UserRole.FARMER)).isFalse();
     }
@@ -139,6 +147,12 @@ class MatchingServiceRoleTest {
         setField(matching, "id", MATCHING_ID);
         setField(matching, "createdAt", LocalDateTime.now());
         return matching;
+    }
+
+    // 조건이 비어 있으면 동의가 CONTRACT_TERMS_REQUIRED로 막히므로 미리 채워둔다.
+    private void withContractTerms(Matching matching) {
+        matching.updateContractTerms(500_000, 50_000, MaintenanceFeePayer.FARMER, 1_000_000,
+                LocalDate.now(), LocalDate.now().plusMonths(6));
     }
 
     private void givenSecuredRequestedMatching(Matching matching) {

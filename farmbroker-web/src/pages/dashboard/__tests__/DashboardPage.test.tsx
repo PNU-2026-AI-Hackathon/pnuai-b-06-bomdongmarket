@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -53,7 +53,7 @@ describe('Dashboard pages', () => {
     expect(screen.queryByText('도심농부 김민준')).not.toBeInTheDocument();
   });
 
-  it('알림 모달에서 받은 신청을 수락하고 닫으면 알림 버튼으로 포커스를 돌려준다', async () => {
+  it('알림 모달의 받은 신청은 수락·거절 대신 채팅·계약서로 이어지고, 닫으면 알림 버튼으로 포커스를 돌려준다', async () => {
     const user = userEvent.setup();
     signIn(['OWNER']);
     renderWithProviders(<DashboardPage />);
@@ -71,18 +71,19 @@ describe('Dashboard pages', () => {
       within(dialog).getByRole('heading', { name: '보낸 신청' }),
     ).toBeInTheDocument();
     expect(within(dialog).getByText(/도심농부 김민준/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: '수락' }));
 
-    expect(await within(dialog).findByText('수락됨')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: '알림, 응답 대기 1건' }),
-      ).toBeInTheDocument(),
+    // 소유자가 신청을 일방적으로 처리하는 버튼은 더 이상 없다.
+    expect(within(dialog).queryByRole('button', { name: '수락' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: '거절' })).not.toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button', { name: '채팅' })[0]).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('link', { name: '계약서' })[0]).toHaveAttribute(
+      'href',
+      '/matchings/1/contract',
     );
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '알림, 응답 대기 1건' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: '알림, 응답 대기 2건' })).toHaveFocus();
   });
 
   it('여러 역할을 가진 사용자는 받은 신청과 보낸 신청을 한 모달에서 본다', async () => {

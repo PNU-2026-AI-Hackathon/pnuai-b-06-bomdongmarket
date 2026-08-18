@@ -8,7 +8,7 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 // 내가 받은 매칭 신청 목록(GET /matchings/received)의 항목 DTO.
-// farmerId·닉네임을 포함해 수락 후 연락 흐름까지 대비한다.
+// farmerId·닉네임을 포함해 협의·계약 흐름까지 대비한다.
 // space·farmer는 레포지토리에서 fetch join으로 로딩된 상태를 전제로 한다.
 @Getter
 public class ReceivedMatchingResponse {

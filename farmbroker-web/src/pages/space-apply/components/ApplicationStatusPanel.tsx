@@ -10,7 +10,7 @@ import type { BadgeTone } from '@/components/common/Badge';
 import type { MatchingStatus, MyMatching } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 import { formatDate } from '@/utils/format';
-import { getMatchingProgressLabel, getMatchingTypeLabel } from '@/utils/labels';
+import { getMatchingStatusLabel, getMatchingTypeLabel } from '@/utils/labels';
 
 interface ApplicationStatusPanelProps {
   application: MyMatching;
@@ -43,7 +43,7 @@ export function ApplicationStatusPanel({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-black text-content">내 신청</h2>
         <Badge tone={statusTones[application.status]}>
-          {getMatchingProgressLabel(application.status)}
+          {getMatchingStatusLabel(application.status)}
         </Badge>
       </div>
 

@@ -73,20 +73,20 @@ class UserWithdrawalServiceConcurrencyIntegrationTest {
     }
 
     @Test
-    void accept_waits_for_owner_withdrawal_and_cannot_restore_an_active_contract() throws Exception {
-        Long[] ids = seedRequestedMatching("accept-owner");
+    void contract_agree_waits_for_owner_withdrawal_and_cannot_restore_an_active_contract() throws Exception {
+        Long[] ids = seedRequestedMatching("agree-owner");
 
-        runWhileWithdrawalHoldsUserLock(ids[0], () -> matchingService.accept(ids[3], ids[0]), error -> {
+        runWhileWithdrawalHoldsUserLock(ids[0], () -> matchingService.agreeContract(ids[3], ids[0], 0), error -> {
             assertThat(error).isInstanceOf(BusinessException.class);
             assertNoAcceptedContract(ids[0], ids[1], ids[2], ids[3]);
         });
     }
 
     @Test
-    void accept_waits_for_farmer_withdrawal_and_cannot_restore_an_active_contract() throws Exception {
-        Long[] ids = seedRequestedMatching("accept-farmer");
+    void contract_agree_waits_for_farmer_withdrawal_and_cannot_restore_an_active_contract() throws Exception {
+        Long[] ids = seedRequestedMatching("agree-farmer");
 
-        runWhileWithdrawalHoldsUserLock(ids[1], () -> matchingService.accept(ids[3], ids[0]), error -> {
+        runWhileWithdrawalHoldsUserLock(ids[1], () -> matchingService.agreeContract(ids[3], ids[0], 0), error -> {
             assertThat(error).isInstanceOf(BusinessException.class);
             assertNoAcceptedContract(ids[0], ids[1], ids[2], ids[3]);
         });

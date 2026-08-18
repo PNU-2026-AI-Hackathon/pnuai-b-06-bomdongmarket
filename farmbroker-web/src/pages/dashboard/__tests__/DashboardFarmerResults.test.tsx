@@ -63,7 +63,7 @@ describe('Dashboard 신청 알림', () => {
     );
   });
 
-  it('보낸 신청 상태를 응답 대기중과 수락으로 표시한다', async () => {
+  it('보낸 신청 상태를 협의 중과 계약 확정으로 표시한다', async () => {
     const user = userEvent.setup();
     saveAuthSession(farmerSession);
     vi.mocked(getDashboardData).mockResolvedValue({
@@ -84,8 +84,8 @@ describe('Dashboard 신청 알림', () => {
     await user.click(await screen.findByRole('button', { name: '알림, 응답 대기 1건' }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('응답 대기중')).toBeInTheDocument();
-    expect(within(dialog).getByText('수락')).toBeInTheDocument();
+    expect(within(dialog).getByText('협의 중')).toBeInTheDocument();
+    expect(within(dialog).getByText('계약 확정')).toBeInTheDocument();
     expect(within(dialog).queryByText('검토')).not.toBeInTheDocument();
     expect(within(dialog).queryByText('완료')).not.toBeInTheDocument();
   });

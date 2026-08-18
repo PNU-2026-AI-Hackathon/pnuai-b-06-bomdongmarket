@@ -23,7 +23,7 @@ import java.util.List;
 // 매칭 관련 엔드포인트 컨트롤러.
 // 얇게 유지: 토큰의 userId(@AuthenticationPrincipal — 백엔드 1 JWT 필터 규약)와
 // 요청 DTO를 서비스에 위임하고 ApiResponse로 감싸 반환만 한다.
-@Tag(name = "매칭", description = "농부-공간 매칭 신청/수락/거절 API (인증 필요)")
+@Tag(name = "매칭", description = "농부-공간 매칭 신청/계약 협의 API (인증 필요)")
 @RestController
 @RequestMapping("/matchings")
 @RequiredArgsConstructor
@@ -31,9 +31,9 @@ public class MatchingController {
 
     private final MatchingService matchingService;
 
-    // POST /api/matchings — 매칭 신청 (로그인 필요, 수락되면 FARMER 역할이 부여됨)
+    // POST /api/matchings — 매칭 신청 (로그인 필요, 계약이 확정되면 FARMER 역할이 부여됨)
     @Operation(summary = "매칭 신청 (로그인 필요)",
-            description = "역할 제한 없이 로그인한 회원이면 신청할 수 있고, 공간 소유자가 수락하면 신청자에게 FARMER 역할이 부여된다.")
+            description = "역할 제한 없이 로그인한 회원이면 신청할 수 있고, 양측이 계약에 동의하면 신청자에게 FARMER 역할이 부여된다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MatchingApplyResponse> apply(@RequestBody @Valid MatchingApplyRequest request,
@@ -61,27 +61,9 @@ public class MatchingController {
         return ApiResponse.success("받은 신청 목록 조회에 성공했습니다.", response);
     }
 
-    // PATCH /api/matchings/{matchingId}/accept — 신청 수락 (공간 owner 전용)
-    @Operation(summary = "매칭 신청 수락 (공간 owner 전용)")
-    @PatchMapping("/{matchingId}/accept")
-    public ApiResponse<MatchingStatusResponse> accept(@PathVariable Long matchingId,
-                                                      @AuthenticationPrincipal Long userId) {
-        MatchingStatusResponse response = matchingService.accept(matchingId, userId);
-        return ApiResponse.success("매칭 신청을 수락했습니다.", response);
-    }
-
-    // PATCH /api/matchings/{matchingId}/reject — 신청 거절 (공간 owner 전용)
-    @Operation(summary = "매칭 신청 거절 (공간 owner 전용)")
-    @PatchMapping("/{matchingId}/reject")
-    public ApiResponse<MatchingStatusResponse> reject(@PathVariable Long matchingId,
-                                                      @AuthenticationPrincipal Long userId) {
-        MatchingStatusResponse response = matchingService.reject(matchingId, userId);
-        return ApiResponse.success("매칭 신청을 거절했습니다.", response);
-    }
-
     // PATCH /api/matchings/{matchingId}/dismiss — 받은 목록에서 감추기 (공간 owner 전용)
     @Operation(summary = "받은 매칭 신청 감추기 (공간 owner 전용)",
-            description = "수락·거절·취소된 신청을 소유자의 받은 목록에서 감춘다. 신청자 목록에는 그대로 남는다.")
+            description = "확정·취소된 신청을 소유자의 받은 목록에서 감춘다. 신청자 목록에는 그대로 남는다.")
     @PatchMapping("/{matchingId}/dismiss")
     public ApiResponse<Void> dismiss(@PathVariable Long matchingId,
                                      @AuthenticationPrincipal Long userId) {
@@ -92,7 +74,7 @@ public class MatchingController {
     // PATCH /api/matchings/{matchingId}/cancel — 신청 취소 (신청자 본인 전용)
     // DELETE가 아닌 PATCH — 행을 지우지 않고 CANCELED로 남겨 신청 이력을 보존한다.
     @Operation(summary = "매칭 신청 취소 (신청자 본인 전용)",
-            description = "아직 수락·거절되지 않은(REQUESTED) 신청만 취소할 수 있고, 취소 후 같은 공간에 재신청할 수 있다.")
+            description = "아직 계약이 확정·취소되지 않은(REQUESTED) 신청만 취소할 수 있고, 취소 후 같은 공간에 재신청할 수 있다.")
     @PatchMapping("/{matchingId}/cancel")
     public ApiResponse<MatchingStatusResponse> cancel(@PathVariable Long matchingId,
                                                       @AuthenticationPrincipal Long userId) {

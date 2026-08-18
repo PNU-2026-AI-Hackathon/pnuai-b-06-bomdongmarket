@@ -8,7 +8,12 @@ export interface ChatDockValue {
   // 대화를 엽니다. 데스크톱은 우측 하단 위젯, 좁은 화면은 채팅방 화면으로 갑니다.
   openConversation: (conversationId: number) => void;
   // 상품·공간 상세에서 "말 걸기"에 씁니다. 방이 없으면 만들고 있으면 그 방을 엽니다.
-  openContext: (contextType: ChatContextType, contextId: number) => Promise<void>;
+  // otherUserId는 공간 주인이 신청자에게 먼저 걸 때만 지정합니다.
+  openContext: (
+    contextType: ChatContextType,
+    contextId: number,
+    otherUserId?: number,
+  ) => Promise<void>;
   // 소켓으로 실시간 갱신되는 채팅방 목록. 도크와 /chat 이 같은 목록을 봅니다 —
   // 화면마다 따로 받으면 한쪽만 최신이 됩니다.
   conversations: Conversation[];

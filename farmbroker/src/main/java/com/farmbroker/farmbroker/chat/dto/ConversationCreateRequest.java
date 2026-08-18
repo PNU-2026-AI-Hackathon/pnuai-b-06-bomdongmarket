@@ -16,4 +16,9 @@ public class ConversationCreateRequest {
     @NotNull
     @Positive
     private Long contextId;
+
+    // 말을 걸 상대. 문의자가 주인에게 걸 때는 상대가 자명해서 비워 보낸다.
+    // 공간 주인이 신청자에게 먼저 걸 때만 지목이 필요하다.
+    @Positive
+    private Long otherUserId;
 }

@@ -305,7 +305,8 @@ export interface MatchingRequest {
 
 // 매칭 1건에 붙는 계약서. 대시보드의 ContractSummary(매칭 요약의 별칭)와는 다른 화면이라
 // 이름을 ContractDetail로 구분한다.
-export type ContractStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELED';
+// 계약 진행 상태는 별도 타입 없이 MatchingStatus를 그대로 쓴다 —
+// REQUESTED(협의 중) / ACCEPTED(최종 계약) / REJECTED(계약 취소) / CANCELED(신청 철회).
 
 // 계약 당사자는 공간 제공자와 도심 농부 둘뿐이다. 요청자 판정과 관리비 책임소재가 같은 값을 쓴다.
 export type ContractParty = 'OWNER' | 'FARMER';
@@ -335,7 +336,7 @@ export interface ContractDetail {
   termsVersion: number;
   ownerAgreed: boolean;
   farmerAgreed: boolean;
-  status: ContractStatus;
+  status: MatchingStatus;
   viewerRole: ContractViewerRole;
 }
 

@@ -10,6 +10,7 @@ import com.farmbroker.farmbroker.chat.repository.ConversationRepository;
 import com.farmbroker.farmbroker.chat.repository.UserBlockRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,13 +52,15 @@ class ConversationServiceTest {
     @Mock UserRepository userRepository;
     @Mock ChatContextResolver contextResolver;
     @Mock ChatBlockService blockService;
+    @Mock MatchingRepository matchingRepository;
 
     private ConversationService service;
 
     @BeforeEach
     void setUp() {
         service = new ConversationService(conversationRepository, conversationWriter,
-                messageRepository, userBlockRepository, userRepository, contextResolver, blockService);
+                messageRepository, userBlockRepository, userRepository, contextResolver, blockService,
+                matchingRepository);
     }
 
     @Test
@@ -169,6 +172,37 @@ class ConversationServiceTest {
         assertEquals(ErrorCode.CHAT_SELF_CONVERSATION, caught.getErrorCode());
     }
 
+    // 공간 주인이 신청자에게 먼저 말을 거는 경로. 상대를 지목하고, 그 상대가 실제 신청자여야 한다.
+    @Test
+    void ownerCanOpenConversationWithApplicant() throws Exception {
+        Conversation conversation = conversation(1L);
+        given(userRepository.existsById(OWNER_ID)).willReturn(true);
+        given(contextResolver.resolve("SPACE", SPACE_ID)).willReturn(target(OWNER_ID));
+        given(matchingRepository.existsBySpaceIdAndFarmerId(SPACE_ID, USER_ID)).willReturn(true);
+        given(conversationWriter.find(
+                ChatContextType.SPACE, SPACE_ID, USER_ID, OWNER_ID)).willReturn(Optional.of(conversation));
+        given(userRepository.findAllById(any())).willReturn(List.of(user(USER_ID)));
+        given(messageRepository.countUnreadByConversationIds(any(), eq(OWNER_ID))).willReturn(List.of());
+        given(userBlockRepository.findBlocksBetween(eq(OWNER_ID), any())).willReturn(List.of());
+
+        ConversationResponse response = service.createOrGet(OWNER_ID, requestTargeting(USER_ID));
+
+        assertEquals(USER_ID, response.getOtherUserId());
+        verify(blockService).validateCanChat(OWNER_ID, USER_ID);
+    }
+
+    @Test
+    void ownerCannotOpenConversationWithNonApplicant() throws Exception {
+        given(userRepository.existsById(OWNER_ID)).willReturn(true);
+        given(contextResolver.resolve("SPACE", SPACE_ID)).willReturn(target(OWNER_ID));
+        given(matchingRepository.existsBySpaceIdAndFarmerId(SPACE_ID, USER_ID)).willReturn(false);
+
+        BusinessException caught = assertThrows(BusinessException.class,
+                () -> service.createOrGet(OWNER_ID, requestTargeting(USER_ID)));
+
+        assertEquals(ErrorCode.CHAT_FORBIDDEN, caught.getErrorCode());
+    }
+
     private void stubResponseData() throws Exception {
         given(userRepository.findAllById(any())).willReturn(List.of(user(OWNER_ID)));
         given(messageRepository.countUnreadByConversationIds(any(), eq(USER_ID))).willReturn(List.of());
@@ -178,6 +212,13 @@ class ConversationServiceTest {
     private ConversationCreateRequest request() throws Exception {
         return new ObjectMapper().readValue(
                 "{\"contextType\":\"SPACE\",\"contextId\":" + SPACE_ID + "}",
+                ConversationCreateRequest.class);
+    }
+
+    private ConversationCreateRequest requestTargeting(long otherUserId) throws Exception {
+        return new ObjectMapper().readValue(
+                "{\"contextType\":\"SPACE\",\"contextId\":" + SPACE_ID
+                        + ",\"otherUserId\":" + otherUserId + "}",
                 ConversationCreateRequest.class);
     }
 

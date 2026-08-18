@@ -1,20 +1,24 @@
-import { Check, X } from 'lucide-react';
+import { FileText, MessageCircle, X } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
+import { useChatDock } from '@/chat/chatDockContext';
 import { Badge, type BadgeTone } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { RemoteImage } from '@/components/common/RemoteImage';
+import { buttonStyles } from '@/components/common/buttonStyles';
+import { ROUTES } from '@/constants/routes';
 import type { MatchingRequest, MatchingStatus } from '@/types/api';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { getMatchingStatusLabel } from '@/utils/labels';
 
 interface MatchingRequestCardProps {
   request: MatchingRequest;
-  isUpdating?: boolean;
-  onAccept?: () => void;
-  onReject?: () => void;
-  // 검토가 끝난 신청을 목록에서 치웁니다. 응답 대기중인 신청에는 노출하지 않습니다.
+  // 협의가 끝난 신청을 목록에서 치웁니다. 협의 중인 신청에는 노출하지 않습니다.
   onDismiss?: () => void;
+  // 채팅이 열린 뒤 호출합니다. 이 카드를 감싼 알림 모달이 채팅 도크를 덮으므로 모달을 비켜 줍니다.
+  onChatOpen?: () => void;
 }
 
 const statusTones: Record<MatchingStatus, BadgeTone> = {
@@ -24,14 +28,15 @@ const statusTones: Record<MatchingStatus, BadgeTone> = {
   CANCELED: 'red',
 };
 
-// 소유자가 받은 매칭 신청을 카드 단위로 검토하고 수락/거절 액션을 시연합니다.
+// 소유자가 받은 매칭 신청을 카드 단위로 확인하고 채팅·계약서로 이어갑니다.
+// 버튼 구성은 공간 상세의 SpaceMatchingRequestCard와 같습니다 — 양측이 같은 흐름을 봅니다.
 export function MatchingRequestCard({
   request,
-  isUpdating = false,
-  onAccept,
-  onReject,
   onDismiss,
+  onChatOpen,
 }: MatchingRequestCardProps) {
+  const chatDock = useChatDock();
+  const [chatError, setChatError] = useState<string | null>(null);
   const isWaiting = request.status === 'REQUESTED';
 
   return (
@@ -72,18 +77,39 @@ export function MatchingRequestCard({
         ) : null}
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-600">{request.message}</p>
-      {isWaiting ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          <Button disabled={isUpdating} onClick={onAccept} size="sm">
-            <Check className="h-4 w-4" aria-hidden />
-            {isUpdating ? '처리 중...' : '수락'}
-          </Button>
-          <Button disabled={isUpdating} onClick={onReject} size="sm" variant="outline">
-            <X className="h-4 w-4" aria-hidden />
-            거절
-          </Button>
-        </div>
-      ) : null}
+      <div className="mt-4 grid gap-2">
+        {/* 신청자와의 공간 문의 방을 엽니다. 이미 있으면 그 방이 열립니다. */}
+        <Button
+          className="w-full"
+          onClick={() => {
+            setChatError(null);
+            void chatDock
+              .openContext('SPACE', request.spaceId, request.farmerId)
+              // 실패하면 닫지 않습니다 — 모달이 닫히면 아래 오류 문구를 볼 수 없습니다.
+              .then(() => onChatOpen?.())
+              .catch((caught: unknown) => {
+                setChatError(
+                  caught instanceof Error ? caught.message : '채팅을 열지 못했습니다.',
+                );
+              });
+          }}
+        >
+          <MessageCircle className="h-5 w-5" aria-hidden />
+          채팅
+        </Button>
+        {chatError ? (
+          <p className="text-sm font-semibold text-feedback-danger" role="alert">
+            {chatError}
+          </p>
+        ) : null}
+        <Link
+          className={buttonStyles({ variant: 'outline', className: 'w-full' })}
+          to={ROUTES.contract(request.matchingId)}
+        >
+          <FileText className="h-5 w-5" aria-hidden />
+          계약서
+        </Link>
+      </div>
     </Card>
   );
 }
