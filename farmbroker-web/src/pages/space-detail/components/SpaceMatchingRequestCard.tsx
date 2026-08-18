@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
+import { useChatDock } from '@/chat/chatDockContext';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -23,6 +24,8 @@ interface SpaceMatchingRequestCardProps {
 // 상세 조회 응답에는 내 신청 정보가 없어 my-requests를 이 카드에서 따로 조회합니다.
 export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardProps) {
   const { isAuthenticated } = useAuth();
+  const chatDock = useChatDock();
+  const [chatError, setChatError] = useState<string | null>(null);
   const [application, setApplication] = useState<MyMatching | null>(null);
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [isCanceling, setIsCanceling] = useState(false);
@@ -111,11 +114,24 @@ export function SpaceMatchingRequestCard({ spaceId }: SpaceMatchingRequestCardPr
         ) : null}
 
         <div className="mt-5 grid gap-2">
-          {/* 채팅은 화면만 먼저 만든 자리로, 아직 연결된 기능이 없습니다. */}
-          <Button className="w-full">
+          {/* 공간 문의 방을 엽니다. 이미 있으면 그 방이 열립니다. */}
+          <Button
+            className="w-full"
+            onClick={() => {
+              setChatError(null);
+              void chatDock.openContext('SPACE', spaceId).catch((caught: unknown) => {
+                setChatError(caught instanceof Error ? caught.message : '채팅을 열지 못했습니다.');
+              });
+            }}
+          >
             <MessageCircle className="h-5 w-5" aria-hidden />
             채팅
           </Button>
+          {chatError ? (
+            <p className="text-sm font-semibold text-feedback-danger" role="alert">
+              {chatError}
+            </p>
+          ) : null}
           <Link
             className={buttonStyles({ variant: 'outline', className: 'w-full' })}
             to={ROUTES.contract(application.matchingId)}

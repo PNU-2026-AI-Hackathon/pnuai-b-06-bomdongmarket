@@ -1,8 +1,9 @@
-import { ArrowLeft, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Minus, Plus, Route, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useRequireAuth } from '@/auth/useRequireAuth';
+import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { buttonStyles } from '@/components/common/buttonStyles';
@@ -22,6 +23,7 @@ import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTr
 // 상품 상세와 생산 이력, 수량 선택, 구매 CTA를 제공하는 마켓 상세 화면입니다.
 export function ProductDetailPage() {
   const requireAuth = useRequireAuth();
+  const chatDock = useChatDock();
   const navigate = useNavigate();
   const { productId } = useParams();
   const [item, setItem] = useState<MarketItem | null>(null);
@@ -48,6 +50,17 @@ export function ProductDetailPage() {
 
   // 마감(CLOSED)·품절(stock 0) 상품은 목록에서 빠지지만 직접 URL로 들어올 수 있어 구매를 막는다.
   const isSoldOut = item != null && (item.status === 'CLOSED' || item.stock <= 0);
+
+  // 이 마켓의 기본 거래 방식입니다. 방이 없으면 만들고 있으면 그 방을 엽니다.
+  function handleChat() {
+    if (!item) return;
+    requireAuth(() => {
+      setCartError(null);
+      void chatDock.openContext('PRODUCT', item.productId).catch((caught: unknown) => {
+        setCartError(caught instanceof Error ? caught.message : '채팅을 열지 못했습니다.');
+      });
+    });
+  }
 
   // 담고 나면 바로 장바구니로 보냅니다 — 결제까지 이어지는 흐름이 한 번에 보이도록.
   function handleAddToCart() {
@@ -141,8 +154,13 @@ export function ProductDetailPage() {
                 </Button>
               </div>
             </div>
+            {/* 거래는 채팅이 기본이라 담기보다 먼저 눈에 들어오게 둡니다. */}
+            <Button className="mt-5 w-full" onClick={handleChat} variant="outline">
+              <MessageCircle className="h-5 w-5" aria-hidden />
+              판매자와 채팅
+            </Button>
             <Button
-              className="mt-5 w-full"
+              className="mt-2 w-full"
               disabled={isSoldOut || isAdding}
               onClick={handleAddToCart}
             >

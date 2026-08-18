@@ -1,5 +1,6 @@
 import { MessageCircle } from 'lucide-react';
 
+import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -33,6 +34,7 @@ export function ApplicationStatusPanel({
   onCancel,
 }: ApplicationStatusPanelProps) {
   const confirmation = useDisclosure();
+  const chatDock = useChatDock();
   const isCanceling = actionStatus === 'loading';
   const isWaiting = application.status === 'REQUESTED';
 
@@ -66,13 +68,15 @@ export function ApplicationStatusPanel({
 
       {/* 신청을 보낸 시점부터 공간 제공자와 이야기할 자리가 필요하므로 수락 전에도 노출합니다. */}
       <div className="mt-5">
-        <Button className="w-full" disabled variant="outline">
+        {/* 신청한 공간에 대한 문의 방을 엽니다. 이미 있으면 그 방이 열립니다. */}
+        <Button
+          className="w-full"
+          onClick={() => void chatDock.openContext('SPACE', application.spaceId)}
+          variant="outline"
+        >
           <MessageCircle className="h-5 w-5" aria-hidden />
           채팅방으로 이동
         </Button>
-        <p className="mt-2 text-xs font-normal text-content-subtle">
-          채팅 기능은 준비 중입니다. 그때까지는 공간 제공자에게 직접 연락해 주세요.
-        </p>
       </div>
 
       {actionError ? (

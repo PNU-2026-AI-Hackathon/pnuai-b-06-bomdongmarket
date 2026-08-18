@@ -17,6 +17,8 @@ export const ROUTES = {
   myProducts: '/market/my',
   cart: '/market/cart',
   orderComplete: '/market/order-complete',
+  chat: '/chat',
+  chatRoom: (conversationId: number | string) => `/chat/${conversationId}`,
   newProduct: '/market/new',
   productDetail: (productId: number | string) => `/market/${productId}`,
   editProduct: (productId: number | string) => `/market/${productId}/edit`,
