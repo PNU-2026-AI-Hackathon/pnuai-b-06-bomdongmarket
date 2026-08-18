@@ -25,22 +25,76 @@ jobs:
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment:
       name: production
       url: https://farmbroker.onrender.com
     env:
+      AIVEN_CLI_VERSION: 4.12.0
       RENDER_CLI_VERSION: 2.22.0
       RENDER_SERVICE_URL: https://farmbroker.onrender.com
 
     steps:
       - name: Validate deployment secrets
         env:
+          AIVEN_PROJECT_NAME: ${{ secrets.AIVEN_PROJECT_NAME }}
+          AIVEN_SERVICE_NAME: ${{ secrets.AIVEN_SERVICE_NAME }}
+          AIVEN_TOKEN: ${{ secrets.AIVEN_TOKEN }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
+          test -n "$AIVEN_PROJECT_NAME" || { echo "AIVEN_PROJECT_NAME is not configured" >&2; exit 1; }
+          test -n "$AIVEN_SERVICE_NAME" || { echo "AIVEN_SERVICE_NAME is not configured" >&2; exit 1; }
+          test -n "$AIVEN_TOKEN" || { echo "AIVEN_TOKEN is not configured" >&2; exit 1; }
           test -n "$RENDER_API_KEY" || { echo "RENDER_API_KEY is not configured" >&2; exit 1; }
           test -n "$RENDER_SERVICE_ID" || { echo "RENDER_SERVICE_ID is not configured" >&2; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Aiven CLI
+        run: |
+          python -m pip install --disable-pip-version-check "aiven-client==$AIVEN_CLI_VERSION"
+          avn --version
+
+      - name: Power on Aiven MySQL
+        id: aiven
+        env:
+          AIVEN_AUTH_TOKEN: ${{ secrets.AIVEN_TOKEN }}
+          AIVEN_PROJECT_NAME: ${{ secrets.AIVEN_PROJECT_NAME }}
+          AIVEN_SERVICE_NAME: ${{ secrets.AIVEN_SERVICE_NAME }}
+        run: |
+          set -euo pipefail
+
+          initial_state="$(avn service get \
+            "$AIVEN_SERVICE_NAME" \
+            --project "$AIVEN_PROJECT_NAME" \
+            --format '{state}')"
+          echo "Aiven service initial state: $initial_state"
+
+          if [ "$initial_state" != "RUNNING" ]; then
+            avn service update \
+              "$AIVEN_SERVICE_NAME" \
+              --project "$AIVEN_PROJECT_NAME" \
+              --power-on
+          fi
+
+          if ! avn service wait \
+            "$AIVEN_SERVICE_NAME" \
+            --project "$AIVEN_PROJECT_NAME" \
+            --timeout 300; then
+            final_state="$(avn service get \
+              "$AIVEN_SERVICE_NAME" \
+              --project "$AIVEN_PROJECT_NAME" \
+              --format '{state}')"
+            echo "::error::Aiven MySQL did not reach RUNNING within 5 minutes. Final state: $final_state"
+            exit 1
+          fi
+
+          echo "status=RUNNING" >> "$GITHUB_OUTPUT"
+          echo "Aiven MySQL is ready"
 
       - name: Install Render CLI
         run: |
@@ -108,11 +162,13 @@ jobs:
           DEPLOY_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
           DEPLOY_ID: ${{ steps.deploy.outputs.id }}
           DEPLOY_STATUS: ${{ steps.deploy.outputs.status }}
+          AIVEN_STATUS: ${{ steps.aiven.outputs.status }}
         run: |
           {
             echo "### Render production deployment"
             echo
             echo "- Commit: \`$DEPLOY_COMMIT_SHA\`"
+            echo "- Aiven MySQL: \`${AIVEN_STATUS:-failed}\`"
             echo "- Deploy ID: \`${DEPLOY_ID:-unavailable}\`"
             echo "- Status: \`${DEPLOY_STATUS:-failed}\`"
             echo "- URL: $RENDER_SERVICE_URL"
