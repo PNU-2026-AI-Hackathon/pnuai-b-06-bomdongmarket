@@ -107,6 +107,7 @@ describe('ContractPage', () => {
     // 음수·소수·지수 표기는 키 입력 단계에서 막습니다.
     const maintenanceFee = await screen.findByLabelText('관리비');
     await user.clear(maintenanceFee);
+    await waitFor(() => expect(maintenanceFee).toHaveValue(null));
     await user.type(maintenanceFee, '-1.5e3');
     expect(maintenanceFee).toHaveValue(153);
 

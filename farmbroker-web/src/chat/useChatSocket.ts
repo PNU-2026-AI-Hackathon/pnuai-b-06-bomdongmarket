@@ -46,16 +46,30 @@ export function useChatSocket(enabled: boolean, onIncoming: (message: IncomingMe
   const [lastEvent, setLastEvent] = useState<ChatRealtimeEvent | null>(null);
   const onIncomingRef = useRef(onIncoming);
   onIncomingRef.current = onIncoming;
+  const activeRef = useRef(false);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   // 이벤트 처리 중 최신 목록이 필요해 ref 로도 들고 있습니다(구독 콜백이 상태를 닫아 버립니다).
   const conversationsRef = useRef<Conversation[]>([]);
   conversationsRef.current = conversations;
 
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+    };
+  }, []);
+
   const refresh = useCallback(async () => {
+    if (!activeRef.current || !enabledRef.current) return;
+
     try {
       const result = await getConversations();
+      if (!activeRef.current || !enabledRef.current) return;
       setConversations(result.conversations);
       setStatus('success');
     } catch {
+      if (!activeRef.current || !enabledRef.current) return;
       // 한 번이라도 받아 둔 목록이 있으면 화면을 지우지 않습니다 —
       // 다음 이벤트나 재연결에서 다시 맞춰집니다.
       setStatus((prev) => (prev === 'success' ? prev : 'error'));
