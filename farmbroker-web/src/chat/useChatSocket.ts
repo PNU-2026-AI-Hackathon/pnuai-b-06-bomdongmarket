@@ -1,4 +1,4 @@
-import { Client, type IMessage } from '@stomp/stompjs';
+import { Client, ReconnectionTimeMode, type IMessage } from '@stomp/stompjs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { APP_INFO } from '@/constants/appInfo';
@@ -37,6 +37,13 @@ function resolveSocketUrl(): string {
 // 탭 개수와 안읽음 배지에도 들어가지 않아 그 방에 새 메시지가 와도 아무 표시가 나지 않습니다.
 // hasNext 가 false 가 될 때까지 이어 받되, 서버가 계속 true 를 주는 경우를 대비해 상한을 둡니다.
 const MAX_CONVERSATION_PAGES = 25;
+
+// 핸드셰이크가 막히면 stompjs 는 같은 간격으로 무한히 다시 붙습니다. 저절로 낫지 않는
+// 실패(Origin 거절 등)에서는 3초에 한 줄씩 콘솔이 실패 로그로 가득 찹니다.
+// 간격을 두 배씩 늘려 1분에서 멈추게 합니다 — 포기하지는 않으므로 서버가 깨어나면
+// (Render 는 유휴 상태에서 내려갑니다) 새로고침 없이 다시 붙습니다.
+const RECONNECT_DELAY_MS = 3000;
+const MAX_RECONNECT_DELAY_MS = 60000;
 
 // 페이지를 넘기는 사이 로그아웃이나 계정 전환이 일어나면 남은 장을 받지 않고 null 로 물러납니다.
 async function fetchAllConversations(isStale: () => boolean): Promise<Conversation[] | null> {
@@ -162,7 +169,9 @@ export function useChatSocket(
     const client = new Client({
       brokerURL: resolveSocketUrl(),
       // 인증은 handshake 의 JWT 쿠키로 이뤄집니다(SecurityConfig 가 /ws-chat 을 보호).
-      reconnectDelay: 3000,
+      reconnectDelay: RECONNECT_DELAY_MS,
+      reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+      maxReconnectDelay: MAX_RECONNECT_DELAY_MS,
       onConnect: () => {
         client.subscribe('/user/queue/chat-events', (frame: IMessage) => {
           try {

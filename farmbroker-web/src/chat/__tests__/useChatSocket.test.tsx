@@ -11,6 +11,8 @@ const chatServiceMocks = vi.hoisted(() => ({
 vi.mock('@/services/chatService', () => chatServiceMocks);
 
 vi.mock('@stomp/stompjs', () => ({
+  // 훅이 재연결 간격을 늘리는 데 쓰는 값도 함께 내보내야 한다(없으면 undefined 접근으로 터진다).
+  ReconnectionTimeMode: { LINEAR: 0, EXPONENTIAL: 1 },
   Client: class {
     activate = vi.fn();
     deactivate = vi.fn().mockResolvedValue(undefined);
