@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -19,13 +19,23 @@ const session = {
   roles: ['CONSUMER'] as UserRole[],
 };
 
+// 시작일은 오늘 ±2주 안에서만 고를 수 있어 날짜를 고정하면 시간이 지나면서 테스트가 깨집니다.
+// contractDates의 구현을 빌려쓰지 않고 따로 계산해 검증 대상과 기대값을 독립시킵니다.
+function daysFromToday(offset: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 const savedTerms = {
   monthlyRent: 500000,
   maintenanceFee: 50000,
   maintenanceFeePayer: 'FARMER' as const,
   deposit: 3000000,
-  startDate: '2026-09-01',
-  endDate: '2027-08-31',
+  startDate: daysFromToday(7),
+  endDate: daysFromToday(372),
 };
 
 function renderPage(overrides: Partial<ContractDetail> = {}) {
@@ -158,17 +168,84 @@ describe('ContractPage', () => {
     expect(screen.getByLabelText('월세')).toHaveValue(900000);
   });
 
-  it('종료일이 시작일보다 앞서면 저장하지 않고 오류를 알린다', async () => {
+  // 시작일은 오늘 ±2주, 종료일은 시작일 다음 날부터 — 금액 칸의 min/step과 같은 방식으로
+  // 달력 단계에서 막습니다. 제출 시점 재검사(validatePeriod)는 contractDates.test.ts에서 다룹니다.
+  it('계약 시작일은 오늘 ±2주, 종료일은 시작일 다음 날부터만 고를 수 있다', async () => {
+    renderPage({ viewerRole: 'OWNER', ...savedTerms });
+
+    const startDate = await screen.findByLabelText('계약 시작일');
+    expect(startDate).toHaveAttribute('min', daysFromToday(-14));
+    expect(startDate).toHaveAttribute('max', daysFromToday(14));
+    // 저장된 시작일이 +7일이므로 종료일 하한은 +8일입니다.
+    expect(screen.getByLabelText('계약 종료일')).toHaveAttribute('min', daysFromToday(8));
+  });
+
+  it('창 밖의 시작일과 시작일보다 앞선 종료일은 칸마다 따로 알린다', async () => {
     const user = userEvent.setup();
     renderPage({ viewerRole: 'OWNER', ...savedTerms });
 
-    const endDate = await screen.findByLabelText('계약 종료일');
-    await user.clear(endDate);
-    await user.type(endDate, '2026-08-01');
+    // 달력에서 고를 수 없는 값이 붙여넣기·자동완성으로 들어온 상황입니다.
+    const startDate = await screen.findByLabelText('계약 시작일');
+    fireEvent.change(startDate, { target: { value: daysFromToday(15) } });
+    fireEvent.change(screen.getByLabelText('계약 종료일'), {
+      target: { value: daysFromToday(1) },
+    });
     await user.click(screen.getByRole('button', { name: '저장' }));
 
+    const alerts = (await screen.findAllByRole('alert')).map((el) => el.textContent);
+    expect(alerts).toContain('계약 시작일은 오늘부터 앞뒤 2주 이내여야 합니다.');
+    expect(alerts).toContain('계약 종료일은 시작일보다 뒤여야 합니다.');
+    // 저장되지 않았으므로 변경사항 안내가 그대로 남고 동의도 막혀 있습니다.
+    expect(
+      screen.getByText('저장하지 않은 변경사항이 있습니다. 먼저 저장해 주세요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '계약' })).toBeDisabled();
+  });
+
+  // 브라우저 기본 검증을 켜 두면 시작일이 이미 창 밖인 계약에서 제출이 통째로 취소되어
+  // 아무 안내 없이 저장 버튼이 먹통이 됩니다 — 금액만 고치려던 제공자가 막혀 버립니다.
+  it('저장된 시작일이 이미 창 밖이어도 제공자가 고쳐서 저장할 수 있다', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      viewerRole: 'OWNER',
+      ...savedTerms,
+      startDate: daysFromToday(60),
+      endDate: daysFromToday(425),
+    });
+
+    const monthlyRent = await screen.findByLabelText('월세');
+    await user.clear(monthlyRent);
+    await user.type(monthlyRent, '900000');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    // 먹통이 되는 대신 무엇이 문제인지 알려 줍니다.
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '계약 종료일은 시작일보다 뒤여야 합니다.',
+      '계약 시작일은 오늘부터 앞뒤 2주 이내여야 합니다.',
+    );
+
+    // 창 안의 날짜로 고치면 그대로 저장됩니다.
+    fireEvent.change(screen.getByLabelText('계약 시작일'), {
+      target: { value: daysFromToday(7) },
+    });
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText('저장하지 않은 변경사항이 있습니다. 먼저 저장해 주세요.'),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByLabelText('월세')).toHaveValue(900000);
+    expect(screen.getByLabelText('계약 시작일')).toHaveValue(daysFromToday(7));
+  });
+
+  it('관리비 책임소재를 고르지 않으면 저장하지 않고 알린다', async () => {
+    const user = userEvent.setup();
+    renderPage({ viewerRole: 'OWNER', ...savedTerms, maintenanceFeePayer: null });
+
+    await user.click(await screen.findByRole('button', { name: '저장' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '관리비 책임소재를 선택해 주세요.',
     );
   });
 

@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MatchingService {
+
+    // 계약 시작일은 오늘을 가운데 둔 이 폭 안에서만 고를 수 있다 — 프론트 달력의 min/max와 같은 규칙이다.
+    private static final int CONTRACT_START_WINDOW_WEEKS = 2;
 
     private final MatchingRepository matchingRepository;
     private final UserRepository userRepository;
@@ -162,7 +166,13 @@ public class MatchingService {
         if (!isContractOwner(matching, userId)) {
             throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
         }
-        if (!request.getEndDate().isAfter(request.getStartDate())) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = request.getStartDate();
+        if (startDate.isBefore(today.minusWeeks(CONTRACT_START_WINDOW_WEEKS))
+                || startDate.isAfter(today.plusWeeks(CONTRACT_START_WINDOW_WEEKS))) {
+            throw new BusinessException(ErrorCode.CONTRACT_INVALID_START_DATE);
+        }
+        if (!request.getEndDate().isAfter(startDate)) {
             throw new BusinessException(ErrorCode.CONTRACT_INVALID_PERIOD);
         }
 
