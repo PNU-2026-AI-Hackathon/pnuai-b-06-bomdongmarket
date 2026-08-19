@@ -127,6 +127,17 @@ public class ProductService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         }
 
+        // 수확일이나 생산 공간을 바꾸는 요청일 때만 재검증한다 —
+        // 계약이 끝난 뒤에도 재고·상태 같은 나머지 항목은 계속 수정할 수 있어야 한다.
+        // PATCH의 'null = 변경 없음' 규약을 따라 적용 후 최종값으로 본다.
+        if (request.getHarvestDate() != null || request.getSpaceId() != null) {
+            LocalDate harvestDate = request.getHarvestDate() != null
+                    ? request.getHarvestDate() : product.getHarvestDate();
+            Long spaceId = request.getSpaceId() != null
+                    ? request.getSpaceId() : product.getSpaceId();
+            validateHarvestDateInContract(userId, spaceId, harvestDate);
+        }
+
         ProductCategory category = request.getCategory() == null ? null : parseCategory(request.getCategory());
         ProductStatus status = request.getStatus() == null ? null : parseStatus(request.getStatus());
         // producerName은 수정 대상이 아니다(등록 시 닉네임으로 고정) — null을 넘겨 기존 값을 유지한다.

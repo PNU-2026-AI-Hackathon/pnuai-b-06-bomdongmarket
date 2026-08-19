@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 // 로컬마켓 상품 서비스의 핵심 규칙을 검증한다.
 // DB 없이 돌도록 레포지토리는 목으로 대체한다(이 프로젝트는 H2 없이 MySQL만 쓴다).
@@ -313,6 +314,38 @@ class ProductServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.HARVEST_DATE_OUT_OF_CONTRACT);
+    }
+
+    @Test
+    @DisplayName("수확일을 계약 기간 밖으로 수정할 수 없다")
+    void updateRejectsHarvestDateOutsideContract() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 3, null);
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(owner));
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+        given(matchingRepository.countContractsCovering(eq(1L), any(), eq(LocalDate.of(2027, 1, 1)))).willReturn(0L);
+
+        assertThatThrownBy(() -> productService.update(
+                1L, 10L, updateRequest("{ \"harvestDate\": \"2027-01-01\" }")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.HARVEST_DATE_OUT_OF_CONTRACT);
+    }
+
+    @Test
+    @DisplayName("수확일·공간을 건드리지 않는 수정은 계약을 조회하지 않는다")
+    void updateWithoutHarvestDateSkipsContractCheck() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 3, null);
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(owner));
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+
+        productService.update(1L, 10L, updateRequest("{ \"stock\": 10 }"));
+
+        assertThat(product.getStock()).isEqualTo(10);
+        verifyNoInteractions(matchingRepository);
     }
 
     private Product product(User owner, int stock, String imageUrl) {
