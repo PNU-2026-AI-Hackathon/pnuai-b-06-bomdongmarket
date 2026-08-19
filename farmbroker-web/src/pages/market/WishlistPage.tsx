@@ -19,7 +19,7 @@ import type { AsyncStatus } from '@/types/common';
 import { formatCurrency } from '@/utils/format';
 
 // 찜해 둔 상품을 모아 보는 화면입니다.
-// 거래는 채팅으로 하므로 여기서 결제하지 않습니다 — 상세로 들어가 판매자와 이야기하거나 바로 구매합니다.
+// 거래는 채팅으로 하므로 여기서 거래를 확정하지 않습니다 — 상세로 들어가 판매자와 이야기합니다.
 // 찜해 둔 사이 품절·마감될 수 있어, 서버가 줄마다 내려주는 purchasable을 그대로 따릅니다.
 export function WishlistPage() {
   const navigate = useNavigate();
@@ -111,7 +111,7 @@ export function WishlistPage() {
                       {item.name}
                     </Link>
                     {/* 찜해 둔 뒤 사정이 바뀐 줄은 왜 살 수 없는지 알려 줍니다. */}
-                    {!item.purchasable ? <Badge tone="slate">판매 마감</Badge> : null}
+                    {!item.purchasable ? <Badge tone="slate">판매완료</Badge> : null}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {formatCurrency(item.price)} / {item.unit}

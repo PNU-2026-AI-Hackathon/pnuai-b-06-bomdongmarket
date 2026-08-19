@@ -7,6 +7,8 @@ export const mockMarketItems: MarketItem[] = [
     category: '잎채소',
     productionLocation: '장전 스마트팜',
     producerName: '어반리프',
+    // 판매자 본인은 구매할 수 없어야 해서 화면이 소유자를 판별할 수 있어야 합니다.
+    sellerId: 9,
     harvestDate: '2026-07-05',
     price: 4300,
     unit: '팩',

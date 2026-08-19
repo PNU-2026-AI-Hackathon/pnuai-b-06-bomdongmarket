@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { MarketPage } from '@/pages/market/MarketPage';
 import { ProductDetailPage } from '@/pages/market/ProductDetailPage';
@@ -28,6 +29,7 @@ function wishlistWith(productId: number, name: string): Wishlist {
 describe('Market pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearAuthSession();
     vi.mocked(getWishlist).mockResolvedValue(emptyWishlist);
   });
 
@@ -43,7 +45,7 @@ describe('Market pages', () => {
     });
   });
 
-  it('수량 변경 시 바로 구매 버튼의 금액을 갱신한다', async () => {
+  it('수량 변경 시 거래 버튼의 금액을 갱신한다', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ProductDetailPage />, { route: '/market/1' });
 
@@ -53,7 +55,7 @@ describe('Market pages', () => {
     await user.click(screen.getByRole('button', { name: /수량 늘리기/i }));
 
     expect(
-      screen.getByRole('button', { name: /₩8,600 바로 구매/i }),
+      screen.getByRole('button', { name: /₩8,600에 거래하기/i }),
     ).toBeInTheDocument();
   });
 
@@ -69,6 +71,35 @@ describe('Market pages', () => {
       'aria-pressed',
       'false',
     );
+  });
+
+  // 자기 상품을 사면 재고만 줄고 거래는 없다. 서버도 막지만 버튼부터 감춘다.
+  it('내가 등록한 상품에는 구매·채팅 버튼을 두지 않는다', async () => {
+    saveAuthSession({
+      userId: 9,
+      email: 'seller@example.com',
+      nickname: '어반리프',
+      roles: ['FARMER'],
+    });
+    renderWithProviders(<ProductDetailPage />, { route: '/market/1', authenticated: true });
+
+    expect(await screen.findByText('내가 등록한 상품입니다')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /거래하기/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '판매자와 채팅' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '판매 관리로 이동' })).toBeInTheDocument();
+  });
+
+  it('다른 사람의 상품에는 거래 버튼을 그대로 둔다', async () => {
+    saveAuthSession({
+      userId: 77,
+      email: 'buyer@example.com',
+      nickname: '지역소비자',
+      roles: ['CONSUMER'],
+    });
+    renderWithProviders(<ProductDetailPage />, { route: '/market/1', authenticated: true });
+
+    expect(await screen.findByRole('button', { name: /거래하기/i })).toBeInTheDocument();
+    expect(screen.queryByText('내가 등록한 상품입니다')).not.toBeInTheDocument();
   });
 
   it('비로그인이면 찜 목록을 부르지 않는다', async () => {

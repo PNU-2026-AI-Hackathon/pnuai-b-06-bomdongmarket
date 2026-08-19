@@ -27,7 +27,7 @@ export function DashboardWishlistItemCard({ item }: DashboardWishlistItemCardPro
         />
         <div className="p-4">
           <Badge tone={item.purchasable ? 'green' : 'slate'}>
-            {item.purchasable ? '구매 가능' : '판매 마감'}
+            {item.purchasable ? '거래 가능' : '판매완료'}
           </Badge>
           <h3 className="mt-3 line-clamp-2 text-lg font-bold text-content">
             {item.name}

@@ -6,6 +6,7 @@ import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.dto.MatchingApplyRequest;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
+import com.farmbroker.farmbroker.chat.service.ChatBlockService;
 import com.farmbroker.farmbroker.matching.service.MatchingService;
 import com.farmbroker.farmbroker.matching.support.SpaceContractAdapter;
 import com.farmbroker.farmbroker.space.domain.Space;
@@ -42,8 +43,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 // 서비스 AOP와 실제 H2 행 잠금을 함께 사용해, 탈퇴가 먼저 user PESSIMISTIC_WRITE 잠금을 잡았을 때
 // 매칭·공간 쓰기가 탈퇴 후 상태를 되돌릴 수 없는지를 검증한다.
 @DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+// MatchingService 는 재신청을 막을지 판단할 때 차단 여부를 묻는다(ChatBlockService).
 @Import({UserService.class, MatchingService.class, SpaceService.class, SpaceContractAdapter.class,
-        JpaAuditingConfig.class, UserWithdrawalServiceConcurrencyIntegrationTest.BlockingPasswordEncoderConfiguration.class})
+        ChatBlockService.class, JpaAuditingConfig.class,
+        UserWithdrawalServiceConcurrencyIntegrationTest.BlockingPasswordEncoderConfiguration.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class UserWithdrawalServiceConcurrencyIntegrationTest {
 

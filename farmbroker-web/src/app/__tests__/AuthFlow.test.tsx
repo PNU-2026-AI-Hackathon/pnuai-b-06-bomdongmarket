@@ -34,7 +34,7 @@ describe('인증 후 원래 위치 복귀', () => {
     const user = userEvent.setup();
     renderWithProviders(<AppRouter />, { route: '/market/1' });
 
-    const purchaseButton = await screen.findByRole('button', { name: /바로 구매/i });
+    const purchaseButton = await screen.findByRole('button', { name: /거래하기/i });
     await user.click(purchaseButton);
 
     expect(

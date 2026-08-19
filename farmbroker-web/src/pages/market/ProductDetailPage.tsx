@@ -2,6 +2,7 @@ import { ArrowLeft, Heart, MessageCircle, Minus, Plus, Route, ShoppingBag } from
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { useAuth } from '@/auth/authContext';
 import { useRequireAuth } from '@/auth/useRequireAuth';
 import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
@@ -24,6 +25,7 @@ import { ProductTraceabilityTimeline } from '@/pages/market/components/ProductTr
 // 거래는 판매자와의 채팅이 기본이고, 바로 사고 싶을 때를 위해 단건 구매를 함께 둡니다.
 export function ProductDetailPage() {
   const requireAuth = useRequireAuth();
+  const { user } = useAuth();
   const chatDock = useChatDock();
   const navigate = useNavigate();
   const { productId } = useParams();
@@ -53,6 +55,10 @@ export function ProductDetailPage() {
 
   // 마감(CLOSED)·품절(stock 0) 상품은 목록에서 빠지지만 직접 URL로 들어올 수 있어 구매를 막는다.
   const isSoldOut = item != null && (item.status === 'CLOSED' || item.stock <= 0);
+  // 재고가 다 빠진 것과 판매자가 내린 것은 다른 상태라 문구를 갈라 씁니다.
+  const isOutOfStock = item != null && item.stock <= 0;
+  // 자기 상품은 살 수도, 자기와 채팅할 수도 없습니다. 서버도 막지만 버튼부터 감춥니다.
+  const isMyProduct = item?.sellerId != null && item.sellerId === user?.userId;
 
   // 이미 찜한 상품인지는 목록을 받아 판단합니다. 비로그인이면 조회 자체가 막히므로 조용히 넘깁니다.
   useEffect(() => {
@@ -140,7 +146,11 @@ export function ProductDetailPage() {
           <Card padding="lg">
             <div className="flex flex-wrap gap-2">
               {/* 목록에선 제외되지만 직접 URL로 들어오면 마감 상품일 수 있어 뱃지로 명시한다 */}
-              {isSoldOut ? <Badge tone="slate">판매 마감</Badge> : null}
+              {isOutOfStock ? (
+                <Badge tone="slate">판매완료</Badge>
+              ) : isSoldOut ? (
+                <Badge tone="slate">판매 중지</Badge>
+              ) : null}
               {item.freshnessTags.map((tag) => (
                 <Badge key={tag} tone={tag === '오늘 수확' ? 'yellow' : 'green'}>
                   {tag}
@@ -186,6 +196,22 @@ export function ProductDetailPage() {
                 </Button>
               </div>
             </div>
+            {isMyProduct ? (
+              // 내 상품에는 구매 대신 관리 경로를 둡니다.
+              <div className="mt-5 rounded-app border border-leaf-100 bg-leaf-50 p-4">
+                <p className="text-sm font-bold text-ink-900">내가 등록한 상품입니다</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  본인 상품은 구매할 수 없습니다. 수량과 판매 상태는 판매 관리에서 바꿀 수 있습니다.
+                </p>
+                <Link
+                  className={buttonStyles({ className: 'mt-3 w-full', variant: 'outline' })}
+                  to={ROUTES.myProducts}
+                >
+                  판매 관리로 이동
+                </Link>
+              </div>
+            ) : (
+              <>
             {/* 거래는 채팅이 기본이라 구매보다 먼저 눈에 들어오게 둡니다. */}
             <Button className="mt-5 w-full" onClick={handleChat} variant="outline">
               <MessageCircle className="h-5 w-5" aria-hidden />
@@ -207,13 +233,17 @@ export function ProductDetailPage() {
               </Button>
               <Button className="flex-1" disabled={isSoldOut || isBuying} onClick={handleBuyNow}>
                 <ShoppingBag className="h-5 w-5" aria-hidden />
-                {isSoldOut
-                  ? '판매 마감된 상품입니다'
-                  : isBuying
-                    ? '주문 중...'
-                    : `${formatCurrency(item.price * quantity)} 바로 구매`}
+                {isOutOfStock
+                  ? '판매완료된 상품입니다'
+                  : isSoldOut
+                    ? '판매를 멈춘 상품입니다'
+                    : isBuying
+                      ? '거래 요청 중...'
+                      : `${formatCurrency(item.price * quantity)}에 거래하기`}
               </Button>
             </div>
+              </>
+            )}
             {actionError ? (
               <p className="mt-2 text-sm font-semibold text-feedback-danger" role="alert">
                 {actionError}

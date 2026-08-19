@@ -45,6 +45,8 @@ public enum ErrorCode {
     MATCHING_NOT_PROCESSED(HttpStatus.CONFLICT, "아직 응답하지 않은 매칭 신청입니다."),
     MATCHING_DUPLICATED(HttpStatus.CONFLICT, "이미 신청한 공간입니다."),
     MATCHING_SELF_APPLY(HttpStatus.BAD_REQUEST, "본인 소유 공간에는 신청할 수 없습니다."),
+    // 차단은 채팅만 막는 표시가 아니라 "이 사람과는 거래하지 않겠다"는 뜻으로 쓴다.
+    MATCHING_BLOCKED(HttpStatus.FORBIDDEN, "차단된 사용자와는 매칭을 진행할 수 없습니다."),
 
     // ── contract (매칭 1건에 붙는 계약서) ────────────────────────────────────
     CONTRACT_CLOSED(HttpStatus.CONFLICT, "이미 확정되었거나 취소된 계약입니다."),
@@ -67,6 +69,7 @@ public enum ErrorCode {
     // ── 찜·주문 ──────────────────────────────────────────────────────────────
     WISHLIST_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "찜하지 않은 상품입니다."),
     PRODUCT_NOT_ON_SALE(HttpStatus.CONFLICT, "판매 중인 상품이 아닙니다."),
+    ORDER_SELF_PURCHASE(HttpStatus.BAD_REQUEST, "본인이 등록한 상품은 구매할 수 없습니다."),
     OUT_OF_STOCK(HttpStatus.CONFLICT, "재고가 부족합니다."),
 
     // ── chat ─────────────────────────────────────────────────────────────────

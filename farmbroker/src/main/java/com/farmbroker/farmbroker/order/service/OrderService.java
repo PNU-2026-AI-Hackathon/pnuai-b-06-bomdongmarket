@@ -43,6 +43,11 @@ public class OrderService {
         if (product.getStatus() != ProductStatus.ON_SALE) {
             throw new BusinessException(ErrorCode.PRODUCT_NOT_ON_SALE);
         }
+        // 자기 상품을 사면 재고만 줄고 거래는 없다. 화면에서도 감추지만 API 를 직접 부를 수 있어
+        // 여기서 막는다.
+        if (product.getSeller().getId().equals(buyer.getId())) {
+            throw new BusinessException(ErrorCode.ORDER_SELF_PURCHASE);
+        }
 
         // 재고가 0이 되면 엔티티가 상태를 CLOSED로 바꿔 공개 목록에서 빠진다.
         product.reduceStock(request.getQuantity());
