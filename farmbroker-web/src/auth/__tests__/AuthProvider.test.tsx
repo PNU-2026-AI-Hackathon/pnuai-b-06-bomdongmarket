@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@/api/client';
+import { useAuth } from '@/auth/authContext';
 import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { Header } from '@/components/layout/Header';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -23,6 +24,15 @@ const farmer: User = {
   nickname: '도시농부',
   roles: ['FARMER'],
 };
+
+// 매칭이 확정되기 전의 같은 사람 — 역할만 다릅니다.
+const consumer: User = { ...farmer, roles: ['CONSUMER'] };
+
+// 역할은 헤더에 드러나지 않으므로 context 값을 그대로 그려 확인합니다.
+function RoleProbe() {
+  const { user } = useAuth();
+  return <p>{user?.roles.join(',')}</p>;
+}
 
 describe('AuthProvider 세션 복원', () => {
   beforeEach(() => {
@@ -57,5 +67,21 @@ describe('AuthProvider 세션 복원', () => {
     expect(
       screen.queryByRole('link', { name: '도시농부 마이페이지' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('탭으로 돌아오면 /users/me를 다시 불러 서버에서 부여된 역할을 반영한다', async () => {
+    // 상대가 나중에 계약에 동의하면 이 탭은 역할이 바뀐 사실을 알 수 없어, 복귀 시 재검증한다.
+    saveAuthSession(consumer);
+    authServiceMocks.getCurrentUser
+      .mockResolvedValueOnce(consumer)
+      .mockResolvedValueOnce(farmer);
+
+    renderWithProviders(<RoleProbe />);
+
+    expect(await screen.findByText('CONSUMER')).toBeInTheDocument();
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(await screen.findByText('FARMER')).toBeInTheDocument();
   });
 });

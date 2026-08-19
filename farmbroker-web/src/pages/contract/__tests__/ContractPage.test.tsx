@@ -1,8 +1,9 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useAuth } from '@/auth/authContext';
 import { clearAuthSession, saveAuthSession } from '@/auth/session';
 import { resetMockContract, saveMockContractTerms } from '@/mocks/mockContract';
 import { ContractPage } from '@/pages/contract';
@@ -11,6 +12,19 @@ import type { ContractDetail, UserRole } from '@/types/api';
 
 // 서비스 함수를 목으로 바꾸지 않고 mockContract의 상태 기계를 그대로 씁니다 —
 // "저장하면 동의가 풀린다", "양측이 동의해야 확정된다" 같은 규칙까지 함께 검증됩니다.
+// 다만 역할 부여는 서버에서만 일어나므로 /users/me만 목으로 두고 응답을 갈아 끼웁니다.
+
+const authServiceMocks = vi.hoisted(() => ({
+  getCurrentUser: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+}));
+
+vi.mock('@/services/authService', () => ({
+  getCurrentUser: authServiceMocks.getCurrentUser,
+  login: authServiceMocks.login,
+  logout: authServiceMocks.logout,
+}));
 
 const session = {
   userId: 2,
@@ -40,8 +54,16 @@ function renderPage(overrides: Partial<ContractDetail> = {}) {
   );
 }
 
+// 계약 확정으로 역할이 늘었는지는 화면에 드러나지 않으므로 context 값을 그대로 그려 확인합니다.
+function RoleProbe() {
+  const { user } = useAuth();
+  return <p>{user?.roles.join(',')}</p>;
+}
+
 beforeEach(() => {
   resetMockContract();
+  authServiceMocks.getCurrentUser.mockReset();
+  authServiceMocks.getCurrentUser.mockResolvedValue(session);
 });
 
 afterEach(() => {
@@ -213,6 +235,56 @@ describe('ContractPage', () => {
 
     expect(await screen.findByText('계약이 확정되었습니다.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '계약 취소' })).not.toBeInTheDocument();
+  });
+
+  it('계약이 확정되면 새로 부여된 FARMER 역할을 새로고침 없이 반영한다', async () => {
+    // 확정 시 서버가 신청자에게 FARMER를 부여하지만 계약 응답에는 담기지 않아,
+    // 화면이 직접 /users/me를 다시 받아야 상품 등록 같은 농부 전용 기능이 열립니다.
+    const user = userEvent.setup();
+    authServiceMocks.getCurrentUser
+      .mockResolvedValueOnce(session)
+      .mockResolvedValueOnce({ ...session, roles: ['CONSUMER', 'FARMER'] });
+    resetMockContract({ viewerRole: 'FARMER', ownerAgreed: true, ...savedTerms });
+    saveAuthSession(session);
+
+    renderWithProviders(
+      <>
+        <RoleProbe />
+        <Routes>
+          <Route element={<ContractPage />} path="/matchings/:matchingId/contract" />
+        </Routes>
+      </>,
+      { route: '/matchings/21/contract' },
+    );
+
+    expect(await screen.findByText('CONSUMER')).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: '계약' }));
+    await user.click(screen.getByRole('button', { name: '계약 동의' }));
+
+    expect(await screen.findByText('계약이 확정되었습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('CONSUMER,FARMER')).toBeInTheDocument();
+  });
+
+  it('공간 제공자 쪽에서는 계약이 확정돼도 사용자 정보를 다시 받지 않는다', async () => {
+    // 역할을 받는 쪽은 신청자뿐이라 공간 제공자 화면에서는 헛된 요청이 나가면 안 됩니다.
+    const user = userEvent.setup();
+    resetMockContract({ viewerRole: 'OWNER', farmerAgreed: true, ...savedTerms });
+    saveAuthSession(session);
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<ContractPage />} path="/matchings/:matchingId/contract" />
+      </Routes>,
+      { route: '/matchings/21/contract' },
+    );
+
+    await user.click(await screen.findByRole('button', { name: '계약' }));
+    await user.click(screen.getByRole('button', { name: '계약 동의' }));
+
+    expect(await screen.findByText('계약이 확정되었습니다.')).toBeInTheDocument();
+    // 부팅 재검증 1회 외에는 호출되지 않습니다.
+    expect(authServiceMocks.getCurrentUser).toHaveBeenCalledTimes(1);
   });
 
   it('계약 취소는 모달에서 확인하면 한 쪽만 눌러도 취소된다', async () => {

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ApiError } from '@/api/client';
 import { AuthContext } from '@/auth/authContext';
@@ -49,40 +49,53 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
     return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, syncSession);
   }, []);
 
+  // /users/me로 사용자 정보를 다시 받아 온다. 역할처럼 서버에서만 바뀌는 값은
+  // 이 호출로만 최신이 되므로 부팅 재검증과 세션 중 갱신이 같은 경로를 쓴다.
+  const refreshUser = useCallback(async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      updateStoredUser(currentUser);
+      setUser(currentUser);
+      setIsAuthenticated(true);
+    } catch (error) {
+      // 401은 쿠키 없음/만료 = 비로그인 확정 → 세션 정리. 네트워크·일시 장애는 캐시를 유지해
+      // 새로고침 직후 헤더가 비로그인으로 깜빡이는 현상을 막는다.
+      if (error instanceof ApiError && error.status === 401) {
+        clearAuthSession();
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     // Access Token은 httpOnly 쿠키에 있어 JS로 읽을 수 없으므로, 부팅 시 /users/me를 호출해
     // 로그인 상태를 재검증한다. 캐시된 사용자는 첫 페인트 즉시 표시용이고, 이 요청이 최종 확인이다.
     // 테스트 등에서 initialAuthenticated로 상태를 주입한 경우에는 건너뛴다.
     if (initialAuthenticated !== undefined) return;
 
-    let cancelled = false;
-    void getCurrentUser()
-      .then((currentUser) => {
-        if (cancelled) return;
-        updateStoredUser(currentUser);
-        setUser(currentUser);
-        setIsAuthenticated(true);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        // 401은 쿠키 없음/만료 = 비로그인 확정 → 세션 정리. 네트워크·일시 장애는 캐시를 유지해
-        // 새로고침 직후 헤더가 비로그인으로 깜빡이는 현상을 막는다.
-        if (error instanceof ApiError && error.status === 401) {
-          clearAuthSession();
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      });
+    void refreshUser();
+  }, [initialAuthenticated, refreshUser]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [initialAuthenticated]);
+  useEffect(() => {
+    // 상대가 나중에 계약에 동의하면 이 탭은 역할이 바뀐 사실을 알 수 없다.
+    // 탭으로 돌아올 때 사용자 정보를 다시 받아 새로고침 없이 반영한다.
+    // 비로그인 상태에서는 구독하지 않아 불필요한 401을 만들지 않는다.
+    if (initialAuthenticated !== undefined || !isAuthenticated) return;
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') void refreshUser();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [initialAuthenticated, isAuthenticated, refreshUser]);
 
   const value = useMemo(
     () => ({
       isAuthenticated,
       user,
+      refreshUser,
       login: async (input: LoginInput) => {
         const result = await requestLogin(input);
         saveAuthSession(result.user);
@@ -117,7 +130,7 @@ export function AuthProvider({ children, initialAuthenticated }: AuthProviderPro
         await requestWithdrawCurrentUser(input);
       },
     }),
-    [isAuthenticated, user],
+    [isAuthenticated, refreshUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

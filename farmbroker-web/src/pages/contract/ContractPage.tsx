@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { useAuth } from '@/auth/authContext';
+import { hasRole } from '@/auth/roles';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -27,6 +29,7 @@ import type { ContractDetail, ContractTermsInput, MaintenanceFeePayer } from '@/
 // '계약'은 양측이 모두 눌러야 확정되고, '계약 취소'는 한 쪽만 눌러도 취소됩니다.
 export function ContractPage() {
   const { matchingId } = useParams();
+  const { user, refreshUser } = useAuth();
   const { contract, status, error, isSubmitting, actionError, reload, save, agree, cancel } =
     useContract(Number(matchingId));
   const agreeConfirmation = useDisclosure();
@@ -34,6 +37,19 @@ export function ContractPage() {
   // 저장하지 않은 입력값으로는 동의할 수 없습니다 — 동의 요청은 저장된 조건에 대한 것이라
   // 화면에 보이는 금액과 다른 조건에 동의하게 됩니다.
   const [termsDirty, setTermsDirty] = useState(false);
+
+  // 양측이 동의해 계약이 확정되면 서버가 신청자에게 FARMER 역할을 부여합니다.
+  // 그 사실은 계약 응답에 담기지 않으므로 여기서 사용자 정보를 다시 받아
+  // 새로고침 없이 상품 등록 같은 농부 전용 기능이 열리게 합니다.
+  // viewerRole은 이 계약에서의 위치(신청자/공간 제공자)라 공간 제공자 쪽에서는 호출되지 않습니다.
+  const farmerRoleGranted =
+    contract?.status === 'ACCEPTED' &&
+    contract.viewerRole === 'FARMER' &&
+    !hasRole(user, 'FARMER');
+
+  useEffect(() => {
+    if (farmerRoleGranted) void refreshUser();
+  }, [farmerRoleGranted, refreshUser]);
 
   return (
     <PageContainer narrow>
