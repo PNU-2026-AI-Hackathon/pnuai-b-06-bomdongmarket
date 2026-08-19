@@ -305,15 +305,17 @@ describe('ContractPage', () => {
     );
 
     expect(await screen.findByText('이 계약은 취소되었습니다.')).toBeInTheDocument();
-    // 더 기다릴 동의가 없으므로 '동의 대기'는 남지 않습니다.
-    expect(screen.queryByText('동의 대기')).not.toBeInTheDocument();
-    expect(screen.getAllByText('계약 취소')).toHaveLength(2);
+    // 취소 표시는 누른 쪽(도심농부)에만 붙고, 상대는 직전 상태를 그대로 둡니다.
+    const agreements = screen.getByText('동의 현황').parentElement as HTMLElement;
+    expect(within(agreements).getAllByText('계약 취소')).toHaveLength(1);
+    expect(within(agreements).getByText('동의 대기')).toBeInTheDocument();
   });
 
-  it('한 쪽이 이미 동의한 계약이 취소되면 동의 완료는 남고 대기만 취소로 바뀐다', async () => {
+  it('취소한 쪽에만 취소 표시가 붙고 상대의 동의 완료는 남는다', async () => {
     renderPage({
       viewerRole: 'FARMER',
       ownerAgreed: true,
+      canceledBy: 'FARMER',
       status: 'CANCELED',
       ...savedTerms,
     });
@@ -321,5 +323,19 @@ describe('ContractPage', () => {
     expect(await screen.findByText('동의 완료')).toBeInTheDocument();
     expect(screen.getByText('계약 취소')).toBeInTheDocument();
     expect(screen.queryByText('동의 대기')).not.toBeInTheDocument();
+  });
+
+  // 확정에 밀려 자동 거절된 신청은 누군가 누른 게 아니라 취소자가 없습니다.
+  it('취소한 사람을 모르는 계약은 양쪽에 취소로 표시한다', async () => {
+    renderPage({
+      viewerRole: 'FARMER',
+      canceledBy: null,
+      status: 'REJECTED',
+      ...savedTerms,
+    });
+
+    const agreements = (await screen.findByText('동의 현황')).parentElement as HTMLElement;
+    expect(within(agreements).getAllByText('계약 취소')).toHaveLength(2);
+    expect(within(agreements).queryByText('동의 대기')).not.toBeInTheDocument();
   });
 });

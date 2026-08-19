@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.matching.dto;
 
+import com.farmbroker.farmbroker.matching.domain.ContractParty;
 import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
@@ -29,6 +30,9 @@ public class ContractResponse {
     private final int termsVersion;
     private final boolean ownerAgreed;
     private final boolean farmerAgreed;
+    // 계약을 취소한 쪽. 취소 표시를 누른 사람에게만 붙이는 데 쓴다.
+    // 취소 전이거나 확정에 밀려 자동 거절된 신청은 null이다.
+    private final ContractParty canceledBy;
     private final MatchingStatus status;
     private final String viewerRole;
 
@@ -38,6 +42,7 @@ public class ContractResponse {
                              MaintenanceFeePayer maintenanceFeePayer, Integer deposit,
                              LocalDate startDate, LocalDate endDate, int termsVersion,
                              boolean ownerAgreed, boolean farmerAgreed,
+                             ContractParty canceledBy,
                              MatchingStatus status, String viewerRole) {
         this.matchingId = matchingId;
         this.spaceId = spaceId;
@@ -53,6 +58,7 @@ public class ContractResponse {
         this.termsVersion = termsVersion;
         this.ownerAgreed = ownerAgreed;
         this.farmerAgreed = farmerAgreed;
+        this.canceledBy = canceledBy;
         this.status = status;
         this.viewerRole = viewerRole;
     }
@@ -75,6 +81,7 @@ public class ContractResponse {
                 matching.getTermsVersion(),
                 matching.getOwnerAgreedAt() != null,
                 matching.getFarmerAgreedAt() != null,
+                matching.getContractCanceledBy(),
                 matching.getStatus(),
                 isOwner ? "OWNER" : "FARMER"
         );

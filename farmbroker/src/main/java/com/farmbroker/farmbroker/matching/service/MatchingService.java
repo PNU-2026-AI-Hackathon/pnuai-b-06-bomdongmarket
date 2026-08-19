@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.matching.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.domain.ContractParty;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.dto.ContractResponse;
@@ -237,8 +238,10 @@ public class MatchingService {
     @Transactional
     public ContractResponse cancelContract(Long matchingId, Long userId) {
         Matching matching = getDraftContract(matchingId, userId);
-        matching.reject();
-        return ContractResponse.of(matching, isContractOwner(matching, userId));
+        boolean isOwner = isContractOwner(matching, userId);
+        // 누가 눌렀는지 함께 남긴다 — 동의 현황에서 취소 표시를 누른 쪽에만 붙이는 근거다.
+        matching.reject(isOwner ? ContractParty.OWNER : ContractParty.FARMER);
+        return ContractResponse.of(matching, isOwner);
     }
 
     // 계약서 쓰기 공통 전제: 매칭 존재 → 당사자 본인 → 아직 협의 중(REQUESTED).

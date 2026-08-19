@@ -25,7 +25,12 @@ import {
   type ContractPeriodErrors,
 } from '@/pages/contract/constants/contractDates';
 import { useContract } from '@/pages/contract/hooks/useContract';
-import type { ContractDetail, ContractTermsInput, MaintenanceFeePayer } from '@/types/api';
+import type {
+  ContractDetail,
+  ContractParty,
+  ContractTermsInput,
+  MaintenanceFeePayer,
+} from '@/types/api';
 
 // 매칭 1건에 붙는 계약서 화면입니다.
 // 이름(양측 닉네임)과 주소는 기존 정보를 그대로 보여주고, 금액·관리비 책임소재·계약기간만 입력받습니다.
@@ -374,6 +379,15 @@ function isCanceled(contract: ContractDetail) {
   return contract.status === 'REJECTED' || contract.status === 'CANCELED';
 }
 
+// 취소는 누른 쪽에만 표시합니다 — 상대는 취소 직전의 동의 상태를 그대로 둡니다.
+// 다만 누가 취소했는지 서버가 모르는 계약(확정에 밀린 자동 거절, 취소자 기록 이전에 쌓인 건)은
+// 한쪽을 고를 근거가 없어 예전처럼 양쪽에 표시합니다.
+function canceledParty(contract: ContractDetail, party: ContractParty) {
+  return (
+    isCanceled(contract) && (contract.canceledBy === null || contract.canceledBy === party)
+  );
+}
+
 function AgreementCard({ contract }: { contract: ContractDetail }) {
   return (
     <Card padding="lg">
@@ -381,12 +395,12 @@ function AgreementCard({ contract }: { contract: ContractDetail }) {
       <ul className="mt-4 grid gap-3 text-body-sm">
         <AgreementRow
           agreed={contract.ownerAgreed}
-          canceled={isCanceled(contract)}
+          canceled={canceledParty(contract, 'OWNER')}
           label={contract.ownerNickname}
         />
         <AgreementRow
           agreed={contract.farmerAgreed}
-          canceled={isCanceled(contract)}
+          canceled={canceledParty(contract, 'FARMER')}
           label={contract.farmerNickname}
         />
       </ul>

@@ -18,6 +18,7 @@ const initialContract: ContractDetail = {
   termsVersion: 0,
   ownerAgreed: false,
   farmerAgreed: false,
+  canceledBy: null,
   status: 'REQUESTED',
   viewerRole: 'FARMER',
 };
@@ -69,6 +70,11 @@ export function agreeMockContract(matchingId: number, termsVersion: number): Con
 }
 
 export function cancelMockContract(matchingId: number): ContractDetail {
-  mockContract = { ...mockContract, status: 'REJECTED' };
+  // 서버와 같은 규칙: 취소를 누른 쪽을 함께 기록합니다.
+  mockContract = {
+    ...mockContract,
+    status: 'REJECTED',
+    canceledBy: mockContract.viewerRole,
+  };
   return readMockContract(matchingId);
 }

@@ -336,6 +336,9 @@ export interface ContractDetail {
   termsVersion: number;
   ownerAgreed: boolean;
   farmerAgreed: boolean;
+  // 계약을 취소한 쪽. 취소 표시를 누른 사람에게만 붙이는 데 쓴다.
+  // 아직 취소되지 않았거나, 확정에 밀려 자동 거절된 신청은 null이다.
+  canceledBy: ContractParty | null;
   status: MatchingStatus;
   viewerRole: ContractViewerRole;
 }

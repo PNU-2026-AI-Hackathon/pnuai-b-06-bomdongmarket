@@ -3,6 +3,7 @@ package com.farmbroker.farmbroker.matching.service;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
+import com.farmbroker.farmbroker.matching.domain.ContractParty;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
@@ -289,6 +290,35 @@ class MatchingServiceContractTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_CLOSED);
     }
 
+    // 취소 표시를 누른 쪽에만 붙이려면 누가 눌렀는지 남아 있어야 한다 —
+    // 상대는 취소 직전의 동의 상태를 그대로 보여준다.
+    @Test
+    @DisplayName("계약을 취소하면 누른 쪽이 취소자로 남는다")
+    void cancelRecordsWhoCanceled() {
+        Matching canceledByFarmer = matching();
+        givenLockedMatching(canceledByFarmer);
+
+        ContractResponse farmerResponse = matchingService.cancelContract(MATCHING_ID, FARMER_ID);
+
+        assertThat(farmerResponse.getCanceledBy()).isEqualTo(ContractParty.FARMER);
+        assertThat(canceledByFarmer.getContractCanceledBy()).isEqualTo(ContractParty.FARMER);
+
+        Matching canceledByOwner = matching();
+        givenLockedMatching(canceledByOwner);
+
+        ContractResponse ownerResponse = matchingService.cancelContract(MATCHING_ID, OWNER_ID);
+
+        assertThat(ownerResponse.getCanceledBy()).isEqualTo(ContractParty.OWNER);
+        assertThat(canceledByOwner.getContractCanceledBy()).isEqualTo(ContractParty.OWNER);
+    }
+
+    @Test
+    @DisplayName("취소 전 계약에는 취소자가 없다")
+    void draftContractHasNoCanceler() {
+        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching()));
+
+        assertThat(matchingService.getContract(MATCHING_ID, FARMER_ID).getCanceledBy()).isNull();
+    }
 
     // 프론트 달력의 min/max와 같은 규칙 — API를 직접 부르는 경로도 같이 막는다.
     @Test
