@@ -8,11 +8,25 @@ export const MAX_IMAGE_COUNT = 10;
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = '.jpg,.jpeg,.png,.webp,.gif';
 
+// 채팅 사진은 백엔드에서 ChatImageStorage 가 따로 받습니다. 상품 이미지와 달리 gif 를
+// 받지 않으므로 위 목록을 그대로 쓰면 고를 수는 있지만 서버가 FILE_TYPE_NOT_SUPPORTED 로
+// 되돌립니다. 두 제한을 한 이름으로 합치지 않고 따로 둡니다.
+export const ACCEPTED_CHAT_IMAGE_TYPES = '.jpg,.jpeg,.png,.webp';
+
 const ACCEPTED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const ACCEPTED_CHAT_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
+
+function hasExtensionIn(file: File, extensions: readonly string[]) {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  return extension !== undefined && extensions.includes(extension);
+}
 
 export function isAcceptedImage(file: File) {
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  return extension !== undefined && ACCEPTED_EXTENSIONS.includes(extension);
+  return hasExtensionIn(file, ACCEPTED_EXTENSIONS);
+}
+
+export function isAcceptedChatImage(file: File) {
+  return hasExtensionIn(file, ACCEPTED_CHAT_EXTENSIONS);
 }
 
 export async function uploadImages(files: File[]): Promise<UploadedFile[]> {

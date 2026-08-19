@@ -18,7 +18,11 @@ import {
   sendMessage,
   unblockUser,
 } from '@/services/chatService';
-import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES, isAcceptedImage } from '@/services/fileService';
+import {
+  ACCEPTED_CHAT_IMAGE_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  isAcceptedChatImage,
+} from '@/services/fileService';
 import type { ChatMessage, Conversation } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
@@ -66,14 +70,28 @@ export function ChatConversationPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { lastEvent, refresh: refreshConversations } = useChatDock();
+  // 도크에서 방을 갈아타면 이 컴포넌트는 그대로 남고 conversationId 만 바뀝니다.
+  // 앞 방의 요청이 뒤늦게 끝나면 지금 보고 있는 방을 덮어써 다른 사람의 대화가 보입니다 —
+  // 요청마다 번호를 매겨 마지막 요청의 결과만 화면에 반영합니다.
+  const requestRef = useRef(0);
 
   const load = useCallback(async () => {
+    const request = (requestRef.current += 1);
+    // 방이 바뀌었으니 앞 방의 내용을 먼저 비웁니다. 쓰던 중이던 입력도 함께 비워
+    // 다른 방에 대고 쓴 말이 그대로 남지 않게 합니다.
+    setConversation(null);
+    setMessages([]);
+    setBeforeId(null);
+    setError(null);
+    setText('');
+    setImage(null);
     setStatus('loading');
     try {
       const [room, page] = await Promise.all([
         getConversation(conversationId),
         getMessages(conversationId),
       ]);
+      if (request !== requestRef.current) return;
       setConversation(room);
       setMessages(page.messages);
       setBeforeId(page.hasNext ? page.nextBeforeId : null);
@@ -81,6 +99,7 @@ export function ChatConversationPanel({
       // 방을 열었으면 읽은 것으로 처리해 목록의 안읽음 배지를 정리합니다.
       await markRead(conversationId).catch(() => undefined);
     } catch {
+      if (request !== requestRef.current) return;
       setStatus('error');
     }
   }, [conversationId]);
@@ -117,13 +136,17 @@ export function ChatConversationPanel({
 
   async function handleLoadMore() {
     if (beforeId == null || isLoadingMore) return;
+    const request = requestRef.current;
     setIsLoadingMore(true);
     try {
       const page = await getMessages(conversationId, beforeId);
+      // 불러오는 사이 방을 갈아탔으면 앞 방의 과거 메시지를 붙이지 않습니다.
+      if (request !== requestRef.current) return;
       // 위로 붙입니다 — 서버는 오래된 것부터 정렬해 돌려줍니다.
       setMessages((prev) => [...page.messages, ...prev]);
       setBeforeId(page.hasNext ? page.nextBeforeId : null);
     } catch {
+      if (request !== requestRef.current) return;
       setError('이전 메시지를 불러오지 못했습니다.');
     } finally {
       setIsLoadingMore(false);
@@ -135,8 +158,8 @@ export function ChatConversationPanel({
     // 같은 파일을 다시 고를 수 있도록 값을 비웁니다.
     event.target.value = '';
     if (!picked) return;
-    if (!isAcceptedImage(picked)) {
-      setError('jpg, png, webp, gif 이미지만 보낼 수 있습니다.');
+    if (!isAcceptedChatImage(picked)) {
+      setError('jpg, png, webp 사진만 보낼 수 있습니다.');
       return;
     }
     if (picked.size > MAX_IMAGE_SIZE_BYTES) {
@@ -152,15 +175,20 @@ export function ChatConversationPanel({
     const trimmed = text.trim();
     if ((!trimmed && !image) || isSending) return;
 
+    const request = requestRef.current;
     setIsSending(true);
     setError(null);
     try {
       const sent = await sendMessage(conversationId, trimmed, image);
+      // 보내는 사이 방을 갈아탔으면 지금 보고 있는 방에 앞 방의 메시지를 붙이지 않습니다.
+      // 전송 자체는 이미 끝났고, 그 방으로 돌아가면 서버에서 받아 옵니다.
+      if (request !== requestRef.current) return;
       // 소켓 이벤트가 응답보다 먼저 도착했으면 이미 붙어 있습니다.
       setMessages((prev) => appendUnique(prev, sent));
       setText('');
       setImage(null);
     } catch (caught) {
+      if (request !== requestRef.current) return;
       setError(caught instanceof Error ? caught.message : '메시지를 보내지 못했습니다.');
     } finally {
       setIsSending(false);
@@ -169,6 +197,7 @@ export function ChatConversationPanel({
 
   async function handleToggleBlock() {
     if (!conversation) return;
+    const request = requestRef.current;
     setIsBlocking(true);
     setError(null);
     try {
@@ -179,8 +208,11 @@ export function ChatConversationPanel({
       }
       // 차단 여부는 서버가 판단하므로 방 정보를 다시 받습니다
       // (상대가 나를 차단한 경우 내가 풀 수 없습니다).
-      setConversation(await getConversation(conversationId));
+      const room = await getConversation(conversationId);
+      if (request !== requestRef.current) return;
+      setConversation(room);
     } catch (caught) {
+      if (request !== requestRef.current) return;
       setError(caught instanceof Error ? caught.message : '차단 상태를 바꾸지 못했습니다.');
     } finally {
       setIsBlocking(false);
@@ -296,7 +328,7 @@ export function ChatConversationPanel({
           ) : null}
           <div className="flex gap-2">
             <input
-              accept={ACCEPTED_IMAGE_TYPES}
+              accept={ACCEPTED_CHAT_IMAGE_TYPES}
               aria-label="사진 선택"
               className="sr-only"
               onChange={handlePickImage}
