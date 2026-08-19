@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.product.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.product.domain.Product;
 import com.farmbroker.farmbroker.product.domain.ProductCategory;
 import com.farmbroker.farmbroker.product.domain.ProductStatus;
@@ -46,6 +47,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductTraceabilityEventRepository eventRepository;
     private final UserRepository userRepository;
+    private final MatchingRepository matchingRepository;
 
     // 상품 등록 — FARMER 역할 보유자만. sellerId는 항상 인증 컨텍스트의 userId를 쓴다.
     @Transactional
@@ -58,6 +60,7 @@ public class ProductService {
         ProductCategory category = parseCategory(request.getCategory());
         // 생산자명은 입력받지 않고 항상 판매자 닉네임으로 고정한다.
         String producerName = seller.getNickname();
+        validateHarvestDateInContract(userId, request.getSpaceId(), request.getHarvestDate());
 
         Product product = productRepository.save(Product.builder()
                 .seller(seller)
@@ -170,6 +173,15 @@ public class ProductService {
     private void validateOwner(Product product, Long userId) {
         if (!product.getSeller().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.NOT_PRODUCT_OWNER);
+        }
+    }
+
+    // 수확일은 판매자의 확정 계약 기간 안이어야 한다 — 계약하지 않은 기간에 수확한 생산물이 마켓에 오르는 것을 막는다.
+    // spaceId가 지정되면 그 공간의 계약만, 없으면 판매자의 확정 계약 전체를 본다(하나라도 품으면 통과).
+    // FARMER 역할은 매칭 수락으로만 얻으므로 확정 계약이 0건이면 그 자체가 비정상이다 — 같은 코드로 막는다.
+    private void validateHarvestDateInContract(Long sellerId, Long spaceId, LocalDate harvestDate) {
+        if (matchingRepository.countContractsCovering(sellerId, spaceId, harvestDate) == 0) {
+            throw new BusinessException(ErrorCode.HARVEST_DATE_OUT_OF_CONTRACT);
         }
     }
 

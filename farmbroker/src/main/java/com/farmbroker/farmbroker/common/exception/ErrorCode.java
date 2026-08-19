@@ -63,6 +63,8 @@ public enum ErrorCode {
     // ── product (로컬마켓) ───────────────────────────────────────────────────
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
     NOT_PRODUCT_OWNER(HttpStatus.FORBIDDEN, "본인이 등록한 상품이 아닙니다."),
+    // 계약이 아예 없는 경우도 이 코드다 — "수확일을 품는 계약 기간이 없다"는 사실은 둘이 같다.
+    HARVEST_DATE_OUT_OF_CONTRACT(HttpStatus.BAD_REQUEST, "수확일은 계약 기간 안의 날짜여야 합니다."),
 
     // ── 찜·주문 ──────────────────────────────────────────────────────────────
     WISHLIST_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "찜하지 않은 상품입니다."),
