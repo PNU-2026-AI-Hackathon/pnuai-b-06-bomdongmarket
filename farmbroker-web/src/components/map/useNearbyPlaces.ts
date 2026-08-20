@@ -43,6 +43,9 @@ export function useNearbyPlaces<T>(
     const missing = items.filter(
       (it) => adapter.getDirectCoords(it) === null && adapter.getAddress(it),
     );
+    // 로딩 중 빈 배열처럼 보완할 항목이 없을 때 상태를 새 Map으로 갱신하면
+    // 새 items 배열 → effect → 상태 갱신 → 렌더가 반복되므로 아무 작업도 예약하지 않는다.
+    if (missing.length === 0) return;
 
     void Promise.all(
       missing.map(async (it) => {
@@ -52,10 +55,19 @@ export function useNearbyPlaces<T>(
       }),
     ).then((entries) => {
       if (cancelled) return;
+      const foundEntries = entries.filter((entry) => entry !== null);
+      if (foundEntries.length === 0) return;
+
       setResolved((prev) => {
         const next = new Map(prev);
-        for (const entry of entries) if (entry) next.set(entry[0], entry[1]);
-        return next;
+        let changed = false;
+        for (const [id, coords] of foundEntries) {
+          const current = prev.get(id);
+          if (current?.lat === coords.lat && current.lng === coords.lng) continue;
+          next.set(id, coords);
+          changed = true;
+        }
+        return changed ? next : prev;
       });
     });
 

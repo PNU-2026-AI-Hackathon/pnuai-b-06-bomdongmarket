@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { useNearbyPlaces, type NearbyAdapter } from '@/components/map/useNearbyPlaces';
@@ -24,6 +24,22 @@ const center = { lat: 35.1798, lng: 129.075 };
 
 describe('useNearbyPlaces', () => {
   beforeEach(() => geocodeAddress.mockReset());
+
+  it('좌표 보완 대상이 없으면 불필요한 상태 갱신으로 다시 렌더하지 않는다', async () => {
+    const empty: Row[] = [];
+    let renderCount = 0;
+
+    renderHook(() => {
+      renderCount += 1;
+      return useNearbyPlaces(empty, center, 5, adapter);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(renderCount).toBe(1);
+    expect(geocodeAddress).not.toHaveBeenCalled();
+  });
 
   it('저장된 좌표로 반경 내/외를 나눈다', async () => {
     const near: Row = { id: 1, lat: 35.18, lng: 129.076, addr: null };
