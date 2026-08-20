@@ -39,6 +39,35 @@ function mapItem(id: number): NearbyMapItem<TestPlace> {
 }
 
 describe('NearbyMap', () => {
+  it('데이터가 같으면 부모 콜백 변경만으로 마커를 다시 만들지 않는다', async () => {
+    const mapMock = getMapMock();
+    mapMock.markers.length = 0;
+    const items = [mapItem(1)];
+    const props = {
+      center: { lat: 35.1798, lng: 129.075 },
+      radiusKm: 5,
+      items,
+      selectedId: null,
+      onSelect: () => {},
+      getId: (item: TestPlace) => item.id,
+      getTitle: (item: TestPlace) => item.name,
+    };
+
+    const { rerender } = render(<NearbyMap {...props} />);
+    await waitFor(() => expect(mapMock.markers).toHaveLength(1));
+
+    rerender(
+      <NearbyMap
+        {...props}
+        onSelect={() => {}}
+        getId={(item) => item.id}
+        getTitle={(item) => item.name}
+      />,
+    );
+
+    expect(mapMock.markers).toHaveLength(1);
+  });
+
   it('언마운트 후 재진입하면 이전 이벤트를 정리하고 지도를 다시 배치한다', async () => {
     const mapMock = getMapMock();
     mapMock.relayout.mockClear();

@@ -44,6 +44,12 @@ export function NearbyMap<T>({
   // 클릭 리스너는 지도 생성 시 1회만 등록하므로, 최신 콜백을 ref로 참조해 stale closure를 피한다.
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const getIdRef = useRef(getId);
+  getIdRef.current = getId;
+  const getTitleRef = useRef(getTitle);
+  getTitleRef.current = getTitle;
 
   const isSupported = hasKakaoMapKey();
 
@@ -141,12 +147,14 @@ export function NearbyMap<T>({
       const marker = new maps.Marker({
         map,
         position: new maps.LatLng(coords.lat, coords.lng),
-        title: getTitle(item),
+        title: getTitleRef.current(item),
       });
-      maps.event.addListener(marker, 'click', () => onSelect(getId(item)));
+      maps.event.addListener(marker, 'click', () =>
+        onSelectRef.current(getIdRef.current(item)),
+      );
       markersRef.current.push(marker);
     }
-  }, [center, radiusKm, items, onSelect, getId, getTitle]);
+  }, [center, radiusKm, items]);
 
   useEffect(() => {
     if (status === 'ready') redraw();
