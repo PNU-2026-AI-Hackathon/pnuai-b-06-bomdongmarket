@@ -49,6 +49,7 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - 본문은 기본 14px라도 긴 설명에는 24px line-height를 유지한다.
 - 숫자/핵심 지표의 `font-black`은 기존 대시보드와 가격 표현에서만 유지한다.
 - 작은 eyebrow는 canvas 대비 6.13:1인 semantic `accent`를 사용한다. 장식 목적의 `soil-500`을 본문 텍스트로 복제하지 않는다.
+- 한국어 홍보 문구는 `break-keep`으로 어절 단위 개행을 유지한다. `<br />`이나 `&nbsp;`로 줄바꿈을 고정하지 않는다.
 
 ### 간격과 크기
 
