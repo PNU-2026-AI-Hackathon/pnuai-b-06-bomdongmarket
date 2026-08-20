@@ -10,11 +10,14 @@ const POSTCODE_SCRIPT_SRC =
 // libraries=services(지오코딩)까지 준비된 시점을 알 수 있습니다.
 const MAPS_SDK_SRC = 'https://dapi.kakao.com/v2/maps/sdk.js';
 
-const KAKAO_MAP_APP_KEY = import.meta.env.VITE_KAKAO_MAP_APP_KEY ?? '';
+const SDK_TIMEOUT_MS = 10_000;
+
+const KAKAO_MAP_APP_KEY = (import.meta.env.VITE_KAKAO_MAP_APP_KEY ?? '').trim();
 
 // 같은 스크립트를 두 번 넣지 않도록 src별로 Promise를 캐시합니다.
 // React StrictMode의 이중 마운트나 화면 재진입에서 <script>가 중복 생성되는 것을 막습니다.
 const scriptPromises = new Map<string, Promise<void>>();
+let mapsPromise: Promise<KakaoMaps> | null = null;
 
 function loadScript(src: string): Promise<void> {
   const cached = scriptPromises.get(src);
@@ -24,13 +27,23 @@ function loadScript(src: string): Promise<void> {
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => {
+    const timeoutId = window.setTimeout(() => {
+      fail(new Error(`스크립트 응답 시간이 초과되었습니다: ${src}`));
+    }, SDK_TIMEOUT_MS);
+
+    function fail(error: Error) {
+      window.clearTimeout(timeoutId);
       // 실패한 Promise를 캐시에 남겨 두면 재시도가 영원히 막히므로 지웁니다.
       scriptPromises.delete(src);
       script.remove();
-      reject(new Error(`스크립트를 불러오지 못했습니다: ${src}`));
+      reject(error);
+    }
+
+    script.onload = () => {
+      window.clearTimeout(timeoutId);
+      resolve();
     };
+    script.onerror = () => fail(new Error(`스크립트를 불러오지 못했습니다: ${src}`));
     document.head.append(script);
   });
 
@@ -54,22 +67,54 @@ export async function loadPostcodeScript(): Promise<KakaoPostcodeConstructor> {
   return postcode;
 }
 
+interface LoadKakaoMapsOptions {
+  /** 오류 UI의 명시적인 재시도에서만 이전 실패 결과를 버립니다. */
+  retry?: boolean;
+}
+
 /** 지오코딩까지 준비된 지도 네임스페이스를 돌려줍니다. */
-export async function loadKakaoMaps(): Promise<KakaoMaps> {
+export function loadKakaoMaps(options: LoadKakaoMapsOptions = {}): Promise<KakaoMaps> {
   if (!hasKakaoMapKey()) {
-    throw new Error('VITE_KAKAO_MAP_APP_KEY가 설정되지 않았습니다.');
+    return Promise.reject(new Error('VITE_KAKAO_MAP_APP_KEY가 설정되지 않았습니다.'));
   }
 
-  await loadScript(
+  if (options.retry) mapsPromise = null;
+  if (mapsPromise) return mapsPromise;
+
+  mapsPromise = loadScript(
     `${MAPS_SDK_SRC}?appkey=${KAKAO_MAP_APP_KEY}&autoload=false&libraries=services`,
-  );
+  )
+    .then(() => {
+      const maps = window.kakao?.maps;
+      if (!maps) {
+        throw new Error('카카오 지도 SDK를 초기화하지 못했습니다.');
+      }
 
-  const maps = window.kakao?.maps;
-  if (!maps) {
-    throw new Error('카카오 지도 SDK를 초기화하지 못했습니다.');
-  }
+      // HMR이나 늦게 도착한 이전 콜백으로 이미 준비됐다면 load()를 다시 호출하지 않는다.
+      if (typeof maps.Map === 'function' && typeof maps.services?.Geocoder === 'function') {
+        return maps;
+      }
 
-  // load()는 이미 초기화된 뒤에 불러도 콜백을 즉시 실행하므로 중복 호출이 안전합니다.
-  await new Promise<void>((resolve) => maps.load(resolve));
-  return maps;
+      return new Promise<KakaoMaps>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          reject(new Error('카카오 지도 SDK 초기화 응답 시간이 초과되었습니다.'));
+        }, SDK_TIMEOUT_MS);
+
+        try {
+          maps.load(() => {
+            window.clearTimeout(timeoutId);
+            resolve(maps);
+          });
+        } catch (error) {
+          window.clearTimeout(timeoutId);
+          reject(error);
+        }
+      });
+    })
+    .catch((error: unknown) => {
+      // 자동 재진입에서는 같은 실패를 즉시 돌려주고, 오류 UI의 명시적 재시도만 캐시를 비운다.
+      throw error;
+    });
+
+  return mapsPromise;
 }

@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
-import { expect } from 'vitest';
+import { expect, vi } from 'vitest';
 
 // jsdom에서는 카카오 CDN 스크립트를 받을 수 없어 SDK 로더를 통째로 대체합니다.
 // 주소 입력이 들어간 화면 테스트가 모두 같은 가짜 검색 결과를 쓰도록 여기에 모아 둡니다.
@@ -53,6 +53,16 @@ export function createKakaoMapMock() {
   // setBounds로 맞춘 마지막 범위 — 반경 변경 시 화면 조정을 검증할 때 관찰한다.
   let lastBounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null =
     null;
+  const relayout = vi.fn();
+  const removeListener = vi.fn(
+    (
+      target: { handlers?: Record<string, (event: unknown) => void> },
+      type: string,
+      handler: (event: unknown) => void,
+    ) => {
+      if (target.handlers?.[type] === handler) delete target.handlers[type];
+    },
+  );
 
   const maps = {
     load: (cb: () => void) => cb(),
@@ -81,7 +91,9 @@ export function createKakaoMapMock() {
           ne: { lat: bounds.ne.getLat(), lng: bounds.ne.getLng() },
         };
       }
-      relayout() {}
+      relayout() {
+        relayout();
+      }
     },
     LatLngBounds: class {
       constructor(
@@ -110,6 +122,7 @@ export function createKakaoMapMock() {
       ) => {
         if (target.handlers) target.handlers[type] = handler;
       },
+      removeListener,
     },
     services: {
       Geocoder: class {
@@ -139,6 +152,8 @@ export function createKakaoMapMock() {
       mapHandlers?.click?.({ latLng: new maps.LatLng(lat, lng) }),
     // setBounds로 맞춘 마지막 범위(반경 변경 시 화면 조정 검증용).
     getLastBounds: () => lastBounds,
+    relayout,
+    removeListener,
     module: {
       hasKakaoMapKey: () => true,
       loadKakaoMaps: () => Promise.resolve(maps as unknown as KakaoMaps),

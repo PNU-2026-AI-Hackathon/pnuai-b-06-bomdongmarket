@@ -114,6 +114,11 @@ interface KakaoMaps {
       type: string,
       handler: (mouseEvent: KakaoMapMouseEvent) => void,
     ) => void;
+    removeListener: (
+      target: object,
+      type: string,
+      handler: (mouseEvent: KakaoMapMouseEvent) => void,
+    ) => void;
   };
   services: {
     Geocoder: new () => KakaoGeocoder;
