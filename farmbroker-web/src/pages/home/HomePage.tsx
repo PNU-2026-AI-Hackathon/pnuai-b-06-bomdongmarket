@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { clearAuthSession } from '@/auth/session';
+import { Footer } from '@/components/layout/Footer';
 import { CampaignCarousel } from '@/pages/home/components/CampaignCarousel';
 import { RoleJourneySections } from '@/pages/home/components/RoleJourneySections';
 
@@ -29,6 +30,7 @@ export function HomePage() {
       ) : null}
       <CampaignCarousel />
       <RoleJourneySections />
+      <Footer />
     </>
   );
 }
