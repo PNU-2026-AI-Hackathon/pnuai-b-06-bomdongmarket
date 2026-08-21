@@ -14,6 +14,8 @@ import java.util.List;
 public class ProductDetailResponse {
 
     private final Long productId;
+    // 화면이 "내가 등록한 상품"인지 판단할 수 있어야 구매 버튼을 감출 수 있다.
+    private final Long sellerId;
     private final String sellerNickname;
     private final String name;
     private final String category;
@@ -38,6 +40,7 @@ public class ProductDetailResponse {
     private ProductDetailResponse(Product product, String sellerNickname, List<String> freshnessTags,
                                   List<ProductTraceabilityEvent> events) {
         this.productId = product.getId();
+        this.sellerId = product.getSeller().getId();
         this.sellerNickname = sellerNickname;
         this.name = product.getName();
         this.category = product.getCategory().getLabel();

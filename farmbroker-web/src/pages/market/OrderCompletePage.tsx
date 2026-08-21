@@ -9,9 +9,10 @@ import { ROUTES } from '@/constants/routes';
 import type { Order } from '@/types/api';
 import { formatCurrency } from '@/utils/format';
 
-// 결제 완료 화면.
-// 실제 결제(PG)는 연동하지 않았습니다 — 주문이 확정되고 판매자 재고가 줄어든 상태입니다.
-// 주문 내역은 결제 응답을 그대로 받아 보여 주므로, 새로고침하면 사라집니다(주문 조회 API는 아직 없습니다).
+// 거래 확정 화면.
+// 이 서비스에는 결제 단계가 없습니다 — 대금은 판매자와 직접 정하고, 여기서는 거래를 기록하고
+// 재고를 줄이는 것까지 합니다. 결제라고 적으면 카드가 빠져나간 것으로 읽혀 문구를 갈랐습니다.
+// 내역은 거래 응답을 그대로 받아 보여 주므로, 새로고침하면 사라집니다(조회 API는 아직 없습니다).
 export function OrderCompletePage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export function OrderCompletePage() {
       <PageContainer narrow>
         <EmptyState
           actionLabel="마켓으로 가기"
-          description="결제를 마치면 이 화면에서 주문 내역을 볼 수 있습니다."
+          description="거래를 확정하면 이 화면에서 내역을 볼 수 있습니다."
           onAction={() => navigate(ROUTES.market)}
           title="표시할 주문이 없습니다"
         />
@@ -36,7 +37,7 @@ export function OrderCompletePage() {
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-leaf-100 text-leaf-700">
           <CheckCircle2 className="h-9 w-9" aria-hidden />
         </span>
-        <h1 className="mt-4 text-3xl font-black text-ink-900">결제가 완료되었습니다</h1>
+        <h1 className="mt-4 text-3xl font-black text-ink-900">거래가 확정되었습니다</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           주문번호 {order.orderId}
           <br />
@@ -62,7 +63,7 @@ export function OrderCompletePage() {
           ))}
         </ul>
         <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
-          <span className="text-sm font-semibold text-slate-600">결제 금액</span>
+          <span className="text-sm font-semibold text-slate-600">거래 금액</span>
           <span className="text-2xl font-black text-ink-900">
             {formatCurrency(order.totalPrice)}
           </span>

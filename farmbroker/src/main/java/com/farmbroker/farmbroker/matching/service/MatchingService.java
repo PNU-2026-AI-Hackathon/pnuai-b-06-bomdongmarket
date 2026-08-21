@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.matching.service;
 
+import com.farmbroker.farmbroker.chat.service.ChatBlockService;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.Matching;
@@ -46,6 +47,7 @@ public class MatchingService {
     private final MatchingRepository matchingRepository;
     private final UserRepository userRepository;
     private final SpaceContractAdapter spaceContractAdapter; // BE2 SpaceService 계약 제공 시 교체
+    private final ChatBlockService chatBlockService; // 차단 여부만 묻는다 — 차단 도메인은 chat 모듈이 갖는다
     private final EntityManager entityManager;
 
     @Transactional
@@ -66,6 +68,12 @@ public class MatchingService {
         if (matchingRepository.existsBySpaceIdAndFarmerIdAndStatus(
                 space.getId(), userId, MatchingStatus.REQUESTED)) {
             throw new BusinessException(ErrorCode.MATCHING_DUPLICATED);
+        }
+        // 거절·취소된 뒤에는 다시 신청할 수 있다. 다시 받고 싶지 않으면 차단하면 된다 —
+        // 차단이 채팅만 막는 표시가 아니라 거래를 거부하는 수단이 되도록 여기서 함께 본다.
+        // 어느 쪽이 차단했든 막는다(내가 차단한 사람의 공간에 신청하는 것도 앞뒤가 맞지 않는다).
+        if (chatBlockService.isBlockedEitherDirection(userId, space.getOwnerId())) {
+            throw new BusinessException(ErrorCode.MATCHING_BLOCKED);
         }
 
         Matching matching = Matching.builder()

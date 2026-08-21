@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.matching.service;
 
+import com.farmbroker.farmbroker.chat.service.ChatBlockService;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
@@ -57,6 +58,10 @@ class MatchingServiceContractTest {
 
     @Mock
     private SpaceContractAdapter spaceContractAdapter;
+
+    // 차단 여부는 chat 모듈이 판단한다. 기본값 false 라 차단 없는 상황이 그대로 된다.
+    @Mock
+    private ChatBlockService chatBlockService;
 
     @Mock
     private EntityManager entityManager;

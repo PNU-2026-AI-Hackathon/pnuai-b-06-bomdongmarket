@@ -1,14 +1,17 @@
-import { ImagePlus, Send, Ban, X } from 'lucide-react';
+import { FileText, ImagePlus, Send, Ban, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
+import { buttonStyles } from '@/components/common/buttonStyles';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { RemoteImage } from '@/components/common/RemoteImage';
 import { APP_INFO } from '@/constants/appInfo';
 import { contextLabel } from '@/pages/chat/chatFilters';
+import { ROUTES } from '@/constants/routes';
 import { ENDPOINTS } from '@/api/endpoints';
 import {
   blockUser,
@@ -236,14 +239,29 @@ export function ChatConversationPanel({
           <p className="truncate font-bold text-ink-900">{conversation.otherUserNickname}</p>
           <p className="truncate text-xs text-slate-500">{conversation.contextTitle}</p>
         </div>
+        {/* 계약은 matchingId 로만 열 수 있어, 서버가 이 대화의 매칭을 함께 내려줍니다.
+            수락된 매칭이 있을 때만 노출합니다 — 그 전에는 쓸 내용이 없습니다. */}
+        {conversation.matchingId != null && conversation.matchingStatus === 'ACCEPTED' ? (
+          <Link
+            className={buttonStyles({ size: 'sm', variant: 'outline' })}
+            to={ROUTES.contract(conversation.matchingId)}
+          >
+            <FileText className="h-4 w-4" aria-hidden />
+            계약서
+          </Link>
+        ) : null}
+        {/* 아이콘만 두면 무슨 버튼인지 알 수 없고, hover 로도 아무것도 뜨지 않습니다.
+            누구를 차단하는지가 중요하므로 상대 이름과 함께 글자로 적습니다. */}
         <Button
-          aria-label={conversation.blocked ? '차단 해제' : '이 사용자 차단'}
           disabled={isBlocking}
           onClick={() => void handleToggleBlock()}
           size="sm"
-          variant="ghost"
+          variant={conversation.blocked ? 'primary' : 'ghost'}
         >
           <Ban className="h-4 w-4" aria-hidden />
+          <span className="whitespace-nowrap">
+            {conversation.blocked ? '차단 해제' : '차단하기'}
+          </span>
         </Button>
       </div>
 
@@ -309,7 +327,8 @@ export function ChatConversationPanel({
       {/* 차단된 상대에게는 서버가 전송을 막으므로 입력창부터 잠급니다. */}
       {conversation.blocked ? (
         <p className="border-t border-leaf-100 px-4 py-3 text-sm text-slate-500">
-          차단된 상대와는 대화할 수 없습니다. 위 차단 버튼으로 해제할 수 있습니다.
+          차단된 상대와는 대화할 수 없습니다. 위 차단 해제 버튼으로 풀 수 있습니다. 차단하는 동안은
+          이 사람이 내 공간에 다시 신청할 수도 없습니다.
         </p>
       ) : (
         <form className="border-t border-leaf-100 p-3" onSubmit={handleSubmit}>

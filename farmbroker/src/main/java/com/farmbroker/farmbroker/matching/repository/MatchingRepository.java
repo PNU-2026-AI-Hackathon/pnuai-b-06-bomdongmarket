@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +26,12 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
     // 공간 주인이 신청자에게 먼저 채팅을 걸 수 있는지 판단할 때 쓴다(chat 도메인).
     // 상태는 보지 않는다 — 협의가 끝난 뒤에도 이미 오간 대화는 이어갈 수 있어야 한다.
     boolean existsBySpaceIdAndFarmerId(Long spaceId, Long farmerId);
+
+    // 채팅에서 계약으로 넘어가는 버튼을 그리려면 두 참여자 사이의 매칭을 알아야 한다.
+    // 어느 쪽이 농부인지는 채팅 쪽에서 알 수 없어 두 사람의 id 를 함께 넘긴다.
+    // 재신청으로 여러 건이 쌓일 수 있어 최근 것을 쓴다.
+    List<Matching> findBySpaceIdInAndFarmerIdInOrderByCreatedAtDesc(
+            Collection<Long> spaceIds, Collection<Long> farmerIds);
 
     // 내가 farmer로서 신청한 목록 — 공간 정보는 getSummariesByIds(공간 계약) 배치로 별도 조회
     List<Matching> findAllByFarmerIdOrderByCreatedAtDesc(Long farmerId);

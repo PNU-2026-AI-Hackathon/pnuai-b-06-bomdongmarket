@@ -117,7 +117,10 @@ export function MyProductsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="green">{item.category}</Badge>
                   {/* 공개 목록은 판매중·재고 있는 상품만 노출되므로, 왜 마켓에 안 보이는지 여기서 알려 줍니다. */}
-                  {item.status === 'CLOSED' ? <Badge tone="slate">판매 마감</Badge> : null}
+                  {/* 재고가 다 빠진 것과 내가 판매를 멈춘 것은 다른 상태입니다. */}
+                  {item.status === 'CLOSED' ? (
+                    <Badge tone="slate">{item.stock <= 0 ? '판매완료' : '판매 중지'}</Badge>
+                  ) : null}
                   {item.status !== 'CLOSED' && item.stock <= 0 ? (
                     <Badge tone="slate">품절 · 마켓 미노출</Badge>
                   ) : null}

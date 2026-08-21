@@ -119,7 +119,7 @@ describe('ChatConversationPanel', () => {
     renderWithProviders(<ChatConversationPanel conversationId={1} myUserId={1} />);
 
     await screen.findByText('상추 아직 남아 있나요?');
-    await user.click(screen.getByRole('button', { name: '이 사용자 차단' }));
+    await user.click(screen.getByRole('button', { name: '차단하기' }));
 
     expect(await screen.findByText(/차단된 상대와는 대화할 수 없습니다/)).toBeInTheDocument();
     expect(screen.queryByLabelText('메시지 입력')).not.toBeInTheDocument();

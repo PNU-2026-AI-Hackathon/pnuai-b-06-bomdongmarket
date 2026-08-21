@@ -10,7 +10,10 @@ import com.farmbroker.farmbroker.chat.repository.ConversationRepository;
 import com.farmbroker.farmbroker.chat.repository.UserBlockRepository;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.domain.Matching;
+import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
+import com.farmbroker.farmbroker.space.domain.Space;
 import com.farmbroker.farmbroker.user.domain.User;
 import com.farmbroker.farmbroker.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,10 +26,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -201,6 +207,63 @@ class ConversationServiceTest {
                 () -> service.createOrGet(OWNER_ID, requestTargeting(USER_ID)));
 
         assertEquals(ErrorCode.CHAT_FORBIDDEN, caught.getErrorCode());
+    }
+
+    // 공간 주인이 같은 공간에서 신청자 둘과 대화할 수 있다. 매칭을 spaceId 만으로 잡으면
+    // 두 대화가 같은 matchingId 를 물어, A 와의 대화에서 B 의 계약서가 열린다.
+    @Test
+    void mapsMatchingToTheFarmerOfEachConversation() throws Exception {
+        long farmerA = 11L;
+        long farmerB = 12L;
+        Conversation withA = conversationBetween(1L, farmerA);
+        Conversation withB = conversationBetween(2L, farmerB);
+        given(conversationRepository.findAllForUser(OWNER_ID, PageRequest.of(0, 10)))
+                .willReturn(new PageImpl<>(List.of(withA, withB), PageRequest.of(0, 10), 2));
+        given(userRepository.findAllById(any())).willReturn(List.of(user(farmerA), user(farmerB)));
+        given(messageRepository.countUnreadByConversationIds(any(), eq(OWNER_ID))).willReturn(List.of());
+        given(userBlockRepository.findBlocksBetween(eq(OWNER_ID), any())).willReturn(List.of());
+        given(matchingRepository.findBySpaceIdInAndFarmerIdInOrderByCreatedAtDesc(any(), any()))
+                .willReturn(List.of(matching(200L, farmerB), matching(100L, farmerA)));
+
+        List<ConversationResponse> responses =
+                service.getConversations(OWNER_ID, 0, 10).getConversations();
+
+        Map<Long, Long> matchingIdByConversation = new HashMap<>();
+        responses.forEach(response ->
+                matchingIdByConversation.put(response.getConversationId(), response.getMatchingId()));
+        assertEquals(100L, matchingIdByConversation.get(1L));
+        assertEquals(200L, matchingIdByConversation.get(2L));
+    }
+
+    private Conversation conversationBetween(long id, long farmerId) throws Exception {
+        Conversation conversation = Conversation.builder()
+                .contextType(ChatContextType.SPACE)
+                .contextId(SPACE_ID)
+                .contextTitle("도심 공실")
+                .participant1Id(farmerId)
+                .participant2Id(OWNER_ID)
+                .build();
+        setField(conversation, "id", id);
+        setField(conversation, "createdAt", LocalDateTime.now());
+        return conversation;
+    }
+
+    private Matching matching(long matchingId, long farmerId) throws Exception {
+        Space space = newInstance(Space.class);
+        setField(space, "id", SPACE_ID);
+
+        Matching matching = newInstance(Matching.class);
+        setField(matching, "id", matchingId);
+        setField(matching, "space", space);
+        setField(matching, "farmer", user(farmerId));
+        setField(matching, "status", MatchingStatus.ACCEPTED);
+        return matching;
+    }
+
+    private <T> T newInstance(Class<T> type) throws Exception {
+        Constructor<T> constructor = type.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        return constructor.newInstance();
     }
 
     private void stubResponseData() throws Exception {

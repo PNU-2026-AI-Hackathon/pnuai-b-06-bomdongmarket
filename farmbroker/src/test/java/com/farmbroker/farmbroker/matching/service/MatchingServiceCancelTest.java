@@ -1,5 +1,6 @@
 package com.farmbroker.farmbroker.matching.service;
 
+import com.farmbroker.farmbroker.chat.service.ChatBlockService;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.Matching;
@@ -54,6 +55,10 @@ class MatchingServiceCancelTest {
 
     @Mock
     private SpaceContractAdapter spaceContractAdapter;
+
+    // 차단 여부는 chat 모듈이 판단한다. 기본값 false 라 차단 없는 상황이 그대로 된다.
+    @Mock
+    private ChatBlockService chatBlockService;
 
     @Mock
     private EntityManager entityManager;
@@ -114,6 +119,25 @@ class MatchingServiceCancelTest {
 
         assertThat(matchingService.apply(FARMER_ID, applyRequest()).getStatus())
                 .isEqualTo(MatchingStatus.REQUESTED);
+    }
+
+    // 차단이 채팅만 막는 표시로 남지 않게, 거래 재신청도 함께 막는다.
+    // 거절·취소만으로는 계속 다시 신청할 수 있어 받는 쪽이 멈출 방법이 없었다.
+    @Test
+    @DisplayName("차단한 사이에는 다시 신청할 수 없다")
+    void cannotReapplyWhenBlocked() {
+        User applicant = newUser(FARMER_ID);
+        given(userRepository.findActiveByIdForUpdate(FARMER_ID)).willReturn(Optional.of(applicant));
+        given(userRepository.findActiveByIdForUpdate(OWNER_ID)).willReturn(Optional.of(newUser(OWNER_ID)));
+        given(spaceContractAdapter.getSummaryById(SPACE_ID)).willReturn(availableSpaceSummary());
+        given(spaceContractAdapter.getSummaryByIdForUpdate(SPACE_ID)).willReturn(availableSpaceSummary());
+        given(matchingRepository.existsBySpaceIdAndFarmerIdAndStatus(
+                SPACE_ID, FARMER_ID, MatchingStatus.REQUESTED)).willReturn(false);
+        given(chatBlockService.isBlockedEitherDirection(FARMER_ID, OWNER_ID)).willReturn(true);
+
+        assertThatThrownBy(() -> matchingService.apply(FARMER_ID, applyRequest()))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MATCHING_BLOCKED);
     }
 
     // ── 픽스처 ────────────────────────────────────────────────────────────────
