@@ -1,4 +1,5 @@
 import { MessageCircle } from 'lucide-react';
+import { useState } from 'react';
 
 import { useChatDock } from '@/chat/chatDockContext';
 import { Badge } from '@/components/common/Badge';
@@ -35,8 +36,27 @@ export function ApplicationStatusPanel({
 }: ApplicationStatusPanelProps) {
   const confirmation = useDisclosure();
   const chatDock = useChatDock();
+  // 방을 만드는 요청이라 결과를 기다리는 시간이 있습니다. 그동안 아무 반응이 없으면
+  // 여러 번 눌려 방 생성 요청이 겹치고, 실패하면 아무 말 없이 묻혔습니다.
+  const [chatStatus, setChatStatus] = useState<AsyncStatus>('idle');
+  const [chatError, setChatError] = useState<string | null>(null);
   const isCanceling = actionStatus === 'loading';
   const isWaiting = application.status === 'REQUESTED';
+  const isOpeningChat = chatStatus === 'loading';
+
+  // 신청한 공간에 대한 문의 방을 엽니다. 이미 있으면 그 방이 열립니다.
+  function handleOpenChat() {
+    if (isOpeningChat) return;
+    setChatStatus('loading');
+    setChatError(null);
+    chatDock
+      .openContext('SPACE', application.spaceId)
+      .then(() => setChatStatus('success'))
+      .catch((caught: unknown) => {
+        setChatStatus('error');
+        setChatError(caught instanceof Error ? caught.message : '채팅방을 열지 못했습니다.');
+      });
+  }
 
   return (
     <Card padding="lg">
@@ -68,15 +88,20 @@ export function ApplicationStatusPanel({
 
       {/* 신청을 보낸 시점부터 공간 제공자와 이야기할 자리가 필요하므로 수락 전에도 노출합니다. */}
       <div className="mt-5">
-        {/* 신청한 공간에 대한 문의 방을 엽니다. 이미 있으면 그 방이 열립니다. */}
         <Button
           className="w-full"
-          onClick={() => void chatDock.openContext('SPACE', application.spaceId)}
+          disabled={isOpeningChat}
+          onClick={handleOpenChat}
           variant="outline"
         >
           <MessageCircle className="h-5 w-5" aria-hidden />
-          채팅방으로 이동
+          {isOpeningChat ? '채팅방 여는 중...' : '채팅방으로 이동'}
         </Button>
+        {chatError ? (
+          <p className="mt-2 text-sm font-semibold text-feedback-danger" role="alert">
+            {chatError}
+          </p>
+        ) : null}
       </div>
 
       {actionError ? (

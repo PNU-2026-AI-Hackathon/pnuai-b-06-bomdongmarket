@@ -23,6 +23,11 @@ export function ChatListPage() {
   const [filter, setFilter] = useState<ChatFilter>('ALL');
 
   const visible = conversations.filter((item) => matchesFilter(item, filter));
+  // 대화가 아예 없는 것과, 고른 탭에만 없는 것은 다른 상황입니다.
+  // 둘을 따로 가리지 않으면 공간 탭이 비었을 때 "대화가 없습니다" 안내와 마켓 둘러보기
+  // 버튼이 아래 "이 분류에는 대화가 없습니다" 와 함께 겹쳐 나옵니다.
+  const isEmpty = status === 'success' && conversations.length === 0;
+  const isFilteredOut = status === 'success' && conversations.length > 0 && visible.length === 0;
 
   return (
     <PageContainer narrow>
@@ -66,7 +71,7 @@ export function ChatListPage() {
         <ErrorState message="채팅 목록을 불러오지 못했습니다" onRetry={refresh} />
       ) : null}
 
-      {status === 'success' && visible.length === 0 ? (
+      {isEmpty ? (
         <EmptyState
           actionLabel="마켓 둘러보기"
           description="상품이나 공간 상세에서 말을 걸면 여기에 쌓입니다."
@@ -90,9 +95,11 @@ export function ChatListPage() {
         </ul>
       ) : null}
 
-      {status === 'success' && conversations.length > 0 && visible.length === 0 ? (
+      {/* 다른 탭에는 대화가 있으니 시작하라고 권하지 않고 어디를 보면 되는지만 알립니다. */}
+      {isFilteredOut ? (
         <p className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-          <MessageCircle className="h-4 w-4" aria-hidden />이 분류에는 대화가 없습니다.
+          <MessageCircle className="h-4 w-4" aria-hidden />이 분류에는 대화가 없습니다. 다른 탭을
+          확인해 보세요.
         </p>
       ) : null}
     </PageContainer>

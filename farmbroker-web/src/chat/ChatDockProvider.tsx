@@ -77,6 +77,7 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
 
   const { conversations, status, lastEvent, totalUnread, refresh } = useChatSocket(
     isAuthenticated,
+    user?.userId ?? null,
     handleIncoming,
   );
 
