@@ -9,6 +9,8 @@ import type {
 export interface AuthContextValue {
   isAuthenticated: boolean;
   user: User | null;
+  // 서버에서만 바뀌는 값(역할 등)을 다시 받아 오기 위한 재조회입니다.
+  refreshUser: () => Promise<void>;
   login: (input: LoginInput) => Promise<User>;
   logout: () => Promise<void>;
   updateUser: (input: UserUpdateInput) => Promise<User>;
