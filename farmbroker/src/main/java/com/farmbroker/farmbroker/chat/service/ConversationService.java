@@ -168,18 +168,24 @@ public class ConversationService {
                 .map(block -> otherUserId(block, userId))
                 .collect(Collectors.toSet());
 
-        Map<Long, Matching> matchingsBySpaceId = findMatchings(conversations, userId, otherUserIds);
+        Map<SpaceFarmer, Matching> matchings = findMatchings(conversations, userId, otherUserIds);
 
         return conversations.stream()
-                .map(conversation -> toResponse(conversation, otherUserIdsByConversation,
-                        otherUsersById, unreadCounts, blockedUserIds, matchingsBySpaceId))
+                .map(conversation -> toResponse(conversation, userId, otherUserIdsByConversation,
+                        otherUsersById, unreadCounts, blockedUserIds, matchings))
                 .toList();
     }
 
+    // 매칭을 고르는 키. 공간 하나에 신청자가 여럿일 수 있어(공간 주인이 여러 신청자와 대화하는 경우)
+    // spaceId 만으로 잡으면 모든 대화가 그 공간의 최신 매칭 하나를 함께 보게 된다 —
+    // 그러면 A 와의 대화에 뜬 계약서 버튼이 B 의 계약으로 연결된다.
+    private record SpaceFarmer(Long spaceId, Long farmerId) {
+    }
+
     // 공간 문의 대화에 걸린 매칭을 한 번에 받아 온다(대화마다 조회하면 N+1).
-    // 같은 공간에 재신청이 쌓여 있으면 최근 것만 남긴다.
-    private Map<Long, Matching> findMatchings(List<Conversation> conversations, Long userId,
-                                              Set<Long> otherUserIds) {
+    // 같은 공간·같은 농부로 재신청이 쌓여 있으면 최근 것만 남긴다.
+    private Map<SpaceFarmer, Matching> findMatchings(List<Conversation> conversations, Long userId,
+                                                     Set<Long> otherUserIds) {
         Set<Long> spaceIds = conversations.stream()
                 .filter(conversation -> conversation.getContextType() == ChatContextType.SPACE)
                 .map(Conversation::getContextId)
@@ -192,26 +198,36 @@ public class ConversationService {
         Set<Long> participantIds = new HashSet<>(otherUserIds);
         participantIds.add(userId);
 
-        Map<Long, Matching> latestBySpaceId = new HashMap<>();
+        Map<SpaceFarmer, Matching> latest = new HashMap<>();
         for (Matching matching : matchingRepository
                 .findBySpaceIdInAndFarmerIdInOrderByCreatedAtDesc(spaceIds, participantIds)) {
-            latestBySpaceId.putIfAbsent(matching.getSpace().getId(), matching);
+            latest.putIfAbsent(
+                    new SpaceFarmer(matching.getSpace().getId(), matching.getFarmer().getId()),
+                    matching);
         }
-        return latestBySpaceId;
+        return latest;
+    }
+
+    // 이 대화의 두 사람 중 농부인 쪽 매칭만 이 대화의 것이다.
+    private Matching matchingFor(Map<SpaceFarmer, Matching> matchings, Long spaceId,
+                                 Long userId, Long otherUserId) {
+        Matching asFarmer = matchings.get(new SpaceFarmer(spaceId, userId));
+        return asFarmer != null ? asFarmer : matchings.get(new SpaceFarmer(spaceId, otherUserId));
     }
 
     private ConversationResponse toResponse(
             Conversation conversation,
+            Long userId,
             Map<Long, Long> otherUserIdsByConversation,
             Map<Long, User> otherUsersById,
             Map<Long, Long> unreadCounts,
             Set<Long> blockedUserIds,
-            Map<Long, Matching> matchingsBySpaceId) {
+            Map<SpaceFarmer, Matching> matchings) {
         Long otherUserId = otherUserIdsByConversation.get(conversation.getId());
         User otherUser = Optional.ofNullable(otherUsersById.get(otherUserId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         Matching matching = conversation.getContextType() == ChatContextType.SPACE
-                ? matchingsBySpaceId.get(conversation.getContextId())
+                ? matchingFor(matchings, conversation.getContextId(), userId, otherUserId)
                 : null;
         return ConversationResponse.builder()
                 .conversationId(conversation.getId())
