@@ -64,10 +64,10 @@ export function CampaignCarousel() {
                   <p className="mb-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-leaf-50 ring-1 ring-white/20 backdrop-blur">
                     {slide.eyebrow}
                   </p>
-                  <h1 className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+                  <h1 className="break-keep text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
                     {slide.title}
                   </h1>
-                  <p className="mt-5 max-w-2xl text-base leading-7 text-leaf-50/90 sm:text-lg">
+                  <p className="mt-5 max-w-2xl break-keep text-base leading-7 text-leaf-50/90 sm:text-lg">
                     {slide.description}
                   </p>
                   <Link

@@ -38,10 +38,10 @@ export function RoleJourneySections() {
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-soil-500">
           One local cycle
         </p>
-        <h2 className="mx-auto mt-3 max-w-3xl text-3xl font-black text-ink-900 sm:text-4xl">
+        <h2 className="mx-auto mt-3 max-w-3xl break-keep text-3xl font-black text-ink-900 sm:text-4xl">
           공간에서 재배로, 수확에서 소비로 이어지는 도심 스마트팜 생태계
         </h2>
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600">
+        <p className="mx-auto mt-5 max-w-2xl break-keep text-base leading-7 text-slate-600">
           {APP_INFO.name}는 유휴공간, 도심 농부, 지역 소비자를 연결해 생산부터 판매까지
           생활권 안에서 순환하도록 돕습니다.
         </p>
@@ -64,11 +64,11 @@ export function RoleJourneySections() {
                 <p className="mt-4 text-base font-bold text-leaf-700">{role.label}</p>
                 <h2
                   id={`${role.id}-role-title`}
-                  className="mt-2 text-3xl font-black leading-tight text-ink-900 sm:text-4xl"
+                  className="mt-2 break-keep text-3xl font-black leading-tight text-ink-900 sm:text-4xl"
                 >
                   {role.title}
                 </h2>
-                <p className="mt-5 text-base leading-7 text-slate-600">
+                <p className="mt-5 break-keep text-base leading-7 text-slate-600">
                   {role.description}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-2">
@@ -122,10 +122,15 @@ export function RoleJourneySections() {
                 >
                   {role.previewLabel}
                 </p>
-                <h3 className="relative mt-3 text-2xl font-black leading-snug">
+                <h3 className="relative mt-3 break-keep text-2xl font-black leading-snug">
                   {role.previewTitle}
                 </h3>
-                <p className={cn('relative mt-4 text-sm leading-7', styles.description)}>
+                <p
+                  className={cn(
+                    'relative mt-4 break-keep text-sm leading-7',
+                    styles.description,
+                  )}
+                >
                   {role.previewDescription}
                 </p>
                 <div className="relative mt-7 grid gap-2 sm:grid-cols-3">

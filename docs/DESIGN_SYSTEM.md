@@ -49,6 +49,7 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - 본문은 기본 14px라도 긴 설명에는 24px line-height를 유지한다.
 - 숫자/핵심 지표의 `font-black`은 기존 대시보드와 가격 표현에서만 유지한다.
 - 작은 eyebrow는 canvas 대비 6.13:1인 semantic `accent`를 사용한다. 장식 목적의 `soil-500`을 본문 텍스트로 복제하지 않는다.
+- 한국어 홍보 문구는 `break-keep`으로 어절 단위 개행을 유지한다. `<br />`이나 `&nbsp;`로 줄바꿈을 고정하지 않는다.
 
 ### 간격과 크기
 
@@ -161,6 +162,16 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 - 접근성: role=dialog와 aria-modal, 제목 연결, 명시적인 닫기 버튼을 제공한다. 열릴 때 모달 내부로 focus를 옮기고 Tab을 모달 안에 가두며, Escape·backdrop·닫기 버튼으로 닫은 뒤 알림 버튼으로 focus를 복귀시킨다.
 - 스크롤: 열린 동안 body 스크롤을 잠그고, 작은 화면에서는 모달 내부 목록만 스크롤한다.
 
+### Footer
+
+- 목적: 서비스 주체(팀명), 저작권, 문의 창구, 주요 화면 바로가기를 담아 화면 하단을 마감한다.
+- 범위: 현재 홈 전용이다. 다른 화면에도 필요해지면 `AppLayout`으로 올리고 `PageContainer`의 하단 여백과 함께 조정한다.
+- 구조: `<footer>` 하나로 `contentinfo` landmark를 제공하고, 폭은 헤더와 같은 `max-w-7xl px-4 sm:px-6`을 맞춘다. `PageContainer`는 `<main>`을 렌더하므로 footer 안에 쓰지 않는다.
+- 바로가기: `PRIMARY_NAVIGATION`을 재사용하고 `<nav aria-label="서비스 바로가기">`로 헤더 내비게이션과 landmark를 구분한다.
+- 외부 링크: `<a target="_blank" rel="noreferrer">`에 lucide 아이콘(`ExternalLink`, `Github`)을 함께 둔다. `index.css`가 링크 색과 밑줄을 제거하므로 `text-content-muted hover:text-action hover:underline`처럼 색·밑줄을 명시한다.
+- 없는 화면으로 연결하지 않는다. 이용약관·개인정보처리방침 페이지가 없는 동안은 항목을 넣지 않는다. catch-all 라우트가 홈으로 되돌려 보내 사용자가 이유를 알 수 없다.
+- 여백: 모바일 고정 하단 탭에 가려지지 않도록 `pb-24 lg:pb-10`을 footer가 직접 갖는다.
+
 ### LoadingState, EmptyState, ErrorState
 
 - `LoadingState`: `role="status"`와 현재 작업을 설명하는 문구를 제공한다. spinner는 장식으로 숨긴다.
@@ -207,6 +218,7 @@ CSS custom property는 공백으로 구분한 RGB 채널이며 Tailwind에서 al
 | Textarea                                       | 신규 규격      | 등록 메모·URL·매칭 메시지에 적용        |
 | ConfirmDialog                                  | 신규 규격      | 매칭 신청·신청 취소 확인에 적용         |
 | PageHeader                                     | 확장 적용      | 목록·폼·인증 정렬과 action breakpoint   |
+| Footer                                         | 신규 규격      | 홈 전용, 필요 시 AppLayout으로 승격     |
 | LoadingState                                   | 규격화         | spinner를 보조기술에서 숨김             |
 | 공간 목록 `/spaces`                            | 시험 적용 완료 | 대표 화면                               |
 | 목록·등록·인증·상세 보조 화면                  | 선택 적용 완료 | 반복 헤더·필드·카드·링크만 교체         |
