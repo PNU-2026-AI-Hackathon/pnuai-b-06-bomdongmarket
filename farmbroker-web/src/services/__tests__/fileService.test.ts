@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { MAX_IMAGE_COUNT, deleteImage, isAcceptedImage } from '@/services/fileService';
+import {
+  ACCEPTED_CHAT_IMAGE_TYPES,
+  MAX_IMAGE_COUNT,
+  deleteImage,
+  isAcceptedChatImage,
+  isAcceptedImage,
+} from '@/services/fileService';
 
 function file(name: string, type: string) {
   return new File([new Uint8Array(8)], name, { type });
@@ -23,6 +29,26 @@ describe('isAcceptedImage', () => {
 
   it('백엔드와 같은 최대 장수를 사용한다', () => {
     expect(MAX_IMAGE_COUNT).toBe(10);
+  });
+});
+
+// 채팅 사진은 백엔드 ChatImageStorage 가 받고, 상품 이미지와 허용 목록이 다르다.
+// 여기서 gif 를 통과시키면 서버가 FILE_TYPE_NOT_SUPPORTED 로 되돌려 전송 직전에 실패한다.
+describe('isAcceptedChatImage', () => {
+  it('서버가 받는 형식만 통과시킨다', () => {
+    expect(isAcceptedChatImage(file('상추.jpg', 'image/jpeg'))).toBe(true);
+    expect(isAcceptedChatImage(file('상추.JPEG', 'image/jpeg'))).toBe(true);
+    expect(isAcceptedChatImage(file('상추.png', 'image/png'))).toBe(true);
+    expect(isAcceptedChatImage(file('상추.webp', 'image/webp'))).toBe(true);
+  });
+
+  it('상품 이미지에서는 되는 gif 를 채팅에서는 거른다', () => {
+    expect(isAcceptedImage(file('흔들흔들.gif', 'image/gif'))).toBe(true);
+    expect(isAcceptedChatImage(file('흔들흔들.gif', 'image/gif'))).toBe(false);
+  });
+
+  it('고르는 창에도 서버가 받는 형식만 제시한다', () => {
+    expect(ACCEPTED_CHAT_IMAGE_TYPES).toBe('.jpg,.jpeg,.png,.webp');
   });
 });
 

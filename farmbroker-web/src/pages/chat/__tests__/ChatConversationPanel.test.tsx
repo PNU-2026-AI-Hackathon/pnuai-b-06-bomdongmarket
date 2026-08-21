@@ -97,6 +97,15 @@ describe('ChatConversationPanel', () => {
     expect(screen.queryByText('lettuce.jpg')).not.toBeInTheDocument();
   });
 
+  // 서버(ChatImageStorage)는 gif 를 받지 않는다. 고르는 창이 gif 를 제시하면
+  // 골라 놓고 보내는 순간에야 FILE_TYPE_NOT_SUPPORTED 로 막힌다.
+  it('사진 고르는 창은 서버가 받는 형식만 제시한다', async () => {
+    renderWithProviders(<ChatConversationPanel conversationId={1} myUserId={1} />);
+
+    await screen.findByText('상추 아직 남아 있나요?');
+    expect(screen.getByLabelText('사진 선택')).toHaveAttribute('accept', '.jpg,.jpeg,.png,.webp');
+  });
+
   // 목업 대화에는 메시지가 2건뿐이라 더 불러올 것이 없다.
   it('더 불러올 이전 메시지가 없으면 버튼을 두지 않는다', async () => {
     renderWithProviders(<ChatConversationPanel conversationId={1} myUserId={1} />);

@@ -12,7 +12,11 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 const socket: { onIncoming: ((message: IncomingMessage) => void) | null } = { onIncoming: null };
 
 vi.mock('@/chat/useChatSocket', () => ({
-  useChatSocket: (_enabled: boolean, onIncoming: (message: IncomingMessage) => void) => {
+  useChatSocket: (
+    _enabled: boolean,
+    _userId: number | null,
+    onIncoming: (message: IncomingMessage) => void,
+  ) => {
     socket.onIncoming = onIncoming;
     return {
       conversations: [],
