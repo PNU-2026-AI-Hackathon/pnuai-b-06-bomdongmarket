@@ -2,6 +2,7 @@ package com.farmbroker.farmbroker.product.service;
 
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
+import com.farmbroker.farmbroker.matching.repository.MatchingRepository;
 import com.farmbroker.farmbroker.product.domain.Product;
 import com.farmbroker.farmbroker.product.domain.ProductCategory;
 import com.farmbroker.farmbroker.product.dto.ProductCreateRequest;
@@ -28,7 +29,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 // 로컬마켓 상품 서비스의 핵심 규칙을 검증한다.
 // DB 없이 돌도록 레포지토리는 목으로 대체한다(이 프로젝트는 H2 없이 MySQL만 쓴다).
@@ -46,6 +49,9 @@ class ProductServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private MatchingRepository matchingRepository;
 
     @InjectMocks
     private ProductService productService;
@@ -81,6 +87,7 @@ class ProductServiceTest {
     void createFixesProducerNameToNickname() {
         given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(seller("어반리프")));
         given(productRepository.save(any(Product.class))).willAnswer(inv -> inv.getArgument(0));
+        given(matchingRepository.countContractsCovering(eq(1L), any(), any())).willReturn(1L);
 
         ProductDetailResponse response = productService.create(1L, createRequest("""
                 {
@@ -104,6 +111,7 @@ class ProductServiceTest {
         given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(seller("어반리프")));
         given(productRepository.save(any(Product.class))).willAnswer(inv -> inv.getArgument(0));
         given(eventRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
+        given(matchingRepository.countContractsCovering(eq(1L), any(), any())).willReturn(1L);
 
         String today = LocalDate.now().toString();
         ProductDetailResponse response = productService.create(1L, createRequest("""
@@ -260,6 +268,84 @@ class ProductServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN_ROLE);
+    }
+
+    @Test
+    @DisplayName("수확일이 계약 기간 밖이면 등록할 수 없다")
+    void createRejectsHarvestDateOutsideContract() {
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(seller("어반리프")));
+        given(matchingRepository.countContractsCovering(eq(1L), eq(7L), eq(LocalDate.of(2027, 1, 1)))).willReturn(0L);
+
+        assertThatThrownBy(() -> productService.create(1L, createRequest("""
+                {
+                  "name": "버터헤드 상추",
+                  "category": "잎채소",
+                  "price": 4300,
+                  "unit": "팩",
+                  "stock": 24,
+                  "harvestDate": "2027-01-01",
+                  "productionLocation": "장전 스마트팔",
+                  "spaceId": 7
+                }
+                """)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.HARVEST_DATE_OUT_OF_CONTRACT);
+    }
+
+    @Test
+    @DisplayName("확정 계약이 하나도 없는 판매자는 등록할 수 없다")
+    void createRejectsSellerWithoutContract() {
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(seller("어반리프")));
+        // spaceId를 안 보낸 요청은 판매자의 계약 전체를 보지만, 그러고도 0건이면 막힌다.
+        given(matchingRepository.countContractsCovering(eq(1L), eq(null), any())).willReturn(0L);
+
+        assertThatThrownBy(() -> productService.create(1L, createRequest("""
+                {
+                  "name": "버터헤드 상추",
+                  "category": "잎채소",
+                  "price": 4300,
+                  "unit": "팩",
+                  "stock": 24,
+                  "harvestDate": "2026-07-05",
+                  "productionLocation": "장전 스마트팔"
+                }
+                """)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.HARVEST_DATE_OUT_OF_CONTRACT);
+    }
+
+    @Test
+    @DisplayName("수확일을 계약 기간 밖으로 수정할 수 없다")
+    void updateRejectsHarvestDateOutsideContract() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 3, null);
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(owner));
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+        given(matchingRepository.countContractsCovering(eq(1L), any(), eq(LocalDate.of(2027, 1, 1)))).willReturn(0L);
+
+        assertThatThrownBy(() -> productService.update(
+                1L, 10L, updateRequest("{ \"harvestDate\": \"2027-01-01\" }")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.HARVEST_DATE_OUT_OF_CONTRACT);
+    }
+
+    @Test
+    @DisplayName("수확일·공간을 건드리지 않는 수정은 계약을 조회하지 않는다")
+    void updateWithoutHarvestDateSkipsContractCheck() {
+        User owner = seller("어반리프");
+        ReflectionTestUtils.setField(owner, "id", 1L);
+        Product product = product(owner, 3, null);
+        given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.of(owner));
+        given(productRepository.findForUpdate(10L)).willReturn(Optional.of(product));
+
+        productService.update(1L, 10L, updateRequest("{ \"stock\": 10 }"));
+
+        assertThat(product.getStock()).isEqualTo(10);
+        verifyNoInteractions(matchingRepository);
     }
 
     private Product product(User owner, int stock, String imageUrl) {

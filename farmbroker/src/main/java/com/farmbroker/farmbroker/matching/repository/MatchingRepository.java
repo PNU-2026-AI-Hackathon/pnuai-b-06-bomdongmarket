@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -78,6 +79,17 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
             "AND s.status = com.farmbroker.farmbroker.space.domain.SpaceStatus.MATCHED " +
             "AND (m.farmer.id = :userId OR s.owner.id = :userId)")
     List<Matching> findActiveContractsByUserIdForUpdate(@Param("userId") Long userId);
+
+    // 수확일을 품는 확정 계약이 몇 건인지 — 상품의 수확일이 계약 기간 안인지 검증할 때 쓴다.
+    // spaceId가 null이면(공간 지정 없이 등록) 판매자의 확정 계약 전체를 대상으로 본다.
+    // 경계일은 포함이며(시작일·종료일 당일 수확은 정상), 기간이 비어 있는 행은 날짜 비교에서 자연히 걸러진다.
+    @Query("SELECT count(m) FROM Matching m WHERE m.farmer.id = :farmerId "
+            + "AND m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.ACCEPTED "
+            + "AND m.contractStartDate <= :harvestDate AND m.contractEndDate >= :harvestDate "
+            + "AND (:spaceId IS NULL OR m.space.id = :spaceId)")
+    long countContractsCovering(@Param("farmerId") Long farmerId,
+                                @Param("spaceId") Long spaceId,
+                                @Param("harvestDate") LocalDate harvestDate);
 
     @Modifying(flushAutomatically = true)
     @Query("UPDATE Matching m SET m.status = com.farmbroker.farmbroker.matching.domain.MatchingStatus.CANCELED, " +
