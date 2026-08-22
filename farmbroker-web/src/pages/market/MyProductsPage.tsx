@@ -76,7 +76,7 @@ export function MyProductsPage() {
         <PageHeader
           action={
             <Link className={buttonStyles()} to={ROUTES.newProduct}>
-              <Plus className="h-4 w-4" aria-hidden />
+              <Plus className="h-5 w-5" aria-hidden />
               상품 등록
             </Link>
           }
