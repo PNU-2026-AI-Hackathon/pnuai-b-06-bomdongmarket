@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useAuth } from '@/auth/authContext';
@@ -20,8 +20,19 @@ import {
   validateAmounts,
   type ContractAmountErrors,
 } from '@/pages/contract/constants/contractAmounts';
+import {
+  nextDay,
+  startDateBounds,
+  validatePeriod,
+  type ContractPeriodErrors,
+} from '@/pages/contract/constants/contractDates';
 import { useContract } from '@/pages/contract/hooks/useContract';
-import type { ContractDetail, ContractTermsInput, MaintenanceFeePayer } from '@/types/api';
+import type {
+  ContractDetail,
+  ContractParty,
+  ContractTermsInput,
+  MaintenanceFeePayer,
+} from '@/types/api';
 
 // 매칭 1건에 붙는 계약서 화면입니다.
 // 이름(양측 닉네임)과 주소는 기존 정보를 그대로 보여주고, 금액·관리비 책임소재·계약기간만 입력받습니다.
@@ -197,7 +208,11 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
   const [startDate, setStartDate] = useState(contract.startDate ?? '');
   const [endDate, setEndDate] = useState(contract.endDate ?? '');
   const [amountErrors, setAmountErrors] = useState<ContractAmountErrors>({});
-  const [periodError, setPeriodError] = useState<string | null>(null);
+  const [periodErrors, setPeriodErrors] = useState<ContractPeriodErrors>({});
+  const [payerError, setPayerError] = useState<string | null>(null);
+  // 달력 경계는 화면을 여는 순간의 오늘을 기준으로 한 번만 잡습니다 —
+  // 매 렌더마다 새로 계산하면 값이 같아도 min/max가 계속 바뀝니다.
+  const dateBounds = useMemo(() => startDateBounds(), []);
 
   useEffect(() => {
     setMonthlyRent(contract.monthlyRent?.toString() ?? '');
@@ -240,13 +255,20 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
       return;
     }
 
-    if (endDate <= startDate) {
-      setPeriodError('계약 종료일은 시작일보다 뒤여야 합니다.');
+    // 달력의 min/max를 지나쳐 온 값도 여기서 다시 걸러 냅니다.
+    const periodIssues = validatePeriod({ startDate, endDate });
+    setPeriodErrors(periodIssues);
+    if (Object.keys(periodIssues).length > 0) {
       return;
     }
 
-    setPeriodError(null);
-    // 책임소재는 required 선택박스라 빈 값으로 여기까지 오지 않습니다.
+    // 브라우저 검증을 끈 대신(아래 noValidate) 필수 선택도 여기서 확인합니다.
+    if (!maintenanceFeePayer) {
+      setPayerError('관리비 책임소재를 선택해 주세요.');
+      return;
+    }
+
+    setPayerError(null);
     onSave({
       monthlyRent: Number(monthlyRent),
       maintenanceFee: Number(maintenanceFee),
@@ -266,7 +288,11 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
           : '공간 제공자가 입력한 조건입니다. 수정은 공간 제공자만 할 수 있습니다.'}
       </p>
 
-      <form className="mt-5 grid gap-4" onSubmit={submit}>
+      {/* 브라우저 기본 검증을 끕니다. 켜 두면 이 변경 이전에 저장된 계약처럼
+          시작일이 이미 ±2주 밖인 계약에서 제출 자체가 취소되어, 아무 안내 없이
+          저장 버튼이 먹통이 됩니다. 검증은 아래 submit이 모두 맡아 같은 자리에
+          한국어 문구로 보여 줍니다(min/max는 달력을 좁히는 역할만 합니다). */}
+      <form className="mt-5 grid gap-4" noValidate onSubmit={submit}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             errorMessage={amountErrors.monthlyRent}
@@ -312,6 +338,7 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
           {/* 관리비를 내는 쪽은 둘 중 하나라 역할 이름 대신 각자의 닉네임으로 고릅니다. */}
           <Select
             disabled={!canEdit}
+            errorMessage={payerError ?? undefined}
             label="관리비 책임소재"
             name="maintenanceFeePayer"
             onChange={(event) =>
@@ -326,8 +353,14 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
           </Select>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* 달력 자체를 좁혀 고를 수 없는 날짜를 먼저 회색으로 만듭니다.
+              회색으로 막힌 이유를 알 수 있게 시작일에는 안내 문구를 함께 둡니다. */}
           <Input
+            errorMessage={periodErrors.startDate}
+            helperText="오늘부터 앞뒤 2주 이내"
             label="계약 시작일"
+            max={dateBounds.max}
+            min={dateBounds.min}
             name="startDate"
             onChange={(event) => setStartDate(event.target.value)}
             readOnly={!canEdit}
@@ -336,8 +369,9 @@ function TermsCard({ contract, isSubmitting, onDirtyChange, onSave }: TermsCardP
             value={startDate}
           />
           <Input
-            errorMessage={periodError ?? undefined}
+            errorMessage={periodErrors.endDate}
             label="계약 종료일"
+            min={startDate ? nextDay(startDate) : undefined}
             name="endDate"
             onChange={(event) => setEndDate(event.target.value)}
             readOnly={!canEdit}
@@ -361,6 +395,15 @@ function isCanceled(contract: ContractDetail) {
   return contract.status === 'REJECTED' || contract.status === 'CANCELED';
 }
 
+// 취소는 누른 쪽에만 표시합니다 — 상대는 취소 직전의 동의 상태를 그대로 둡니다.
+// 다만 누가 취소했는지 서버가 모르는 계약(확정에 밀린 자동 거절, 취소자 기록 이전에 쌓인 건)은
+// 한쪽을 고를 근거가 없어 예전처럼 양쪽에 표시합니다.
+function canceledParty(contract: ContractDetail, party: ContractParty) {
+  return (
+    isCanceled(contract) && (contract.canceledBy === null || contract.canceledBy === party)
+  );
+}
+
 function AgreementCard({ contract }: { contract: ContractDetail }) {
   return (
     <Card padding="lg">
@@ -368,12 +411,12 @@ function AgreementCard({ contract }: { contract: ContractDetail }) {
       <ul className="mt-4 grid gap-3 text-body-sm">
         <AgreementRow
           agreed={contract.ownerAgreed}
-          canceled={isCanceled(contract)}
+          canceled={canceledParty(contract, 'OWNER')}
           label={contract.ownerNickname}
         />
         <AgreementRow
           agreed={contract.farmerAgreed}
-          canceled={isCanceled(contract)}
+          canceled={canceledParty(contract, 'FARMER')}
           label={contract.farmerNickname}
         />
       </ul>

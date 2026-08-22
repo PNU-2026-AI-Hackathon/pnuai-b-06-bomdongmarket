@@ -4,6 +4,7 @@ import com.farmbroker.farmbroker.chat.service.ChatBlockService;
 import com.farmbroker.farmbroker.common.exception.BusinessException;
 import com.farmbroker.farmbroker.common.exception.ErrorCode;
 import com.farmbroker.farmbroker.matching.domain.MaintenanceFeePayer;
+import com.farmbroker.farmbroker.matching.domain.ContractParty;
 import com.farmbroker.farmbroker.matching.domain.Matching;
 import com.farmbroker.farmbroker.matching.domain.MatchingStatus;
 import com.farmbroker.farmbroker.matching.domain.MatchingType;
@@ -28,6 +29,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -146,13 +148,16 @@ class MatchingServiceContractTest {
     @DisplayName("종료일이 시작일보다 앞서면 저장할 수 없다")
     void updateTermsWithInvalidPeriodIsRejected() {
         givenLockedMatching(matching());
+        // 시작일은 창(오늘 ±2주) 안에 두고 종료일만 앞으로 당긴다 —
+        // 시작일까지 범위 밖이면 종료일 검증에 닿기 전에 걸러진다.
+        LocalDate startDate = LocalDate.now().plusDays(7);
         ContractTermsRequest reversed = termsJson("""
                 {
                   "monthlyRent": 500000, "maintenanceFee": 50000,
                   "maintenanceFeePayer": "FARMER", "deposit": 3000000,
-                  "startDate": "2026-12-31", "endDate": "2026-09-01"
+                  "startDate": "%s", "endDate": "%s"
                 }
-                """);
+                """.formatted(startDate, startDate.minusDays(1)));
 
         assertThatThrownBy(() -> matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, reversed))
                 .isInstanceOf(BusinessException.class)
@@ -290,6 +295,64 @@ class MatchingServiceContractTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_CLOSED);
     }
 
+    // 취소 표시를 누른 쪽에만 붙이려면 누가 눌렀는지 남아 있어야 한다 —
+    // 상대는 취소 직전의 동의 상태를 그대로 보여준다.
+    @Test
+    @DisplayName("계약을 취소하면 누른 쪽이 취소자로 남는다")
+    void cancelRecordsWhoCanceled() {
+        Matching canceledByFarmer = matching();
+        givenLockedMatching(canceledByFarmer);
+
+        ContractResponse farmerResponse = matchingService.cancelContract(MATCHING_ID, FARMER_ID);
+
+        assertThat(farmerResponse.getCanceledBy()).isEqualTo(ContractParty.FARMER);
+        assertThat(canceledByFarmer.getContractCanceledBy()).isEqualTo(ContractParty.FARMER);
+
+        Matching canceledByOwner = matching();
+        givenLockedMatching(canceledByOwner);
+
+        ContractResponse ownerResponse = matchingService.cancelContract(MATCHING_ID, OWNER_ID);
+
+        assertThat(ownerResponse.getCanceledBy()).isEqualTo(ContractParty.OWNER);
+        assertThat(canceledByOwner.getContractCanceledBy()).isEqualTo(ContractParty.OWNER);
+    }
+
+    @Test
+    @DisplayName("취소 전 계약에는 취소자가 없다")
+    void draftContractHasNoCanceler() {
+        given(matchingRepository.findById(MATCHING_ID)).willReturn(Optional.of(matching()));
+
+        assertThat(matchingService.getContract(MATCHING_ID, FARMER_ID).getCanceledBy()).isNull();
+    }
+
+    // 프론트 달력의 min/max와 같은 규칙 — API를 직접 부르는 경로도 같이 막는다.
+    @Test
+    @DisplayName("계약 시작일이 오늘 앞뒤 2주 밖이면 저장할 수 없다")
+    void startDateOutsideWindowIsRejected() {
+        givenLockedMatching(matching());
+
+        for (LocalDate outside : new LocalDate[]{
+                LocalDate.now().plusDays(15), LocalDate.now().minusDays(15)}) {
+            assertThatThrownBy(() ->
+                    matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000, outside)))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_INVALID_START_DATE);
+        }
+    }
+
+    @Test
+    @DisplayName("계약 시작일 앞뒤 2주 경계는 저장할 수 있다")
+    void startDateOnWindowBoundaryIsAccepted() {
+        Matching matching = matching();
+        givenLockedMatching(matching);
+
+        for (LocalDate boundary : new LocalDate[]{
+                LocalDate.now().plusDays(14), LocalDate.now().minusDays(14)}) {
+            matchingService.updateContractTerms(MATCHING_ID, OWNER_ID, terms(500_000, boundary));
+            assertThat(matching.getContractStartDate()).isEqualTo(boundary);
+        }
+    }
+
     // ── 픽스처 ────────────────────────────────────────────────────────────────
 
     private Matching matching() {
@@ -325,13 +388,18 @@ class MatchingServiceContractTest {
     }
 
     private ContractTermsRequest terms(int monthlyRent) {
+        return terms(monthlyRent, LocalDate.now().plusDays(7));
+    }
+
+    // 시작일은 오늘 ±2주 안에서만 받으므로 날짜를 고정하면 시간이 지나면서 테스트가 깨진다.
+    private ContractTermsRequest terms(int monthlyRent, LocalDate startDate) {
         return termsJson("""
                 {
                   "monthlyRent": %d, "maintenanceFee": 50000,
                   "maintenanceFeePayer": "FARMER", "deposit": 3000000,
-                  "startDate": "2026-09-01", "endDate": "2027-08-31"
+                  "startDate": "%s", "endDate": "%s"
                 }
-                """.formatted(monthlyRent));
+                """.formatted(monthlyRent, startDate, startDate.plusYears(1)));
     }
 
     // 요청 DTO는 세터가 없어 Jackson으로 만든다 — 실제 요청과 같은 경로다.

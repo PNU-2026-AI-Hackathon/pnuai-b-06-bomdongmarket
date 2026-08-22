@@ -53,6 +53,7 @@ public enum ErrorCode {
     CONTRACT_TERMS_CHANGED(HttpStatus.CONFLICT, "계약 조건이 변경되었습니다. 다시 확인해 주세요."),
     CONTRACT_TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "월세와 계약기간을 먼저 입력해야 합니다."),
     CONTRACT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "계약 종료일은 시작일보다 뒤여야 합니다."),
+    CONTRACT_INVALID_START_DATE(HttpStatus.BAD_REQUEST, "계약 시작일은 오늘부터 앞뒤 2주 이내여야 합니다."),
 
     // ── ai (소유: 백엔드 3) ──────────────────────────────────────────────────
     AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다."),

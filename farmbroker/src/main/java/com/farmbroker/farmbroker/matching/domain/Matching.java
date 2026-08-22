@@ -96,6 +96,12 @@ public class Matching {
 
     private LocalDateTime farmerAgreedAt;
 
+    // 계약을 취소한 쪽. 아직 취소되지 않았거나, 확정에 밀려 자동 거절된 신청은 null이다
+    // (벌크 UPDATE로 정리되는 건에는 '취소를 누른 사람'이 없다).
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ContractParty contractCanceledBy;
+
     @Builder
     public Matching(Space space, User farmer, String message, MatchingType type) {
         this.space = space;
@@ -114,14 +120,18 @@ public class Matching {
     }
 
     // 한쪽이 계약을 취소한 상태. 되돌릴 수 없다.
-    public void reject() {
+    // 누가 눌렀는지 함께 남긴다 — 동의 현황에 취소 표시를 누른 쪽에만 붙이려면 필요하다.
+    public void reject(ContractParty canceledBy) {
         this.status = MatchingStatus.REJECTED;
+        this.contractCanceledBy = canceledBy;
         this.respondedAt = LocalDateTime.now();
     }
 
     // 신청자 본인 취소. 행을 지우지 않고 CANCELED로 남겨 신청 이력을 보존한다.
+    // 철회할 수 있는 사람은 신청자(도심 농부)뿐이라 취소한 쪽도 언제나 FARMER다.
     public void cancel() {
         this.status = MatchingStatus.CANCELED;
+        this.contractCanceledBy = ContractParty.FARMER;
         this.respondedAt = LocalDateTime.now();
     }
 
