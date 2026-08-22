@@ -3,12 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { clearAuthSession, saveAuthSession } from '@/auth/session';
+import { Header } from '@/components/layout/Header';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
-import { getDashboardData, type DashboardData } from '@/services/dashboardService';
+import {
+  getApplicationNotifications,
+  getDashboardData,
+  type ApplicationNotifications,
+  type DashboardData,
+} from '@/services/dashboardService';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { UserRole } from '@/types/api';
 
-vi.mock('@/services/dashboardService', () => ({ getDashboardData: vi.fn() }));
+vi.mock('@/services/dashboardService', () => ({
+  getApplicationNotifications: vi.fn(),
+  getDashboardData: vi.fn(),
+}));
 
 const farmerSession = {
   userId: 2,
@@ -25,18 +34,23 @@ const emptyDashboard: DashboardData = {
   wishlistItems: [],
 };
 
+const emptyNotifications: ApplicationNotifications = {
+  receivedApplications: [],
+  sentApplications: [],
+};
+
 afterEach(() => {
   cleanup();
   clearAuthSession();
   vi.clearAllMocks();
 });
 
-describe('Dashboard 신청 알림', () => {
+describe('Header 신청 알림', () => {
   it('보낸 신청을 상태와 함께 표시하고 신청 화면으로 연결한다', async () => {
     const user = userEvent.setup();
     saveAuthSession(farmerSession);
-    vi.mocked(getDashboardData).mockResolvedValue({
-      ...emptyDashboard,
+    vi.mocked(getApplicationNotifications).mockResolvedValue({
+      ...emptyNotifications,
       sentApplications: [
         {
           contractId: 20,
@@ -51,7 +65,7 @@ describe('Dashboard 신청 알림', () => {
       ],
     });
 
-    renderWithProviders(<DashboardPage />);
+    renderWithProviders(<Header />, { authenticated: true });
     await user.click(await screen.findByRole('button', { name: '알림' }));
 
     const dialog = screen.getByRole('dialog');
@@ -66,8 +80,8 @@ describe('Dashboard 신청 알림', () => {
   it('보낸 신청 상태를 협의 중과 계약 확정으로 표시한다', async () => {
     const user = userEvent.setup();
     saveAuthSession(farmerSession);
-    vi.mocked(getDashboardData).mockResolvedValue({
-      ...emptyDashboard,
+    vi.mocked(getApplicationNotifications).mockResolvedValue({
+      ...emptyNotifications,
       sentApplications: (['REQUESTED', 'ACCEPTED'] as const).map((status, index) => ({
         contractId: index,
         spaceId: index + 1,
@@ -80,7 +94,7 @@ describe('Dashboard 신청 알림', () => {
       })),
     });
 
-    renderWithProviders(<DashboardPage />);
+    renderWithProviders(<Header />, { authenticated: true });
     await user.click(await screen.findByRole('button', { name: '알림, 응답 대기 1건' }));
 
     const dialog = screen.getByRole('dialog');

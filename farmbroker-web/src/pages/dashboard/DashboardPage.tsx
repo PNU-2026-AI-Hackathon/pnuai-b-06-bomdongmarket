@@ -1,19 +1,11 @@
-import { Bell, UserRound } from 'lucide-react';
-import { useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-import { useAuth } from '@/auth/authContext';
-import { hasRole } from '@/auth/roles';
 import type { BadgeTone } from '@/components/common/Badge';
-import { Button } from '@/components/common/Button';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
-import { buttonStyles } from '@/components/common/buttonStyles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
-import { useDisclosure } from '@/hooks/useDisclosure';
-import { ApplicationNotificationsDialog } from '@/pages/dashboard/components/ApplicationNotificationsDialog';
 import { DashboardCarousel } from '@/pages/dashboard/components/DashboardCarousel';
 import { DashboardWishlistItemCard } from '@/pages/dashboard/components/DashboardWishlistItemCard';
 import { DashboardSpaceCard } from '@/pages/dashboard/components/DashboardSpaceCard';
@@ -29,29 +21,9 @@ const spaceStatusTones: Record<SpaceStatus, BadgeTone> = {
 
 // 로그인 이후의 공간·계약·찜 현황과 신청 알림을 한 곳에서 제공합니다.
 export function DashboardPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const notifications = useDisclosure();
-  const notificationButtonRef = useRef<HTMLButtonElement>(null);
-  const {
-    ownedSpaces,
-    contractedSpaces,
-    receivedApplications,
-    sentApplications,
-    wishlistItems,
-    status,
-    error,
-    actionError,
-    reload,
-    dismissMatching,
-  } = useDashboard();
-  const isOwner = hasRole(user, 'OWNER');
-  const pendingCount =
-    (isOwner
-      ? receivedApplications.filter((application) => application.status === 'REQUESTED')
-          .length
-      : 0) +
-    sentApplications.filter((application) => application.status === 'REQUESTED').length;
+  const { ownedSpaces, contractedSpaces, wishlistItems, status, error, reload } =
+    useDashboard();
 
   return (
     <PageContainer>
@@ -63,33 +35,6 @@ export function DashboardPage() {
           <h1 className="mt-1 text-page-title text-content sm:text-page-title-lg">
             대시보드
           </h1>
-        </div>
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <Button
-            aria-label={
-              pendingCount > 0 ? '알림, 응답 대기 ' + pendingCount + '건' : '알림'
-            }
-            className="relative h-11 w-11 px-0"
-            onClick={notifications.open}
-            ref={notificationButtonRef}
-            variant="outline"
-          >
-            <Bell className="h-5 w-5" aria-hidden />
-            {pendingCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-feedback-danger px-1 text-xs font-bold text-content-inverse">
-                {pendingCount > 99 ? '99+' : pendingCount}
-              </span>
-            ) : null}
-          </Button>
-          <Link
-            aria-label="마이페이지"
-            className={buttonStyles({
-              className: 'h-11 w-11 px-0',
-            })}
-            to={ROUTES.myPage}
-          >
-            <UserRound className="h-5 w-5" aria-hidden />
-          </Link>
         </div>
       </div>
 
@@ -175,17 +120,6 @@ export function DashboardPage() {
               ))}
             </DashboardCarousel>
           </div>
-
-          <ApplicationNotificationsDialog
-            actionError={actionError}
-            isOpen={notifications.isOpen}
-            isOwner={isOwner}
-            onClose={notifications.close}
-            onDismiss={(matchingId) => void dismissMatching(matchingId)}
-            receivedApplications={receivedApplications}
-            returnFocusRef={notificationButtonRef}
-            sentApplications={sentApplications}
-          />
         </>
       ) : null}
     </PageContainer>
