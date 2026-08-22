@@ -110,7 +110,7 @@ export function Header() {
           isOwner={isOwner}
           loadError={notificationData.error}
           onClose={notifications.close}
-          onDismiss={(matchingId) => void notificationData.dismissReceived(matchingId)}
+          onDismiss={notificationData.dismiss}
           onRetry={notificationData.reload}
           receivedApplications={notificationData.receivedApplications}
           returnFocusRef={notificationButtonRef}

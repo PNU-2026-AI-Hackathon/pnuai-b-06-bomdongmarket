@@ -53,6 +53,14 @@ public class MatchingController {
         return ApiResponse.success("내 신청 목록 조회에 성공했습니다.", response);
     }
 
+    // GET /api/matchings/sent — 헤더의 보낸 신청 알림 목록
+    @Operation(summary = "보낸 매칭 신청 알림 목록 조회")
+    @GetMapping("/sent")
+    public ApiResponse<List<MyMatchingResponse>> getSentNotifications(@AuthenticationPrincipal Long userId) {
+        List<MyMatchingResponse> response = matchingService.getSentNotifications(userId);
+        return ApiResponse.success("보낸 신청 알림 조회에 성공했습니다.", response);
+    }
+
     // GET /api/matchings/received — 내 공간들에 들어온 매칭 신청 목록 (owner 시점)
     @Operation(summary = "받은 매칭 신청 목록 조회 (공간 owner 시점)")
     @GetMapping("/received")
@@ -61,14 +69,14 @@ public class MatchingController {
         return ApiResponse.success("받은 신청 목록 조회에 성공했습니다.", response);
     }
 
-    // PATCH /api/matchings/{matchingId}/dismiss — 받은 목록에서 감추기 (공간 owner 전용)
-    @Operation(summary = "받은 매칭 신청 감추기 (공간 owner 전용)",
-            description = "확정·취소된 신청을 소유자의 받은 목록에서 감춘다. 신청자 목록에는 그대로 남는다.")
+    // PATCH /api/matchings/{matchingId}/dismiss — 현재 사용자의 받은/보낸 알림에서 감추기
+    @Operation(summary = "매칭 신청 알림 감추기",
+            description = "신청 당사자가 자신의 받은 또는 보낸 알림에서 감춘다. 신청·계약 상태와 상세 이력은 유지된다.")
     @PatchMapping("/{matchingId}/dismiss")
     public ApiResponse<Void> dismiss(@PathVariable Long matchingId,
                                      @AuthenticationPrincipal Long userId) {
-        matchingService.dismissReceived(matchingId, userId);
-        return ApiResponse.success("받은 신청 목록에서 감췄습니다.", null);
+        matchingService.dismissNotification(matchingId, userId);
+        return ApiResponse.success("신청 알림을 목록에서 감췄습니다.", null);
     }
 
     // PATCH /api/matchings/{matchingId}/cancel — 신청 취소 (신청자 본인 전용)

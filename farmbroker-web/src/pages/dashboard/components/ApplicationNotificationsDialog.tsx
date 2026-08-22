@@ -1,8 +1,9 @@
 import { X } from 'lucide-react';
-import { type RefObject, useEffect, useId, useRef } from 'react';
+import { type RefObject, useEffect, useId, useRef, useState } from 'react';
 
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ContractCard } from '@/pages/dashboard/components/ContractCard';
@@ -19,7 +20,7 @@ interface ApplicationNotificationsDialogProps {
   loadError?: string | null;
   returnFocusRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
-  onDismiss: (matchingId: number) => void;
+  onDismiss: (matchingId: number, direction: 'received' | 'sent') => Promise<void>;
   onRetry?: () => void;
 }
 
@@ -57,6 +58,14 @@ export function ApplicationNotificationsDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dismissTargetRef = useRef(false);
+  const [dismissTarget, setDismissTarget] = useState<{
+    matchingId: number;
+    spaceName: string;
+    direction: 'received' | 'sent';
+  } | null>(null);
+  const [isDismissing, setIsDismissing] = useState(false);
+  dismissTargetRef.current = dismissTarget !== null;
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -67,6 +76,7 @@ export function ApplicationNotificationsDialog({
     closeRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (dismissTargetRef.current) return;
       if (event.key === 'Escape') {
         onClose();
         return;
@@ -174,7 +184,13 @@ export function ApplicationNotificationsDialog({
                         <li className="min-w-0" key={request.matchingId}>
                           <MatchingRequestCard
                             onChatOpen={onClose}
-                            onDismiss={() => onDismiss(request.matchingId)}
+                            onDismiss={() =>
+                              setDismissTarget({
+                                matchingId: request.matchingId,
+                                spaceName: request.spaceTitle,
+                                direction: 'received',
+                              })
+                            }
                             request={request}
                           />
                         </li>
@@ -199,7 +215,16 @@ export function ApplicationNotificationsDialog({
                   <ul className="mt-3 grid min-w-0 gap-3">
                     {sentApplications.map((application) => (
                       <li className="min-w-0" key={application.contractId}>
-                        <ContractCard contract={application} />
+                        <ContractCard
+                          contract={application}
+                          onDismiss={() =>
+                            setDismissTarget({
+                              matchingId: application.contractId,
+                              spaceName: application.spaceName,
+                              direction: 'sent',
+                            })
+                          }
+                        />
                       </li>
                     ))}
                   </ul>
@@ -209,6 +234,30 @@ export function ApplicationNotificationsDialog({
           ) : null}
         </div>
       </div>
+      <ConfirmDialog
+        cancelLabel="취소"
+        confirmLabel="지우기"
+        description={
+          dismissTarget
+            ? `${dismissTarget.spaceName} 신청은 알림 목록에서만 사라지며 신청과 계약 상태는 유지됩니다.`
+            : undefined
+        }
+        isOpen={dismissTarget !== null}
+        isPending={isDismissing}
+        onCancel={() => setDismissTarget(null)}
+        onConfirm={() => {
+          if (!dismissTarget) return;
+          setIsDismissing(true);
+          void onDismiss(dismissTarget.matchingId, dismissTarget.direction).finally(
+            () => {
+              setIsDismissing(false);
+              setDismissTarget(null);
+            },
+          );
+        }}
+        title="신청 알림을 지울까요?"
+        tone="danger"
+      />
     </div>
   );
 }

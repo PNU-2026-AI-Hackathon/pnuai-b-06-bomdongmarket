@@ -68,6 +68,15 @@ export async function getReceivedMatchings(): Promise<MatchingRequest[]> {
   return mockMatchingRequests;
 }
 
+export async function getSentMatchingNotifications(): Promise<MyMatching[]> {
+  if (!USE_MOCKS) {
+    const response = await apiRequest<MyMatching[]>(ENDPOINTS.matchings.sent);
+    return response.data;
+  }
+
+  return getMyMatchings();
+}
+
 // 신청자 본인이 아직 계약이 확정·취소되지 않은 신청을 거둬들입니다. 취소 후 같은 공간에 재신청할 수 있습니다.
 export async function cancelMatching(matchingId: number): Promise<MatchingStatusResult> {
   if (!USE_MOCKS) {
@@ -86,8 +95,8 @@ export async function cancelMatching(matchingId: number): Promise<MatchingStatus
   };
 }
 
-// 공간 소유자가 협의를 마친 신청을 받은 목록에서 감춥니다. 상태를 바꾸지 않아 응답 데이터도 없습니다.
-export async function dismissReceivedMatching(matchingId: number): Promise<void> {
+// 신청 당사자의 받은/보낸 알림에서만 감춥니다. 신청 상태를 바꾸지 않아 응답 데이터도 없습니다.
+export async function dismissMatchingNotification(matchingId: number): Promise<void> {
   if (!USE_MOCKS) {
     await apiRequest<void>(ENDPOINTS.matchings.dismiss(matchingId), { method: 'PATCH' });
     return;

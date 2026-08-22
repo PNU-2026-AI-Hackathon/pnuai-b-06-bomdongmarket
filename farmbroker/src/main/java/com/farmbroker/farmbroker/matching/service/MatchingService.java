@@ -95,6 +95,16 @@ public class MatchingService {
         List<Matching> matchings = spaceId == null
                 ? matchingRepository.findAllByFarmerIdOrderByCreatedAtDesc(userId)
                 : matchingRepository.findAllByFarmerIdAndSpaceIdOrderByCreatedAtDesc(userId, spaceId);
+        return toMyMatchingResponses(matchings);
+    }
+
+    // 헤더의 보낸 신청 알림 목록. 알림에서 치운 신청은 상세 이력에는 남고 여기서만 제외된다.
+    public List<MyMatchingResponse> getSentNotifications(Long userId) {
+        return toMyMatchingResponses(
+                matchingRepository.findAllByFarmerIdAndFarmerDismissedAtIsNullOrderByCreatedAtDesc(userId));
+    }
+
+    private List<MyMatchingResponse> toMyMatchingResponses(List<Matching> matchings) {
         if (matchings.isEmpty()) {
             return List.of();
         }
@@ -136,21 +146,20 @@ public class MatchingService {
         return MatchingStatusResponse.from(matching);
     }
 
-    // 받은 목록에서 감추기 — 협의가 끝난 건만 대상이다.
-    // 아직 협의 중인(REQUESTED) 신청은 계약 확정/취소로 처리해야 하므로 감출 수 없다.
-    // 신청자 목록(my-requests)에는 그대로 남는다 — 소유자 화면에서만 사라진다.
+    // 현재 사용자의 받은/보낸 알림 목록에서만 감춘다. 신청·계약 상태와 상세 이력은 유지한다.
     @Transactional
-    public void dismissReceived(Long matchingId, Long userId) {
+    public void dismissNotification(Long matchingId, Long userId) {
         Matching matching = matchingRepository.findById(matchingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATCHING_NOT_FOUND));
-        if (!matching.getSpace().getOwner().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
+        if (matching.getFarmer().getId().equals(userId)) {
+            matching.dismissByFarmer();
+            return;
         }
-        if (matching.getStatus() == MatchingStatus.REQUESTED) {
-            throw new BusinessException(ErrorCode.MATCHING_NOT_PROCESSED);
+        if (matching.getSpace().getOwner().getId().equals(userId)) {
+            matching.dismissByOwner();
+            return;
         }
-
-        matching.dismissByOwner();
+        throw new BusinessException(ErrorCode.MATCHING_FORBIDDEN);
     }
 
     // ── 계약서 ───────────────────────────────────────────────────────────────

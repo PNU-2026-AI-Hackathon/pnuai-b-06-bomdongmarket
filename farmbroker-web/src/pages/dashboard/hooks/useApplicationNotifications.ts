@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getApplicationNotifications } from '@/services/dashboardService';
-import { dismissReceivedMatching } from '@/services/matchingService';
+import { dismissMatchingNotification } from '@/services/matchingService';
 import type { ContractSummary, MatchingRequest } from '@/types/api';
 import type { AsyncStatus } from '@/types/common';
 
@@ -36,24 +36,32 @@ export function useApplicationNotifications(isEnabled: boolean, isOwner: boolean
     void load();
   }, [load]);
 
-  const dismissReceived = useCallback(
-    async (matchingId: number) => {
+  const dismiss = useCallback(
+    async (matchingId: number, direction: 'received' | 'sent') => {
       setActionError(null);
-      const previousApplications = receivedApplications;
-      setReceivedApplications((current) =>
-        current.filter((matching) => matching.matchingId !== matchingId),
-      );
+      const previousReceived = receivedApplications;
+      const previousSent = sentApplications;
+      if (direction === 'received') {
+        setReceivedApplications((current) =>
+          current.filter((matching) => matching.matchingId !== matchingId),
+        );
+      } else {
+        setSentApplications((current) =>
+          current.filter((matching) => matching.contractId !== matchingId),
+        );
+      }
 
       try {
-        await dismissReceivedMatching(matchingId);
+        await dismissMatchingNotification(matchingId);
       } catch (caught) {
-        setReceivedApplications(previousApplications);
+        setReceivedApplications(previousReceived);
+        setSentApplications(previousSent);
         setActionError(
           caught instanceof Error ? caught.message : '신청을 목록에서 지우지 못했습니다.',
         );
       }
     },
-    [receivedApplications],
+    [receivedApplications, sentApplications],
   );
 
   return {
@@ -63,6 +71,6 @@ export function useApplicationNotifications(isEnabled: boolean, isOwner: boolean
     error,
     actionError,
     reload: load,
-    dismissReceived,
+    dismiss,
   };
 }

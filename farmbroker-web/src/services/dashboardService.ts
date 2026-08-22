@@ -1,5 +1,9 @@
 import { getWishlist } from '@/services/wishlistService';
-import { getMyMatchings, getReceivedMatchings } from '@/services/matchingService';
+import {
+  getMyMatchings,
+  getReceivedMatchings,
+  getSentMatchingNotifications,
+} from '@/services/matchingService';
 import { getMySpaces } from '@/services/spaceService';
 import type {
   WishlistLine,
@@ -43,7 +47,7 @@ export async function getApplicationNotifications(
 ): Promise<ApplicationNotifications> {
   const [received, sent] = await Promise.all([
     isOwner ? getReceivedMatchings() : Promise.resolve([]),
-    getMyMatchings(),
+    getSentMatchingNotifications(),
   ]);
 
   return {
