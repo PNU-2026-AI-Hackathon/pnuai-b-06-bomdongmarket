@@ -38,6 +38,7 @@ describe('Market pages', () => {
     renderWithProviders(<MarketPage />);
 
     expect(await screen.findByText('버터헤드 상추')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '상품 등록' })).toHaveClass('min-h-11');
     await user.click(screen.getByRole('button', { name: '허브' }));
 
     await waitFor(() => {

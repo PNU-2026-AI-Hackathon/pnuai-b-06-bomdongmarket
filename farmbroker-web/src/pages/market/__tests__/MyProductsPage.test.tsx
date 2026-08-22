@@ -46,6 +46,7 @@ describe('MyProductsPage', () => {
     renderWithProviders(<MyProductsPage />);
 
     await screen.findByText('재고 없는 상추');
+    expect(screen.getByRole('link', { name: '상품 등록' })).toHaveClass('min-h-11');
     expect(screen.getAllByRole('button', { name: '판매 재개' })).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: '판매 재개' }));
