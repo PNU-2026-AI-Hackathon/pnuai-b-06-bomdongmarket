@@ -1,5 +1,9 @@
 import { getWishlist } from '@/services/wishlistService';
-import { getMyMatchings, getReceivedMatchings } from '@/services/matchingService';
+import {
+  getMyMatchings,
+  getReceivedMatchings,
+  getSentMatchingNotifications,
+} from '@/services/matchingService';
 import { getMySpaces } from '@/services/spaceService';
 import type {
   WishlistLine,
@@ -18,6 +22,11 @@ export interface DashboardData {
   wishlistItems: WishlistLine[];
 }
 
+export interface ApplicationNotifications {
+  receivedApplications: MatchingRequest[];
+  sentApplications: ContractSummary[];
+}
+
 // 알림 모달에서 쓰는 보낸 신청 요약으로 API 응답을 변환합니다.
 function sentToContract(matching: MyMatching): ContractSummary {
   return {
@@ -29,6 +38,23 @@ function sentToContract(matching: MyMatching): ContractSummary {
     monthlyRent: matching.monthlyRent,
     type: matching.type,
     imageUrl: matching.spaceImageUrl,
+  };
+}
+
+// 헤더 알림은 현재 페이지와 무관하게 필요한 신청 목록만 불러옵니다.
+export async function getApplicationNotifications(
+  isOwner: boolean,
+): Promise<ApplicationNotifications> {
+  const [received, sent] = await Promise.all([
+    isOwner ? getReceivedMatchings() : Promise.resolve([]),
+    getSentMatchingNotifications(),
+  ]);
+
+  return {
+    receivedApplications: received,
+    sentApplications: sent
+      .filter((matching) => matching.status !== 'CANCELED')
+      .map(sentToContract),
   };
 }
 

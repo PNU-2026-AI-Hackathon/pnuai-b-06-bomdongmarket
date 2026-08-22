@@ -36,6 +36,9 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
     // 내가 farmer로서 신청한 목록 — 공간 정보는 getSummariesByIds(공간 계약) 배치로 별도 조회
     List<Matching> findAllByFarmerIdOrderByCreatedAtDesc(Long farmerId);
 
+    // 헤더의 보낸 신청 알림 목록 — 신청자가 치운 건만 제외한다.
+    List<Matching> findAllByFarmerIdAndFarmerDismissedAtIsNullOrderByCreatedAtDesc(Long farmerId);
+
     // 특정 공간에 대한 내 신청만 — 신청 상세 화면(/spaces/{id}/apply)이 전체 목록을 받지 않도록
     List<Matching> findAllByFarmerIdAndSpaceIdOrderByCreatedAtDesc(Long farmerId, Long spaceId);
 

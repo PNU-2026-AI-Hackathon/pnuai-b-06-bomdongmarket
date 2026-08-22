@@ -1,4 +1,5 @@
-import { within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { clearAuthSession, saveAuthSession } from '@/auth/session';
@@ -64,5 +65,29 @@ describe('Header', () => {
     );
     expect(queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
     expect(queryByRole('link', { name: /공간 등록|등록/ })).not.toBeInTheDocument();
+    expect(getByRole('button', { name: '알림' })).toBeInTheDocument();
+  });
+
+  it('알림을 닫으면 헤더의 알림 버튼으로 포커스를 돌려준다', async () => {
+    const user = userEvent.setup();
+    saveAuthSession({
+      userId: 1,
+      email: 'owner@example.com',
+      nickname: '그린스페이스랩',
+      roles: ['OWNER'],
+    });
+    renderWithProviders(<Header />, { authenticated: true });
+
+    const notificationButton = await screen.findByRole('button', {
+      name: '알림, 응답 대기 2건',
+    });
+    await user.click(notificationButton);
+
+    expect(
+      screen.getByRole('dialog', { name: '받은 신청과 보낸 신청' }),
+    ).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(notificationButton).toHaveFocus();
   });
 });

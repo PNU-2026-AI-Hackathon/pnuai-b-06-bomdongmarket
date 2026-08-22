@@ -65,6 +65,9 @@ public class Matching {
     // 소유자 목록에서만 감추는 표시라 상태(status) 전이와는 별개다.
     private LocalDateTime ownerDismissedAt;
 
+    // 신청자가 보낸 신청 알림을 치운 시각. 신청 상세와 계약 이력에는 계속 남는다.
+    private LocalDateTime farmerDismissedAt;
+
     // ── 계약서 ───────────────────────────────────────────────────────────────
     // 매칭 1건당 계약서 1건이라 별도 테이블을 두지 않고 같은 행에 담는다.
     // 계약 진행 상태도 별도 컬럼을 두지 않는다 — status가 그대로 나타낸다
@@ -128,6 +131,11 @@ public class Matching {
     // 소유자가 받은 목록에서 감추기. 상태는 건드리지 않는다(전제 검증은 서비스).
     public void dismissByOwner() {
         this.ownerDismissedAt = LocalDateTime.now();
+    }
+
+    // 신청자가 보낸 알림 목록에서 감추기. 신청·계약 상태는 건드리지 않는다.
+    public void dismissByFarmer() {
+        this.farmerDismissedAt = LocalDateTime.now();
     }
 
     // ── 계약서 (전제 검증은 서비스) ──────────────────────────────────────────

@@ -38,6 +38,9 @@ describe('Market pages', () => {
     renderWithProviders(<MarketPage />);
 
     expect(await screen.findByText('버터헤드 상추')).toBeInTheDocument();
+    const registrationLink = screen.getByRole('link', { name: '상품 등록' });
+    expect(registrationLink).toHaveClass('min-h-11');
+    expect(registrationLink.querySelector('svg')).toHaveClass('h-5', 'w-5');
     await user.click(screen.getByRole('button', { name: '허브' }));
 
     await waitFor(() => {

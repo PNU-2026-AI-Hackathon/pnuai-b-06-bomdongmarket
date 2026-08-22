@@ -102,8 +102,8 @@ export function MarketPage() {
             ) : null}
             {/* 등록 진입점은 비로그인에도 보여 줍니다. 무엇을 할 수 있는 서비스인지 먼저 알리고,
                 누르면 ProtectedRoute가 로그인으로 보냈다가 로그인 후 이 화면으로 되돌립니다. */}
-            <Link className={buttonStyles({ size: 'sm' })} to={ROUTES.newProduct}>
-              <Plus className="h-4 w-4" aria-hidden />
+            <Link className={buttonStyles()} to={ROUTES.newProduct}>
+              <Plus className="h-5 w-5" aria-hidden />
               상품 등록
             </Link>
           </div>

@@ -15,7 +15,7 @@ import { getMatchingStatusLabel } from '@/utils/labels';
 
 interface MatchingRequestCardProps {
   request: MatchingRequest;
-  // 협의가 끝난 신청을 목록에서 치웁니다. 협의 중인 신청에는 노출하지 않습니다.
+  // 신청 상태는 유지한 채 받은 알림 목록에서만 치웁니다.
   onDismiss?: () => void;
   // 채팅이 열린 뒤 호출합니다. 이 카드를 감싼 알림 모달이 채팅 도크를 덮으므로 모달을 비켜 줍니다.
   onChatOpen?: () => void;
@@ -37,7 +37,6 @@ export function MatchingRequestCard({
 }: MatchingRequestCardProps) {
   const chatDock = useChatDock();
   const [chatError, setChatError] = useState<string | null>(null);
-  const isWaiting = request.status === 'REQUESTED';
 
   return (
     <Card className="p-4">
@@ -65,15 +64,16 @@ export function MatchingRequestCard({
               : ''}
           </p>
         </div>
-        {!isWaiting && onDismiss ? (
-          <button
+        {onDismiss ? (
+          <Button
             aria-label={`${request.spaceTitle} 신청을 목록에서 지우기`}
-            className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-app text-content-subtle transition-colors duration-ui hover:bg-action-soft hover:text-action focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            className="-mr-1 -mt-1 h-9 w-9 shrink-0 self-start px-0"
             onClick={onDismiss}
-            type="button"
+            size="sm"
+            variant="ghost"
           >
             <X className="h-4 w-4" aria-hidden />
-          </button>
+          </Button>
         ) : null}
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-600">{request.message}</p>
