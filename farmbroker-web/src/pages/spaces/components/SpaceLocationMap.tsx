@@ -38,9 +38,19 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
       center: position,
       level: MAP_LEVEL,
     });
+    map.relayout();
     mapRef.current = map;
     markerRef.current = new maps.Marker({ map, position });
   }, []);
+
+  useEffect(
+    () => () => {
+      markerRef.current?.setMap(null);
+      markerRef.current = null;
+      mapRef.current = null;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isSupported || !address) return;
@@ -49,7 +59,8 @@ export function SpaceLocationMap({ address }: SpaceLocationMapProps) {
     let cancelled = false;
     setStatus('loading');
 
-    loadKakaoMaps()
+    const mapsRequest = reloadToken > 0 ? loadKakaoMaps({ retry: true }) : loadKakaoMaps();
+    mapsRequest
       .then((maps) => {
         if (cancelled) return;
 

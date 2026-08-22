@@ -44,6 +44,12 @@ export function NearbyMap<T>({
   // 클릭 리스너는 지도 생성 시 1회만 등록하므로, 최신 콜백을 ref로 참조해 stale closure를 피한다.
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const getIdRef = useRef(getId);
+  getIdRef.current = getId;
+  const getTitleRef = useRef(getTitle);
+  getTitleRef.current = getTitle;
 
   const isSupported = hasKakaoMapKey();
 
@@ -51,8 +57,11 @@ export function NearbyMap<T>({
   useEffect(() => {
     if (!isSupported) return;
     let cancelled = false;
+    let relayoutFrame: number | null = null;
+    let clickHandler: ((mouseEvent: KakaoMapMouseEvent) => void) | null = null;
     setStatus('loading');
-    loadKakaoMaps()
+    const mapsRequest = reloadToken > 0 ? loadKakaoMaps({ retry: true }) : loadKakaoMaps();
+    mapsRequest
       .then((maps) => {
         if (cancelled || !containerRef.current) return;
         mapsRef.current = maps;
@@ -62,19 +71,40 @@ export function NearbyMap<T>({
             level: MAP_LEVEL,
           });
           // 지도 빈 곳 클릭 → 그 지점을 주변 검색 중심으로. 리스너는 여기서 딱 한 번 건다.
-          maps.event.addListener(map, 'click', (mouseEvent) => {
+          clickHandler = (mouseEvent) => {
             const latLng = mouseEvent.latLng;
             onMapClickRef.current?.({ lat: latLng.getLat(), lng: latLng.getLng() });
-          });
+          };
+          maps.event.addListener(map, 'click', clickHandler);
           mapRef.current = map;
         }
-        setStatus('ready');
+        const map = mapRef.current;
+        if (!map) return;
+        // SPA 뒤로가기로 다시 마운트될 때 최종 컨테이너 크기를 기준으로 좌표계를 맞춘다.
+        relayoutFrame = window.requestAnimationFrame(() => {
+          if (cancelled || mapRef.current !== map) return;
+          map.relayout();
+          setStatus('ready');
+        });
       })
       .catch(() => {
         if (!cancelled) setStatus('error');
       });
     return () => {
       cancelled = true;
+      if (relayoutFrame !== null) window.cancelAnimationFrame(relayoutFrame);
+
+      const maps = mapsRef.current;
+      const map = mapRef.current;
+      if (maps && map && clickHandler) {
+        maps.event.removeListener(map, 'click', clickHandler);
+      }
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
+      circleRef.current?.setMap(null);
+      circleRef.current = null;
+      mapRef.current = null;
+      mapsRef.current = null;
     };
     // center는 여기서 의도적으로 제외 — 재생성 방지(아래 effect가 이동 담당).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,12 +147,14 @@ export function NearbyMap<T>({
       const marker = new maps.Marker({
         map,
         position: new maps.LatLng(coords.lat, coords.lng),
-        title: getTitle(item),
+        title: getTitleRef.current(item),
       });
-      maps.event.addListener(marker, 'click', () => onSelect(getId(item)));
+      maps.event.addListener(marker, 'click', () =>
+        onSelectRef.current(getIdRef.current(item)),
+      );
       markersRef.current.push(marker);
     }
-  }, [center, radiusKm, items, onSelect, getId, getTitle]);
+  }, [center, radiusKm, items]);
 
   useEffect(() => {
     if (status === 'ready') redraw();
