@@ -1,4 +1,4 @@
-# 🌱 FarmBroker
+# 🌱 FarmBroker - PNU 창의융합 AI해커톤 우수상 (DRB동일대표상) [2026.08.28]
 
 <p align="center">
   <a href="https://pnuai-b-06-bomdongmarket.vercel.app" title="FarmBroker 배포 서비스">
